@@ -1,0 +1,33 @@
+{
+  "name": "client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "electron-store": "^11.0.2",
+    "element-plus": "^2.13.0",
+    "lib0": "^0.2.117",
+    "vue": "^3.5.26",
+    "y-websocket": "^3.0.0",
+    "yjs": "^13.6.29"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.4",
+    "@vitejs/plugin-vue": "^6.0.3",
+    "@vue/tsconfig": "^0.8.1",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.4.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-electron": "^0.29.0",
+    "vue-tsc": "^3.2.2",
+    "wait-on": "^9.0.3"
+  }
+}
