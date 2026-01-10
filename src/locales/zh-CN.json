@@ -1,0 +1,31 @@
+{
+    "home": {
+        "title": "Constella",
+        "subtitle": "开源 ⦁ 协作 ⦁ 无限可能",
+        "serverInput": {
+            "label": "服务器地址",
+            "placeholder": "输入服务器 URL 或 IP 地址",
+            "connect": "连接"
+        },
+        "footer": {
+            "github": "GitHub",
+            "info": "关于"
+        }
+    },
+    "theme": {
+        "light": "浅色模式",
+        "dark": "深色模式"
+    },
+    "language": {
+        "switch": "切换语言"
+    },
+    "window": {
+        "minimize": "最小化",
+        "maximize": "最大化",
+        "restore": "还原",
+        "close": "关闭"
+    },
+    "settings": {
+        "title": "设置"
+    }
+}

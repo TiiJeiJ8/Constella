@@ -1,0 +1,31 @@
+{
+    "home": {
+        "title": "Constella",
+        "subtitle": "Open Source ⦁ Collaboration ⦁ Infinite Possibilities",
+        "serverInput": {
+            "label": "Server Address",
+            "placeholder": "Enter server URL or IP address",
+            "connect": "Connect"
+        },
+        "footer": {
+            "github": "GitHub",
+            "info": "About"
+        }
+    },
+    "theme": {
+        "light": "Light Mode",
+        "dark": "Dark Mode"
+    },
+    "language": {
+        "switch": "Switch Language"
+    },
+    "window": {
+        "minimize": "Minimize",
+        "maximize": "Maximize",
+        "restore": "Restore",
+        "close": "Close"
+    },
+    "settings": {
+        "title": "Settings"
+    }
+}
