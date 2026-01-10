@@ -94,10 +94,9 @@ onMounted(() => {
         showIntro.value = false
     }, 2000)
     
-    // 读取主题设置
+    // 读取主题设置状态
     const savedTheme = localStorage.getItem('theme') || 'light'
     isDark.value = savedTheme === 'dark'
-    document.documentElement.setAttribute('data-theme', savedTheme)
 })
 
 function openSettings() {
@@ -115,6 +114,11 @@ function toggleTheme() {
     const theme = isDark.value ? 'dark' : 'light'
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
+    
+    // 同步更新 settings 中的主题设置
+    const settings = JSON.parse(localStorage.getItem('settings') || '{}')
+    settings.theme = theme
+    localStorage.setItem('settings', JSON.stringify(settings))
 }
 
 function openGithub() {

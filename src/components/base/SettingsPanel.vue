@@ -219,6 +219,10 @@ const settingsData = reactive({
 // 监听 modelValue 变化
 watch(() => props.modelValue, (newVal) => {
     isOpen.value = newVal
+    // 面板打开时重新加载设置，确保同步外部更改
+    if (newVal) {
+        loadSettings()
+    }
 })
 
 // 监听 isOpen 变化
@@ -231,6 +235,15 @@ const loadSettings = () => {
     const saved = localStorage.getItem('settings')
     if (saved) {
         Object.assign(settingsData, JSON.parse(saved))
+    }
+    // 优先使用 localStorage 中的 theme 和 locale 值
+    const savedTheme = localStorage.getItem('theme')
+    if (savedTheme) {
+        settingsData.theme = savedTheme
+    }
+    const savedLocale = localStorage.getItem('locale')
+    if (savedLocale) {
+        settingsData.language = savedLocale
     }
 }
 

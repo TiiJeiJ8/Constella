@@ -6,11 +6,17 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import HomeView from './views/HomeView.vue'
 import AboutView from './views/AboutView.vue'
 
 const currentView = ref('home')
+
+// 在应用启动时初始化主题
+onMounted(() => {
+    const savedTheme = localStorage.getItem('theme') || 'light'
+    document.documentElement.setAttribute('data-theme', savedTheme)
+})
 
 function handleNavigate(view) {
     currentView.value = view
