@@ -27,5 +27,35 @@
     },
     "settings": {
         "title": "Settings"
+    },
+    "about": {
+        "title": "About Constella",
+        "subtitle": "Open Source ⦁ Collaboration ⦁ Infinite Possibilities",
+        "version": "Version",
+        "description": "Constella is a secure real-time collaborative infinite canvas application that can be deployed to your own server, designed for connecting notes, graphics, and multimedia.",
+        "features": {
+            "title": "Features",
+            "crossPlatform": "Cross-platform Desktop App",
+            "infiniteCanvas": "Infinite Canvas",
+            "realtime": "Real-time Collaboration",
+            "offline": "Offline Support",
+            "secure": "Secure Authentication",
+            "easyDeploy": "Easy Deployment",
+            "cardDesign": "Card Design",
+            "mindMap": "Mind Mapping",
+            "mediaSupport": "Multimedia Support"
+        },
+        "tech": {
+            "title": "Tech Stack",
+            "frontend": "Frontend: Vue 3 + Electron + TypeScript",
+            "backend": "Backend: Node.js + Express + PostgreSQL",
+            "realtime": "Real-time: Yjs CRDT"
+        },
+        "links": {
+            "github": "GitHub Repository",
+            "documentation": "Documentation",
+            "license": "License: MIT"
+        },
+        "backToHome": "Back to Home"
     }
 }

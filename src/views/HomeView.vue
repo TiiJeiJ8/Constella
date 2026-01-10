@@ -90,6 +90,8 @@ import {
 } from 'tdesign-icons-vue-next'
 
 const { t, locale } = useI18n()
+const emit = defineEmits(['navigate'])
+
 const showIntro = ref(true)
 const serverUrl = ref('')
 const logoChars = 'Constella'.split('')
@@ -168,10 +170,7 @@ function connectToServer() {
 }
 
 function showInfo() {
-    // TODO: 打开关于对话框
-    alert(locale.value === 'zh-CN'
-        ? 'Constella - 安全实时协作无限画布\n版本: 0.1.0'
-        : 'Constella - Secure Real-time Collaborative Infinite Canvas\nVersion: 0.1.0')
+    emit('navigate', 'about')
 }
 </script>
 

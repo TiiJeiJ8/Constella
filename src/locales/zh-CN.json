@@ -27,5 +27,35 @@
     },
     "settings": {
         "title": "设置"
+    },
+    "about": {
+        "title": "关于 Constella",
+        "subtitle": "开源 ⦁ 协作 ⦁ 无限可能",
+        "version": "版本",
+        "description": "Constella 是一个可部署到自有服务器的安全实时协作无限画布应用，用于连接笔记、图形与多媒体。",
+        "features": {
+            "title": "功能特色",
+            "crossPlatform": "跨平台桌面应用",
+            "infiniteCanvas": "无限画布",
+            "realtime": "实时协作",
+            "offline": "离线支持",
+            "secure": "安全认证",
+            "easyDeploy": "易于部署",
+            "cardDesign": "卡片设计",
+            "mindMap": "思维导图",
+            "mediaSupport": "多媒体支持"
+        },
+        "tech": {
+            "title": "技术栈",
+            "frontend": "前端：Vue 3 + Electron + TypeScript",
+            "backend": "后端：Node.js + Express + PostgreSQL",
+            "realtime": "实时协作：Yjs CRDT"
+        },
+        "links": {
+            "github": "GitHub 仓库",
+            "documentation": "文档",
+            "license": "开源协议：MIT"
+        },
+        "backToHome": "返回主页"
     }
 }
