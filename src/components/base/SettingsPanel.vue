@@ -98,36 +98,15 @@
                                 </div>
                             </div>
 
-                            <!-- 密码 -->
+                            <!-- 邮箱 -->
                             <div class="setting-item">
-                                <label class="setting-label">{{ t('settings.account.password') }}</label>
+                                <label class="setting-label">{{ t('settings.account.email') }}</label>
                                 <input 
-                                    v-model="settingsData.password" 
-                                    type="password"
+                                    v-model="settingsData.email" 
+                                    type="email"
                                     class="setting-input"
-                                    :placeholder="t('settings.account.passwordPlaceholder')"
-                                    @input="checkPassword"
+                                    :placeholder="t('settings.account.emailPlaceholder')"
                                 />
-                                <div v-if="passwordStrength" class="password-strength">
-                                    <span class="strength-label">{{ t('settings.account.passwordStrength') }}:</span>
-                                    <span class="strength-indicator" :class="passwordStrength.strength">
-                                        {{ t(`settings.account.${passwordStrength.strength}`) }}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <!-- 确认密码 -->
-                            <div class="setting-item">
-                                <label class="setting-label">{{ t('settings.account.confirmPassword') }}</label>
-                                <input 
-                                    v-model="settingsData.confirmPassword" 
-                                    type="password"
-                                    class="setting-input"
-                                    :class="{ 'error': passwordError }"
-                                    :placeholder="t('settings.account.confirmPasswordPlaceholder')"
-                                    @input="checkPassword"
-                                />
-                                <div v-if="passwordError" class="error-text">{{ passwordError }}</div>
                             </div>
                         </div>
 
@@ -285,8 +264,7 @@ import {
     generateChineseName,
     generateEnglishName,
     generateAvatar,
-    validateUserId,
-    validatePassword
+    validateUserId
 } from '@/utils/accountHelper'
 
 const { t, locale } = useI18n()
@@ -320,8 +298,7 @@ const settingsData = reactive({
     firstName: '',
     lastName: '',
     avatar: '',
-    password: '',
-    confirmPassword: '',
+    email: '',
     // 通用设置
     language: 'zh-CN',
     autoSave: true,
@@ -340,16 +317,8 @@ const settingsData = reactive({
     debugMode: false
 })
 
-// 密码验证错误
-const passwordError = ref('')
+// 验证错误
 const userIdError = ref('')
-
-// 计算密码强度
-const passwordStrength = computed(() => {
-    if (!settingsData.password) return null
-    const result = validatePassword(settingsData.password)
-    return result
-})
 
 // 监听 modelValue 变化
 watch(() => props.modelValue, (newVal) => {
@@ -482,20 +451,6 @@ const checkUserId = () => {
         userIdError.value = t('settings.account.errors.invalidUserId')
     } else {
         userIdError.value = ''
-    }
-}
-
-// 验证密码
-const checkPassword = () => {
-    if (!settingsData.password || !settingsData.confirmPassword) {
-        passwordError.value = ''
-        return
-    }
-    
-    if (settingsData.password !== settingsData.confirmPassword) {
-        passwordError.value = t('settings.account.errors.passwordMismatch')
-    } else {
-        passwordError.value = ''
     }
 }
 
@@ -724,7 +679,7 @@ applySettings()
 
 .setting-select,
 .setting-input {
-    width: 200px;
+    width: 220px;
     padding: 8px 12px;
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);

@@ -56,6 +56,8 @@
             "name": "姓名",
             "firstName": "名",
             "lastName": "姓",
+            "email": "邮箱",
+            "emailPlaceholder": "输入邮箱地址(可选)",
             "password": "密码",
             "passwordPlaceholder": "输入密码（至少8位）",
             "confirmPassword": "确认密码",
