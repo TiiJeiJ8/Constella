@@ -78,6 +78,26 @@
                         </div>
                     </div>
 
+                    <!-- 主要作者区 -->
+                    <div class="authors-section">
+                        <h2 class="section-title">{{ t('about.authors.title') }}</h2>
+                        <div class="authors-container">
+                            <button class="author-item" @click="openAuthorGithub('TiiJeiJ8')">
+                                <div class="author-avatar">
+                                    <img src="https://github.com/TiiJeiJ8.png" :alt="t('about.authors.author1')" />
+                                </div>
+                                <span class="author-name">{{ t('about.authors.author1') }}</span>
+                            </button>
+                            <span class="author-separator">✖️</span>
+                            <button class="author-item" @click="openAuthorGithub('Author2')">
+                                <div class="author-avatar">
+                                    <img src="https://github.com/577fkj.png" :alt="t('about.authors.author2')" />
+                                </div>
+                                <span class="author-name">{{ t('about.authors.author2') }}</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- 链接区 -->
                     <div class="links-section">
                         <button class="link-btn" @click="openGithub">
@@ -113,6 +133,15 @@ function goBack() {
 
 function openGithub() {
     const url = 'https://github.com/TiiJeiJ8/constella'
+    if (window.electron?.openExternal) {
+        window.electron.openExternal(url)
+    } else {
+        window.open(url, '_blank')
+    }
+}
+
+function openAuthorGithub(username) {
+    const url = `https://github.com/${username}`
     if (window.electron?.openExternal) {
         window.electron.openExternal(url)
     } else {
@@ -306,6 +335,70 @@ function openGithub() {
     font-size: 0.95rem;
     color: var(--text-secondary);
     font-weight: 500;
+}
+
+/* ==================== 主要作者区 ==================== */
+.authors-section {
+    margin-bottom: 48px;
+}
+
+.authors-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+}
+
+.author-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-light);
+    border-radius: 16px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.author-item:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--accent-primary);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.author-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid var(--accent-primary);
+    transition: all 0.3s ease;
+}
+
+.author-item:hover .author-avatar {
+    border-color: var(--accent-hover);
+    transform: scale(1.05);
+}
+
+.author-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.author-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.author-separator {
+    font-size: 1.5rem;
+    color: var(--text-tertiary);
+    user-select: none;
 }
 
 /* ==================== 链接区 ==================== */

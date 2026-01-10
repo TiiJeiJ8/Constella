@@ -86,6 +86,11 @@
             "backend": "Backend: Node.js + Express + PostgreSQL",
             "realtime": "Real-time: Yjs CRDT"
         },
+        "authors": {
+            "title": "Main Authors",
+            "author1": "TiiJeiJ8",
+            "author2": "577fkj"
+        },
         "links": {
             "github": "GitHub Repository",
             "documentation": "Documentation",

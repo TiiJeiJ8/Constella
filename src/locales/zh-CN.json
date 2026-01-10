@@ -86,6 +86,11 @@
             "backend": "后端：Node.js + Express + PostgreSQL",
             "realtime": "实时协作：Yjs CRDT"
         },
+        "authors": {
+            "title": "主要作者",
+            "author1": "TiiJeiJ8",
+            "author2": "577fkj"
+        },
         "links": {
             "github": "GitHub 仓库",
             "documentation": "文档",
