@@ -47,12 +47,43 @@
                     <div class="server-card">
                         <label class="input-label">{{ t('home.serverInput.label') }}</label>
                         <div class="input-group">
-                            <input v-model="serverUrl" type="text" class="server-input"
-                                :placeholder="t('home.serverInput.placeholder')" @keyup.enter="connectToServer" />
-                            <button class="connect-btn" @click="connectToServer">
-                                {{ t('home.serverInput.connect') }}
+                            <input 
+                                v-model="serverUrl" 
+                                type="text" 
+                                class="server-input"
+                                :class="{ 
+                                    'error': connectionError, 
+                                    'success': connectionSuccess,
+                                    'disabled': isConnecting 
+                                }"
+                                :placeholder="t('home.serverInput.placeholder')" 
+                                :disabled="isConnecting"
+                                @keyup.enter="connectToServer" 
+                            />
+                            <button 
+                                class="connect-btn" 
+                                :class="{ 'connecting': isConnecting, 'success': connectionSuccess }"
+                                @click="isConnecting ? cancelConnection() : connectToServer()"
+                                :disabled="connectionSuccess"
+                            >
+                                <span v-if="isConnecting" class="loading-spinner"></span>
+                                {{ isConnecting ? t('home.serverInput.cancel') : connectionSuccess ? t('home.serverInput.success') : t('home.serverInput.connect') }}
                             </button>
                         </div>
+                        
+                        <!-- 错误提示 -->
+                        <Transition name="fade">
+                            <div v-if="connectionError" class="error-message">
+                                {{ connectionError }}
+                            </div>
+                        </Transition>
+                        
+                        <!-- 成功提示 -->
+                        <Transition name="fade">
+                            <div v-if="connectionSuccess" class="success-message">
+                                {{ t('home.serverInput.success') }}
+                            </div>
+                        </Transition>
                     </div>
                 </div>
             </Transition>
@@ -75,6 +106,7 @@ import {
 } from 'tdesign-icons-vue-next'
 import SettingsPanel from '@/components/base/SettingsPanel.vue'
 import WindowControls from '@/components/base/WindowControls.vue'
+import { apiService } from '@/services/api'
 
 const { t, locale } = useI18n()
 const emit = defineEmits(['navigate'])
@@ -85,6 +117,11 @@ const logoChars = 'Constella'.split('')
 const isDark = ref(false)
 const showSettings = ref(false)
 const isElectron = ref(!!window.electron)
+
+// 连接状态
+const isConnecting = ref(false)
+const connectionError = ref('')
+const connectionSuccess = ref(false)
 
 const currentLocale = computed(() => locale.value)
 
@@ -97,6 +134,12 @@ onMounted(() => {
     // 读取主题设置状态
     const savedTheme = localStorage.getItem('theme') || 'light'
     isDark.value = savedTheme === 'dark'
+    
+    // 加载保存的服务器地址
+    const savedServerUrl = localStorage.getItem('serverUrl')
+    if (savedServerUrl) {
+        serverUrl.value = savedServerUrl
+    }
 })
 
 function openSettings() {
@@ -130,14 +173,77 @@ function openGithub() {
     }
 }
 
-function connectToServer() {
+async function connectToServer() {
+    // 验证输入
     if (!serverUrl.value.trim()) {
-        alert(locale.value === 'zh-CN' ? '请输入服务器地址' : 'Please enter server address')
+        connectionError.value = t('home.serverInput.errors.empty')
         return
     }
-    // TODO: 实现连接逻辑
-    console.log('Connecting to:', serverUrl.value)
-    alert(`${locale.value === 'zh-CN' ? '连接到' : 'Connecting to'}: ${serverUrl.value}`)
+
+    // 重置状态
+    connectionError.value = ''
+    connectionSuccess.value = false
+    isConnecting.value = true
+
+    try {
+        // 规范化 URL
+        let normalizedUrl = serverUrl.value.trim()
+        
+        // 如果没有协议，添加 http://
+        if (!normalizedUrl.match(/^https?:\/\//)) {
+            normalizedUrl = 'http://' + normalizedUrl
+        }
+
+        // 验证 URL 格式
+        try {
+            new URL(normalizedUrl)
+        } catch {
+            connectionError.value = t('home.serverInput.errors.invalid')
+            isConnecting.value = false
+            return
+        }
+
+        // 调用健康检查 API
+        const result = await apiService.healthCheck(normalizedUrl)
+
+        if (result.success) {
+            // 连接成功
+            connectionSuccess.value = true
+            apiService.setBaseUrl(normalizedUrl)
+            
+            // 保存服务器地址
+            localStorage.setItem('serverUrl', normalizedUrl)
+            
+            // 显示成功提示
+            setTimeout(() => {
+                connectionSuccess.value = false
+                // TODO: 导航到下一个页面（房间列表/登录）
+                console.log('Connected to:', normalizedUrl)
+            }, 1500)
+        } else {
+            // 连接失败，根据错误信息显示对应提示
+            if (result.message?.includes('timeout') || result.message?.includes('Timeout')) {
+                connectionError.value = t('home.serverInput.errors.timeout')
+            } else if (result.message?.includes('reach') || result.message?.includes('fetch') || result.message?.includes('NetworkError')) {
+                connectionError.value = t('home.serverInput.errors.unreachable')
+            } else if (result.message?.includes('cancelled')) {
+                connectionError.value = t('home.serverInput.errors.cancelled')
+            } else {
+                connectionError.value = result.message || t('home.serverInput.errors.unknown')
+            }
+        }
+    } catch (error) {
+        console.error('Connection error:', error)
+        connectionError.value = error.message || t('home.serverInput.errors.unknown')
+    } finally {
+        isConnecting.value = false
+    }
+}
+
+function cancelConnection() {
+    apiService.cancelRequest()
+    isConnecting.value = false
+    connectionError.value = t('home.serverInput.errors.cancelled')
 }
 
 function showInfo() {
@@ -364,6 +470,27 @@ function showInfo() {
     box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1);
 }
 
+.server-input.error {
+    border-color: #e53935;
+}
+
+.server-input.error:focus {
+    box-shadow: 0 0 0 3px rgba(229, 57, 53, 0.1);
+}
+
+.server-input.success {
+    border-color: #43a047;
+}
+
+.server-input.success:focus {
+    box-shadow: 0 0 0 3px rgba(67, 160, 71, 0.1);
+}
+
+.server-input.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .connect-btn {
     padding: 12px 28px;
     font-size: 1rem;
@@ -372,17 +499,90 @@ function showInfo() {
     background: var(--accent-primary);
     border-radius: 12px;
     transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 120px;
+    justify-content: center;
 }
 
-.connect-btn:hover {
+.connect-btn:hover:not(:disabled) {
     background: var(--accent-hover);
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
 }
 
-.connect-btn:active {
+.connect-btn:active:not(:disabled) {
     background: var(--accent-active);
     transform: translateY(0);
+}
+
+.connect-btn.connecting {
+    background: #ff9800;
+}
+
+.connect-btn.connecting:hover {
+    background: #f57c00;
+}
+
+.connect-btn.success {
+    background: #43a047;
+    cursor: default;
+}
+
+.connect-btn:disabled {
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
+/* 加载动画 */
+.loading-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 错误和成功消息 */
+.error-message,
+.success-message {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.error-message {
+    background: rgba(229, 57, 53, 0.1);
+    color: #e53935;
+    border: 1px solid rgba(229, 57, 53, 0.3);
+}
+
+.success-message {
+    background: rgba(67, 160, 71, 0.1);
+    color: #43a047;
+    border: 1px solid rgba(67, 160, 71, 0.3);
+}
+
+/* 淡入淡出动画 */
+.fade-enter-active,
+.fade-leave-active {
+    transition: all 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+    transform: translateY(-5px);
 }
 
 /* ==================== 响应式设计 ==================== */

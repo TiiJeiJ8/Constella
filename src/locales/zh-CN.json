@@ -5,7 +5,19 @@
         "serverInput": {
             "label": "服务器地址",
             "placeholder": "输入服务器 URL 或 IP 地址",
-            "connect": "连接"
+            "connect": "连接",
+            "connecting": "正在连接...",
+            "cancel": "取消连接",
+            "success": "连接成功！",
+            "failed": "连接失败",
+            "errors": {
+                "empty": "请输入服务器地址",
+                "invalid": "无效的服务器地址",
+                "timeout": "连接超时，请检查服务器地址",
+                "unreachable": "无法访问服务器，请检查网络连接",
+                "cancelled": "连接已取消",
+                "unknown": "连接失败，请稍后重试"
+            }
         },
         "footer": {
             "github": "GitHub",

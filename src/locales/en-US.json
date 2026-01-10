@@ -5,7 +5,19 @@
         "serverInput": {
             "label": "Server Address",
             "placeholder": "Enter server URL or IP address",
-            "connect": "Connect"
+            "connect": "Connect",
+            "connecting": "Connecting...",
+            "cancel": "Cancel",
+            "success": "Connected successfully!",
+            "failed": "Connection failed",
+            "errors": {
+                "empty": "Please enter server address",
+                "invalid": "Invalid server address",
+                "timeout": "Connection timeout, please check server address",
+                "unreachable": "Unable to reach server, please check network",
+                "cancelled": "Connection cancelled",
+                "unknown": "Connection failed, please try again later"
+            }
         },
         "footer": {
             "github": "GitHub",
