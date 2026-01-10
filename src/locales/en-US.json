@@ -8,7 +8,7 @@
             "connect": "Connect",
             "connecting": "Connecting...",
             "cancel": "Cancel",
-            "success": "Connected successfully!",
+            "success": "Connected!",
             "failed": "Connection failed",
             "errors": {
                 "empty": "Please enter server address",
@@ -40,11 +40,39 @@
     "settings": {
         "title": "Settings",
         "categories": {
+            "account": "Account",
             "general": "General",
             "appearance": "Appearance",
             "editor": "Editor",
             "collaboration": "Collaboration",
             "advanced": "Advanced"
+        },
+        "account": {
+            "title": "Account Settings",
+            "avatar": "Avatar",
+            "userId": "User ID",
+            "userIdPlaceholder": "Enter user ID (8-16 chars, start with letter)",
+            "userIdHint": "Like WeChat ID, used for login and room operations",
+            "name": "Name",
+            "firstName": "First Name",
+            "lastName": "Last Name",
+            "password": "Password",
+            "passwordPlaceholder": "Enter password (at least 8 chars)",
+            "confirmPassword": "Confirm Password",
+            "confirmPasswordPlaceholder": "Re-enter password",
+            "changeAvatar": "Change Avatar",
+            "generateRandom": "Generate Random",
+            "regenerateId": "Regenerate ID",
+            "regenerateName": "Regenerate Name",
+            "passwordStrength": "Password Strength",
+            "weak": "Weak",
+            "medium": "Medium",
+            "strong": "Strong",
+            "errors": {
+                "invalidUserId": "Invalid user ID format",
+                "passwordMismatch": "Passwords do not match",
+                "passwordTooShort": "Password must be at least 8 characters"
+            }
         },
         "general": {
             "title": "General Settings",

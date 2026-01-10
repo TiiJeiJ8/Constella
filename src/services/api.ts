@@ -5,8 +5,10 @@
 
 export interface ApiResponse<T = any> {
     success: boolean
-    data?: T
+    code?: number
     message?: string
+    data?: T
+    errorCode?: string  // 错误码，用于前端多语言映射
 }
 
 class ApiService {
@@ -64,18 +66,31 @@ class ApiService {
             })
 
             if (response.ok) {
-                const data = await response.json()
+                const result = await response.json()
                 this.abortController = null
                 return {
                     success: true,
-                    data,
-                    message: 'Server is healthy'
+                    code: result.code,
+                    message: result.message || 'Server is healthy',
+                    data: result.data
                 }
             } else {
                 this.abortController = null
-                return {
-                    success: false,
-                    message: `Server returned status ${response.status}`
+                // 尝试解析错误响应
+                try {
+                    const errorData = await response.json()
+                    return {
+                        success: false,
+                        code: errorData.code || response.status,
+                        message: errorData.message || `Server returned status ${response.status}`,
+                        errorCode: errorData.data
+                    }
+                } catch {
+                    return {
+                        success: false,
+                        code: response.status,
+                        message: `Server returned status ${response.status}`
+                    }
                 }
             }
         } catch (error: any) {
@@ -113,15 +128,28 @@ class ApiService {
                 body: JSON.stringify({ username, email, password })
             })
 
-            const data = await response.json()
+            const result = await response.json()
 
             if (response.ok) {
-                return { success: true, data }
+                return {
+                    success: true,
+                    code: result.code,
+                    message: result.message,
+                    data: result.data
+                }
             } else {
-                return { success: false, message: data.message || 'Registration failed' }
+                return {
+                    success: false,
+                    code: result.code || response.status,
+                    message: result.message || 'Registration failed',
+                    errorCode: result.data  // 错误码
+                }
             }
         } catch (error: any) {
-            return { success: false, message: error.message || 'Network error' }
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            }
         }
     }
 
@@ -138,15 +166,28 @@ class ApiService {
                 body: JSON.stringify({ email, password })
             })
 
-            const data = await response.json()
+            const result = await response.json()
 
             if (response.ok) {
-                return { success: true, data }
+                return {
+                    success: true,
+                    code: result.code,
+                    message: result.message,
+                    data: result.data
+                }
             } else {
-                return { success: false, message: data.message || 'Login failed' }
+                return {
+                    success: false,
+                    code: result.code || response.status,
+                    message: result.message || 'Login failed',
+                    errorCode: result.data  // 错误码
+                }
             }
         } catch (error: any) {
-            return { success: false, message: error.message || 'Network error' }
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            }
         }
     }
 
@@ -163,15 +204,28 @@ class ApiService {
                 body: JSON.stringify({ refresh_token: refreshToken })
             })
 
-            const data = await response.json()
+            const result = await response.json()
 
             if (response.ok) {
-                return { success: true, data }
+                return {
+                    success: true,
+                    code: result.code,
+                    message: result.message,
+                    data: result.data
+                }
             } else {
-                return { success: false, message: data.message || 'Token refresh failed' }
+                return {
+                    success: false,
+                    code: result.code || response.status,
+                    message: result.message || 'Token refresh failed',
+                    errorCode: result.data  // 错误码
+                }
             }
         } catch (error: any) {
-            return { success: false, message: error.message || 'Network error' }
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            }
         }
     }
 }

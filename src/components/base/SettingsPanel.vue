@@ -31,6 +31,106 @@
 
                     <!-- 右侧设置项 -->
                     <div class="settings-main">
+                        <!-- 账户设置 -->
+                        <div v-show="activeCategory === 'account'" class="settings-section">
+                            <h3 class="section-title">{{ t('settings.account.title') }}</h3>
+                            
+                            <!-- 头像 -->
+                            <div class="setting-item avatar-item">
+                                <label class="setting-label">{{ t('settings.account.avatar') }}</label>
+                                <div class="avatar-controls">
+                                    <div class="avatar-preview">
+                                        <img :src="settingsData.avatar" :alt="settingsData.userId" />
+                                    </div>
+                                    <button class="change-avatar-btn" @click="changeAvatar">
+                                        {{ t('settings.account.changeAvatar') }}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 用户 ID -->
+                            <div class="setting-item userid-item">
+                                <div class="label-with-help">
+                                    <label class="setting-label">{{ t('settings.account.userId') }}</label>
+                                    <div class="help-icon-wrapper" :title="t('settings.account.userIdHint')">
+                                        <HelpCircleIcon class="help-icon" />
+                                    </div>
+                                </div>
+                                <div class="input-with-button">
+                                    <input 
+                                        v-model="settingsData.userId" 
+                                        type="text"
+                                        class="setting-input"
+                                        :class="{ 'error': userIdError }"
+                                        :placeholder="t('settings.account.userIdPlaceholder')"
+                                        @blur="checkUserId"
+                                    />
+                                    <button class="icon-btn" @click="regenerateUserId" :title="t('settings.account.regenerateId')">
+                                        <RefreshIcon />
+                                    </button>
+                                </div>
+                                <div v-if="userIdError" class="error-text">{{ userIdError }}</div>
+                            </div>
+
+                            <!-- 姓名 -->
+                            <div class="setting-item name-group">
+                                <label class="setting-label">{{ t('settings.account.name') }}</label>
+                                <div class="name-inputs">
+                                    <div class="name-field">
+                                        <input 
+                                            v-model="settingsData.lastName" 
+                                            type="text"
+                                            class="setting-input"
+                                            :placeholder="t('settings.account.lastName')"
+                                        />
+                                    </div>
+                                    <div class="name-field">
+                                        <input 
+                                            v-model="settingsData.firstName" 
+                                            type="text"
+                                            class="setting-input"
+                                            :placeholder="t('settings.account.firstName')"
+                                        />
+                                    </div>
+                                    <button class="icon-btn" @click="regenerateName" :title="t('settings.account.regenerateName')">
+                                        <RefreshIcon />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 密码 -->
+                            <div class="setting-item">
+                                <label class="setting-label">{{ t('settings.account.password') }}</label>
+                                <input 
+                                    v-model="settingsData.password" 
+                                    type="password"
+                                    class="setting-input"
+                                    :placeholder="t('settings.account.passwordPlaceholder')"
+                                    @input="checkPassword"
+                                />
+                                <div v-if="passwordStrength" class="password-strength">
+                                    <span class="strength-label">{{ t('settings.account.passwordStrength') }}:</span>
+                                    <span class="strength-indicator" :class="passwordStrength.strength">
+                                        {{ t(`settings.account.${passwordStrength.strength}`) }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- 确认密码 -->
+                            <div class="setting-item">
+                                <label class="setting-label">{{ t('settings.account.confirmPassword') }}</label>
+                                <input 
+                                    v-model="settingsData.confirmPassword" 
+                                    type="password"
+                                    class="setting-input"
+                                    :class="{ 'error': passwordError }"
+                                    :placeholder="t('settings.account.confirmPasswordPlaceholder')"
+                                    @input="checkPassword"
+                                />
+                                <div v-if="passwordError" class="error-text">{{ passwordError }}</div>
+                            </div>
+                        </div>
+
                         <!-- 通用设置 -->
                         <div v-show="activeCategory === 'general'" class="settings-section">
                             <h3 class="section-title">{{ t('settings.general.title') }}</h3>
@@ -167,7 +267,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
     CloseIcon,
@@ -175,8 +275,19 @@ import {
     ViewListIcon,
     Edit1Icon,
     UserCircleIcon,
-    ToolsIcon
+    ToolsIcon,
+    UserIcon,
+    HelpCircleIcon,
+    RefreshIcon
 } from 'tdesign-icons-vue-next'
+import {
+    generateUserId,
+    generateChineseName,
+    generateEnglishName,
+    generateAvatar,
+    validateUserId,
+    validatePassword
+} from '@/utils/accountHelper'
 
 const { t, locale } = useI18n()
 
@@ -194,6 +305,7 @@ const activeCategory = ref('general')
 
 // 分类列表
 const categories = [
+    { key: 'account', icon: UserIcon },
     { key: 'general', icon: SettingIcon },
     { key: 'appearance', icon: ViewListIcon },
     { key: 'editor', icon: Edit1Icon },
@@ -203,17 +315,40 @@ const categories = [
 
 // 设置数据
 const settingsData = reactive({
+    // 账户信息
+    userId: '',
+    firstName: '',
+    lastName: '',
+    avatar: '',
+    password: '',
+    confirmPassword: '',
+    // 通用设置
     language: 'zh-CN',
     autoSave: true,
     autoSaveInterval: 30,
+    // 外观设置
     theme: 'light',
     fontSize: 14,
     fontFamily: 'system',
+    // 编辑器设置
     defaultFormat: 'markdown',
     spellCheck: true,
+    // 协作设置
     showCursors: true,
     showPresence: true,
+    // 高级设置
     debugMode: false
+})
+
+// 密码验证错误
+const passwordError = ref('')
+const userIdError = ref('')
+
+// 计算密码强度
+const passwordStrength = computed(() => {
+    if (!settingsData.password) return null
+    const result = validatePassword(settingsData.password)
+    return result
 })
 
 // 监听 modelValue 变化
@@ -244,6 +379,28 @@ const loadSettings = () => {
     const savedLocale = localStorage.getItem('locale')
     if (savedLocale) {
         settingsData.language = savedLocale
+    }
+    
+    // 初始化账户信息（如果没有）
+    initializeAccount()
+}
+
+// 初始化账户信息
+const initializeAccount = () => {
+    if (!settingsData.userId) {
+        settingsData.userId = generateUserId()
+    }
+    
+    if (!settingsData.firstName || !settingsData.lastName) {
+        const name = settingsData.language === 'zh-CN' 
+            ? generateChineseName() 
+            : generateEnglishName()
+        settingsData.firstName = name.firstName
+        settingsData.lastName = name.lastName
+    }
+    
+    if (!settingsData.avatar) {
+        settingsData.avatar = generateAvatar(settingsData.userId)
     }
 }
 
@@ -288,6 +445,57 @@ const clearCache = () => {
     if (confirm(locale.value === 'zh-CN' ? '确定要清除缓存吗？' : 'Are you sure to clear cache?')) {
         localStorage.clear()
         alert(locale.value === 'zh-CN' ? '缓存已清除，请重启应用' : 'Cache cleared, please restart the app')
+    }
+}
+
+// 重新生成用户 ID
+const regenerateUserId = () => {
+    settingsData.userId = generateUserId()
+    settingsData.avatar = generateAvatar(settingsData.userId)
+    userIdError.value = ''
+}
+
+// 重新生成姓名
+const regenerateName = () => {
+    const name = settingsData.language === 'zh-CN' 
+        ? generateChineseName() 
+        : generateEnglishName()
+    settingsData.firstName = name.firstName
+    settingsData.lastName = name.lastName
+}
+
+// 更换头像
+const changeAvatar = () => {
+    // 使用时间戳作为 seed 生成新头像
+    const seed = `${settingsData.userId}-${Date.now()}`
+    settingsData.avatar = generateAvatar(seed)
+}
+
+// 验证用户 ID
+const checkUserId = () => {
+    if (!settingsData.userId) {
+        userIdError.value = ''
+        return
+    }
+    
+    if (!validateUserId(settingsData.userId)) {
+        userIdError.value = t('settings.account.errors.invalidUserId')
+    } else {
+        userIdError.value = ''
+    }
+}
+
+// 验证密码
+const checkPassword = () => {
+    if (!settingsData.password || !settingsData.confirmPassword) {
+        passwordError.value = ''
+        return
+    }
+    
+    if (settingsData.password !== settingsData.confirmPassword) {
+        passwordError.value = t('settings.account.errors.passwordMismatch')
+    } else {
+        passwordError.value = ''
     }
 }
 
@@ -450,6 +658,31 @@ applySettings()
     border-bottom: 1px solid var(--border-light);
 }
 
+.setting-item.userid-item {
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.setting-item.userid-item .label-with-help {
+    flex: none;
+}
+
+.setting-item.userid-item .input-with-button {
+    flex: 1;
+    max-width: 400px;
+}
+
+.setting-item.userid-item .error-text {
+    width: 100%;
+    margin-top: 8px;
+    margin-left: 0;
+}
+
+.setting-item.avatar-item {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
 .setting-item:last-child {
     border-bottom: none;
 }
@@ -459,6 +692,34 @@ applySettings()
     font-weight: 500;
     color: var(--text-primary);
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.label-with-help {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+}
+
+.help-icon-wrapper {
+    display: flex;
+    align-items: center;
+    cursor: help;
+}
+
+.help-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--text-tertiary);
+    margin-right: 100px;
+    transition: color 0.2s ease;
+}
+
+.help-icon-wrapper:hover .help-icon {
+    color: var(--accent-primary);
 }
 
 .setting-select,
@@ -477,6 +738,154 @@ applySettings()
 .setting-input:focus {
     border-color: var(--accent-primary);
     outline: none;
+}
+
+.setting-input.error {
+    border-color: #e53935;
+}
+
+/* ==================== 头像相关 ==================== */
+.avatar-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.avatar-preview {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid var(--accent-primary);
+    flex-shrink: 0;
+}
+
+.avatar-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.change-avatar-btn {
+    padding: 8px 16px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.change-avatar-btn:hover {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #fff;
+}
+
+/* ==================== 带按钮的输入框 ==================== */
+.input-with-button {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    max-width: 400px;
+}
+
+.input-with-button .setting-input {
+    flex: 1;
+    width: auto;
+}
+
+.icon-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.icon-btn:hover {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #fff;
+}
+
+.icon-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* ==================== 错误提示 ==================== */
+.error-text {
+    font-size: 0.75rem;
+    color: #e53935;
+    margin-top: 4px;
+}
+
+/* ==================== 姓名输入组 ==================== */
+.setting-item.name-group {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.name-inputs {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.name-field {
+    flex: 1;
+}
+
+.name-field .setting-input {
+    width: 100%;
+}
+
+/* ==================== 密码强度 ==================== */
+.password-strength {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 0.75rem;
+}
+
+.strength-label {
+    color: var(--text-secondary);
+}
+
+.strength-indicator {
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.strength-indicator.weak {
+    color: #e53935;
+    background: rgba(229, 57, 53, 0.1);
+}
+
+.strength-indicator.medium {
+    color: #ff9800;
+    background: rgba(255, 152, 0, 0.1);
+}
+
+.strength-indicator.strong {
+    color: #43a047;
+    background: rgba(67, 160, 71, 0.1);
 }
 
 /* ==================== 开关按钮 ==================== */

@@ -40,11 +40,39 @@
     "settings": {
         "title": "设置",
         "categories": {
+            "account": "账户",
             "general": "通用",
             "appearance": "外观",
             "editor": "编辑器",
             "collaboration": "协作",
             "advanced": "高级"
+        },
+        "account": {
+            "title": "账户设置",
+            "avatar": "头像",
+            "userId": "用户 ID",
+            "userIdPlaceholder": "输入用户 ID（8-16位，字母开头）",
+            "userIdHint": "类似微信号，用于登录和房间操作",
+            "name": "姓名",
+            "firstName": "名",
+            "lastName": "姓",
+            "password": "密码",
+            "passwordPlaceholder": "输入密码（至少8位）",
+            "confirmPassword": "确认密码",
+            "confirmPasswordPlaceholder": "再次输入密码",
+            "changeAvatar": "更换头像",
+            "generateRandom": "随机生成",
+            "regenerateId": "重新生成 ID",
+            "regenerateName": "重新生成姓名",
+            "passwordStrength": "密码强度",
+            "weak": "弱",
+            "medium": "中等",
+            "strong": "强",
+            "errors": {
+                "invalidUserId": "无效的用户 ID 格式",
+                "passwordMismatch": "两次密码输入不一致",
+                "passwordTooShort": "密码至少需要 8 个字符"
+            }
         },
         "general": {
             "title": "通用设置",

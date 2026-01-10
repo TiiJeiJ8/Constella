@@ -107,6 +107,7 @@ import {
 import SettingsPanel from '@/components/base/SettingsPanel.vue'
 import WindowControls from '@/components/base/WindowControls.vue'
 import { apiService } from '@/services/api'
+import { handleApiError } from '@/utils/errorHandler'
 
 const { t, locale } = useI18n()
 const emit = defineEmits(['navigate'])
@@ -221,8 +222,11 @@ async function connectToServer() {
                 console.log('Connected to:', normalizedUrl)
             }, 1500)
         } else {
-            // 连接失败，根据错误信息显示对应提示
-            if (result.message?.includes('timeout') || result.message?.includes('Timeout')) {
+            // 连接失败，使用错误处理工具获取本地化的错误消息
+            if (result.errorCode) {
+                // 如果有错误码，使用错误处理工具
+                connectionError.value = handleApiError(result)
+            } else if (result.message?.includes('timeout') || result.message?.includes('Timeout')) {
                 connectionError.value = t('home.serverInput.errors.timeout')
             } else if (result.message?.includes('reach') || result.message?.includes('fetch') || result.message?.includes('NetworkError')) {
                 connectionError.value = t('home.serverInput.errors.unreachable')

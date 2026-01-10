@@ -1,0 +1,21 @@
+{
+    "AUTH_MISSING_FIELDS": "Please fill in all required fields",
+    "AUTH_EMAIL_EXISTS": "This email is already registered",
+    "AUTH_USERNAME_EXISTS": "This username is already taken",
+    "AUTH_INVALID_CREDENTIALS": "Invalid email or password",
+    "AUTH_INVALID_TOKEN": "Invalid token",
+    "AUTH_TOKEN_REVOKED": "Token has been revoked",
+    "AUTH_TOKEN_EXPIRED": "Token has expired",
+    "AUTH_TOKEN_MISSING": "Token is missing",
+    "INTERNAL_ERROR": "Internal server error, please try again later",
+    "NOT_FOUND": "Resource not found",
+    "UNAUTHORIZED": "Authentication required",
+    "FORBIDDEN": "Permission denied",
+    "BAD_REQUEST": "Invalid request",
+    "USER_NOT_FOUND": "User not found",
+    "USER_ALREADY_EXISTS": "User already exists",
+    "ROOM_NOT_FOUND": "Room not found",
+    "ROOM_ACCESS_DENIED": "Access denied to this room",
+    "ROOM_INVALID_PASSWORD": "Invalid room password",
+    "ROOM_ALREADY_JOINED": "Already joined this room"
+}
