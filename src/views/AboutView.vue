@@ -84,14 +84,14 @@
                         <div class="authors-container">
                             <button class="author-item" @click="openAuthorGithub('TiiJeiJ8')">
                                 <div class="author-avatar">
-                                    <img src="https://github.com/TiiJeiJ8.png" :alt="t('about.authors.author1')" />
+                                    <img src="../assets/IMG/Author_TiiJeiJ8.jpg" :alt="t('about.authors.author1')" />
                                 </div>
                                 <span class="author-name">{{ t('about.authors.author1') }}</span>
                             </button>
                             <span class="author-separator">✖️</span>
                             <button class="author-item" @click="openAuthorGithub('Author2')">
                                 <div class="author-avatar">
-                                    <img src="https://github.com/577fkj.png" :alt="t('about.authors.author2')" />
+                                    <img src="../assets/IMG/Author_fkj577.jpg" :alt="t('about.authors.author2')" />
                                 </div>
                                 <span class="author-name">{{ t('about.authors.author2') }}</span>
                             </button>
