@@ -1,20 +1,10 @@
 <template>
     <div class="about-view">
-        <!-- 窗口控制按钮 -->
-        <div class="window-controls">
-            <button class="window-btn minimize-btn" @click="minimizeWindow" :title="t('window.minimize')">
-                <MinusIcon />
-            </button>
-            <button class="window-btn maximize-btn" @click="toggleMaximize" :title="t('window.maximize')">
-                <RectangleIcon />
-            </button>
-            <button class="window-btn close-btn" @click="closeWindow" :title="t('window.close')">
-                <CloseIcon />
-            </button>
-        </div>
+        <!-- 窗口控制组件 -->
+        <WindowControls />
 
         <!-- 返回按钮 -->
-        <button class="back-btn" @click="goBack" :title="t('about.backToHome')">
+        <button class="back-btn" :class="{ 'no-electron': !isElectron }" @click="goBack" :title="t('about.backToHome')">
             <ChevronLeftIcon />
             <span>{{ t('about.backToHome') }}</span>
         </button>
@@ -103,39 +93,19 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-    MinusIcon,
-    RectangleIcon,
-    CloseIcon,
     ChevronLeftIcon,
     LogoGithubIcon
 } from 'tdesign-icons-vue-next'
+import WindowControls from '@/components/base/WindowControls.vue'
 
 const { t, locale } = useI18n()
 const emit = defineEmits(['navigate'])
 
+const isElectron = ref(!!window.electron)
 const currentLocale = computed(() => locale.value)
-
-// 窗口控制函数
-function minimizeWindow() {
-    if (window.electron?.minimize) {
-        window.electron.minimize()
-    }
-}
-
-function toggleMaximize() {
-    if (window.electron?.toggleMaximize) {
-        window.electron.toggleMaximize()
-    }
-}
-
-function closeWindow() {
-    if (window.electron?.close) {
-        window.electron.close()
-    }
-}
 
 function goBack() {
     emit('navigate', 'home')
@@ -159,42 +129,6 @@ function openGithub() {
     overflow: hidden;
 }
 
-/* ==================== 窗口控制按钮 ==================== */
-.window-controls {
-    position: fixed;
-    top: 0;
-    right: 0;
-    display: flex;
-    z-index: 1001;
-    -webkit-app-region: no-drag;
-}
-
-.window-btn {
-    width: 46px;
-    height: 32px;
-    background: transparent;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s ease;
-    color: var(--text-primary);
-}
-
-.window-btn svg {
-    width: 14px;
-    height: 14px;
-}
-
-.window-btn:hover {
-    background: var(--bg-tertiary);
-}
-
-.close-btn:hover {
-    background: #e81123;
-    color: #fff;
-}
-
 /* ==================== 返回按钮 ==================== */
 .back-btn {
     position: fixed;
@@ -214,6 +148,14 @@ function openGithub() {
     color: var(--text-primary);
     font-size: 0.9rem;
     font-weight: 500;
+}
+
+.back-btn.no-electron {
+    top: 12px;
+}
+
+.back-btn.no-electron {
+    top: 12px;
 }
 
 .back-btn:hover {

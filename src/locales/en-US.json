@@ -26,7 +26,42 @@
         "close": "Close"
     },
     "settings": {
-        "title": "Settings"
+        "title": "Settings",
+        "categories": {
+            "general": "General",
+            "appearance": "Appearance",
+            "editor": "Editor",
+            "collaboration": "Collaboration",
+            "advanced": "Advanced"
+        },
+        "general": {
+            "title": "General Settings",
+            "language": "Language",
+            "autoSave": "Auto Save",
+            "autoSaveInterval": "Auto Save Interval (seconds)"
+        },
+        "appearance": {
+            "title": "Appearance Settings",
+            "theme": "Theme",
+            "fontSize": "Font Size",
+            "fontFamily": "Font Family"
+        },
+        "editor": {
+            "title": "Editor Settings",
+            "defaultFormat": "Default Format",
+            "spellCheck": "Spell Check"
+        },
+        "collaboration": {
+            "title": "Collaboration Settings",
+            "showCursors": "Show Other Users' Cursors",
+            "showPresence": "Show Online Status"
+        },
+        "advanced": {
+            "title": "Advanced Settings",
+            "debugMode": "Debug Mode",
+            "clearCache": "Clear Cache"
+        },
+        "close": "Close"
     },
     "about": {
         "title": "About Constella",

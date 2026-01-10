@@ -12,6 +12,8 @@ function createWindow() {
     // 隐藏默认边框
     transparent: false,
     backgroundColor: "#ffffff",
+    roundedCorners: true,
+    // 启用圆角
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

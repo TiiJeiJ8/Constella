@@ -26,7 +26,42 @@
         "close": "关闭"
     },
     "settings": {
-        "title": "设置"
+        "title": "设置",
+        "categories": {
+            "general": "通用",
+            "appearance": "外观",
+            "editor": "编辑器",
+            "collaboration": "协作",
+            "advanced": "高级"
+        },
+        "general": {
+            "title": "通用设置",
+            "language": "语言",
+            "autoSave": "自动保存",
+            "autoSaveInterval": "自动保存间隔（秒）"
+        },
+        "appearance": {
+            "title": "外观设置",
+            "theme": "主题",
+            "fontSize": "字体大小",
+            "fontFamily": "字体"
+        },
+        "editor": {
+            "title": "编辑器设置",
+            "defaultFormat": "默认格式",
+            "spellCheck": "拼写检查"
+        },
+        "collaboration": {
+            "title": "协作设置",
+            "showCursors": "显示其他用户光标",
+            "showPresence": "显示在线状态"
+        },
+        "advanced": {
+            "title": "高级设置",
+            "debugMode": "调试模式",
+            "clearCache": "清除缓存"
+        },
+        "close": "关闭"
     },
     "about": {
         "title": "关于 Constella",
