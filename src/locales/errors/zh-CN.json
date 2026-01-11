@@ -1,8 +1,8 @@
 {
     "AUTH_MISSING_FIELDS": "请填写所有必填字段",
-    "AUTH_EMAIL_EXISTS": "该邮箱已被注册",
-    "AUTH_USERNAME_EXISTS": "该用户名已被使用",
-    "AUTH_INVALID_CREDENTIALS": "邮箱或密码错误",
+    "AUTH_EMAIL_EXISTS": "该账户已存在",
+    "AUTH_USERNAME_EXISTS": "该用户ID已被使用",
+    "AUTH_INVALID_CREDENTIALS": "用户ID或密码错误",
     "AUTH_INVALID_TOKEN": "无效的令牌",
     "AUTH_TOKEN_REVOKED": "令牌已被撤销",
     "AUTH_TOKEN_EXPIRED": "令牌已过期",

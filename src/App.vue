@@ -1,6 +1,7 @@
 <template>
     <Transition name="slide" mode="out-in">
         <HomeView v-if="currentView === 'home'" @navigate="handleNavigate" />
+        <LoginView v-else-if="currentView === 'login'" @navigate="handleNavigate" />
         <AboutView v-else-if="currentView === 'about'" @navigate="handleNavigate" />
     </Transition>
 </template>
@@ -8,6 +9,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import HomeView from './views/HomeView.vue'
+import LoginView from './views/LoginView.vue'
 import AboutView from './views/AboutView.vue'
 
 const currentView = ref('home')

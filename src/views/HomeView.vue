@@ -218,8 +218,8 @@ async function connectToServer() {
             // 显示成功提示
             setTimeout(() => {
                 connectionSuccess.value = false
-                // TODO: 导航到下一个页面（房间列表/登录）
-                console.log('Connected to:', normalizedUrl)
+                // 跳转到登录页
+                emit('navigate', 'login')
             }, 1500)
         } else {
             // 连接失败，使用错误处理工具获取本地化的错误消息

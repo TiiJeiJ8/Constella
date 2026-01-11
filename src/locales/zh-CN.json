@@ -105,6 +105,22 @@
         },
         "close": "关闭"
     },
+    "login": {
+        "title": "登录",
+        "subtitle": "使用您的账户信息登录",
+        "serverConnected": "已连接服务器",
+        "password": "密码",
+        "passwordPlaceholder": "请输入密码",
+        "hint": "如果是首次登录，系统将自动为您创建账户",
+        "submit": "登录 / 注册",
+        "success": "登录成功！",
+        "controls": {
+            "back": "返回"
+        },
+        "errors": {
+            "unknown": "登录失败，请重试"
+        }
+    },
     "about": {
         "title": "关于 Constella",
         "subtitle": "开源 ⦁ 协作 ⦁ 无限可能",

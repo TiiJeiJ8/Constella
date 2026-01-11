@@ -105,6 +105,22 @@
         },
         "close": "Close"
     },
+    "login": {
+        "title": "Login",
+        "subtitle": "Sign in with your account",
+        "serverConnected": "Connected to",
+        "password": "Password",
+        "passwordPlaceholder": "Enter your password",
+        "hint": "If this is your first time, an account will be created automatically",
+        "submit": "Login / Register",
+        "success": "Login successful!",
+        "controls": {
+            "back": "Back"
+        },
+        "errors": {
+            "unknown": "Login failed, please try again"
+        }
+    },
     "about": {
         "title": "About Constella",
         "subtitle": "Open Source ⦁ Collaboration ⦁ Infinite Possibilities",
