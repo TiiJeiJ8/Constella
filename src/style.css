@@ -2,7 +2,7 @@
 :root {
     /* 浅色主题（默认） */
     --bg-primary: #ffffff;
-    --bg-secondary: #f5f7fa;
+    --bg-secondary: rgba(255, 255, 255, 0.7);
     --bg-tertiary: #ebeef5;
 
     --text-primary: #2c3e50;
@@ -12,6 +12,8 @@
     --border-color: #dcdfe6;
     --border-light: #e4e7ed;
 
+    --color-primary: #667eea;
+    --color-primary-alpha: rgba(102, 126, 234, 0.15);
     --accent-primary: #409eff;
     --accent-hover: #66b1ff;
     --accent-active: #3a8ee6;
@@ -24,16 +26,18 @@
 /* 深色主题 */
 html[data-theme='dark'] {
     --bg-primary: #1a1a1a;
-    --bg-secondary: #242424;
+    --bg-secondary: rgba(30, 30, 30, 0.8);
     --bg-tertiary: #2d2d2d;
 
     --text-primary: #e4e7ed;
     --text-secondary: #c0c4cc;
     --text-tertiary: #909399;
 
-    --border-color: #3a3a3a;
+    --border-color: rgba(255, 255, 255, 0.1);
     --border-light: #2d2d2d;
 
+    --color-primary: #667eea;
+    --color-primary-alpha: rgba(102, 126, 234, 0.2);
     --accent-primary: #409eff;
     --accent-hover: #66b1ff;
     --accent-active: #3a8ee6;
