@@ -207,6 +207,8 @@ async function handleLogin() {
         // 保存用户信息
         if (result.data?.user) {
             localStorage.setItem('user', JSON.stringify(result.data.user))
+            // 单独保存 user_id 方便快速访问
+            localStorage.setItem('user_id', result.data.user.id.toString())
         }
 
         loginSuccess.value = true

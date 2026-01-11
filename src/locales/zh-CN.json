@@ -31,11 +31,135 @@
     "language": {
         "switch": "切换语言"
     },
+    "common": {
+        "confirm": "确认",
+        "cancel": "取消",
+        "retry": "重试",
+        "errors": {
+            "userNotLoggedIn": "请先登录",
+            "tokenExpired": "登录已过期，请重新登录",
+            "tokenInvalid": "登录信息无效，请重新登录",
+            "unauthorized": "未授权，请先登录",
+            "networkError": "网络错误，请稍后重试"
+        }
+    },
     "window": {
         "minimize": "最小化",
         "maximize": "最大化",
         "restore": "还原",
         "close": "关闭"
+    },
+    "dock": {
+        "rooms": "房间列表",
+        "recent": "最近使用",
+        "favorites": "我的收藏",
+        "notifications": "通知中心",
+        "language": "切换语言",
+        "theme": "切换主题",
+        "settings": "设置",
+        "exit": "退出",
+        "logout": "退出登录",
+        "disconnect": "断开连接",
+        "logoutConfirm": {
+            "title": "退出登录",
+            "message": "确定要退出登录吗？您将返回到登录页面。",
+            "confirm": "确定退出"
+        },
+        "disconnectConfirm": {
+            "title": "断开连接",
+            "message": "确定要断开与服务器的连接吗？您将返回到首页。",
+            "confirm": "确定断开"
+        }
+    },
+    "topbar": {
+        "search": "搜索",
+        "searchPlaceholder": "搜索房间...",
+        "createRoom": "创建房间",
+        "tabs": {
+            "all": "全部房间",
+            "my": "我的房间",
+            "joined": "已加入",
+            "public": "公开房间"
+        },
+        "tabsShort": {
+            "all": "全部",
+            "my": "我的",
+            "joined": "已加入",
+            "public": "公开"
+        }
+    },
+    "rooms": {
+        "noDescription": "暂无描述",
+        "loading": "加载中...",
+        "empty": "还没有房间",
+        "createFirst": "创建第一个房间",
+        "private": "私密房间",
+        "members": "成员",
+        "errors": {
+            "loadFailed": "加载房间列表失败"
+        },
+        "roles": {
+            "owner": "房主",
+            "admin": "管理员",
+            "member": "成员"
+        },
+        "time": {
+            "justNow": "刚刚",
+            "minutesAgo": "{n} 分钟前",
+            "hoursAgo": "{n} 小时前",
+            "daysAgo": "{n} 天前"
+        },
+        "delete": {
+            "deleteRoom": "删除房间",
+            "title": "删除房间",
+            "warning": "警告：此操作不可恢复",
+            "warningDesc": "删除房间后，所有房间数据、成员和内容将被永久删除，无法恢复。",
+            "roomName": "房间名称",
+            "memberCount": "成员数量",
+            "privacy": "隐私状态",
+            "passwordRequired": "请输入房间密码以确认删除",
+            "enterPassword": "输入房间密码",
+            "passwordEmpty": "请输入房间密码",
+            "confirm": "确认删除",
+            "deleting": "删除中...",
+            "failed": "删除失败",
+            "delete": "删除"
+        }
+    },
+    "createRoom": {
+        "title": "创建房间",
+        "name": "房间名称",
+        "namePlaceholder": "输入房间名称",
+        "description": "房间描述",
+        "descriptionPlaceholder": "简单描述一下这个房间的用途（可选）",
+        "icon": "房间图标",
+        "private": "私密房间",
+        "privateHint": "需要密码才能加入",
+        "password": "房间密码",
+        "passwordPlaceholder": "设置一个安全密码",
+        "create": "创建",
+        "creating": "创建中...",
+        "errors": {
+            "nameRequired": "请输入房间名称",
+            "nameTooShort": "房间名称至少需要2个字符",
+            "passwordRequired": "私密房间需要设置密码",
+            "passwordTooShort": "密码至少需要4个字符",
+            "createFailed": "创建房间失败，请重试"
+        }
+    },
+    "joinRoom": {
+        "title": "加入房间",
+        "password": "房间密码",
+        "passwordPlaceholder": "输入房间密码",
+        "join": "加入",
+        "joining": "加入中...",
+        "errors": {
+            "passwordRequired": "请输入房间密码",
+            "roomNotFound": "房间不存在",
+            "wrongPassword": "密码错误，请重试",
+            "alreadyMember": "您已经是房间成员",
+            "joinFailed": "加入房间失败，请重试"
+        }
     },
     "settings": {
         "title": "设置",

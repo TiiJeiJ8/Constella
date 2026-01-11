@@ -31,11 +31,135 @@
     "language": {
         "switch": "Switch Language"
     },
+    "common": {
+        "confirm": "Confirm",
+        "cancel": "Cancel",
+        "retry": "Retry",
+        "errors": {
+            "userNotLoggedIn": "Please log in first",
+            "tokenExpired": "Session expired, please log in again",
+            "tokenInvalid": "Invalid session, please log in again",
+            "unauthorized": "Unauthorized, please log in first",
+            "networkError": "Network error, please try again later"
+        }
+    },
     "window": {
         "minimize": "Minimize",
         "maximize": "Maximize",
         "restore": "Restore",
         "close": "Close"
+    },
+    "dock": {
+        "rooms": "Rooms",
+        "recent": "Recent",
+        "favorites": "Favorites",
+        "notifications": "Notifications",
+        "language": "Switch Language",
+        "theme": "Switch Theme",
+        "settings": "Settings",
+        "exit": "Exit",
+        "logout": "Logout",
+        "disconnect": "Disconnect",
+        "logoutConfirm": {
+            "title": "Logout",
+            "message": "Are you sure you want to logout? You will be redirected to the login page.",
+            "confirm": "Confirm Logout"
+        },
+        "disconnectConfirm": {
+            "title": "Disconnect",
+            "message": "Are you sure you want to disconnect from the server? You will be redirected to the home page.",
+            "confirm": "Confirm Disconnect"
+        }
+    },
+    "topbar": {
+        "search": "Search",
+        "searchPlaceholder": "Search rooms...",
+        "createRoom": "Create Room",
+        "tabs": {
+            "all": "All Rooms",
+            "my": "My Rooms",
+            "joined": "Joined",
+            "public": "Public Rooms"
+        },
+        "tabsShort": {
+            "all": "All",
+            "my": "My",
+            "joined": "Joined",
+            "public": "Public"
+        }
+    },
+    "rooms": {
+        "noDescription": "No description",
+        "loading": "Loading...",
+        "empty": "No rooms yet",
+        "createFirst": "Create your first room",
+        "private": "Private Room",
+        "members": "members",
+        "errors": {
+            "loadFailed": "Failed to load rooms"
+        },
+        "roles": {
+            "owner": "Owner",
+            "admin": "Admin",
+            "member": "Member"
+        },
+        "time": {
+            "justNow": "Just now",
+            "minutesAgo": "{n} minutes ago",
+            "hoursAgo": "{n} hours ago",
+            "daysAgo": "{n} days ago"
+        },
+        "delete": {
+            "deleteRoom": "Delete Room",
+            "title": "Delete Room",
+            "warning": "Warning: This action cannot be undone",
+            "warningDesc": "Once deleted, all room data, members, and content will be permanently removed and cannot be recovered.",
+            "roomName": "Room Name",
+            "memberCount": "Member Count",
+            "privacy": "Privacy",
+            "passwordRequired": "Enter room password to confirm deletion",
+            "enterPassword": "Enter room password",
+            "passwordEmpty": "Please enter room password",
+            "confirm": "Confirm Delete",
+            "deleting": "Deleting...",
+            "failed": "Delete failed",
+            "delete": "Delete"
+        }
+    },
+    "createRoom": {
+        "title": "Create Room",
+        "name": "Room Name",
+        "namePlaceholder": "Enter room name",
+        "description": "Description",
+        "descriptionPlaceholder": "Briefly describe what this room is for (optional)",
+        "icon": "Room Icon",
+        "private": "Private Room",
+        "privateHint": "Requires password to join",
+        "password": "Room Password",
+        "passwordPlaceholder": "Set a secure password",
+        "create": "Create",
+        "creating": "Creating...",
+        "errors": {
+            "nameRequired": "Please enter a room name",
+            "nameTooShort": "Room name must be at least 2 characters",
+            "passwordRequired": "Private rooms require a password",
+            "passwordTooShort": "Password must be at least 4 characters",
+            "createFailed": "Failed to create room, please try again"
+        }
+    },
+    "joinRoom": {
+        "title": "Join Room",
+        "password": "Room Password",
+        "passwordPlaceholder": "Enter room password",
+        "join": "Join",
+        "joining": "Joining...",
+        "errors": {
+            "passwordRequired": "Please enter room password",
+            "roomNotFound": "Room not found",
+            "wrongPassword": "Wrong password, please try again",
+            "alreadyMember": "You are already a member",
+            "joinFailed": "Failed to join room, please try again"
+        }
     },
     "settings": {
         "title": "Settings",

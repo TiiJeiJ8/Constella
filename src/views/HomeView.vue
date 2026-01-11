@@ -24,7 +24,7 @@
         </div>
 
         <!-- 入场动画容器 -->
-        <div class="intro-animation" :class="{ 'fade-out': !showIntro }">
+        <div class="intro-animation" :class="{ 'fade-out': !showIntro }" style="user-select: none;">
             <div class="logo-text">
                 <span v-for="(char, index) in logoChars" :key="index" class="char"
                     :style="{ animationDelay: `${index * 0.1}s` }">
