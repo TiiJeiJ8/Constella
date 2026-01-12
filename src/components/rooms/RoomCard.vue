@@ -4,6 +4,11 @@
         <div class="card-body" @click="handleClick">
             <!-- 卡片头部 -->
             <div class="card-header">
+                <!-- 房间图标 -->
+                <div v-if="roomIcon" class="room-icon">
+                    {{ roomIcon }}
+                </div>
+                
                 <div class="room-info">
                     <h3 class="room-name">{{ room.name }}</h3>
                     <div class="room-meta">
@@ -74,6 +79,11 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['click', 'delete'])
+
+// 房间图标
+const roomIcon = computed(() => {
+    return props.room.settings?.appearance?.icon || null
+})
 
 // 是否显示删除按钮
 const showDeleteButton = computed(() => {
@@ -209,6 +219,28 @@ function formatTime(timestamp) {
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 12px;
+    gap: 12px;
+}
+
+.room-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, rgba(103, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    transition: transform 0.3s ease;
+}
+
+.room-card:hover .room-icon {
+    transform: scale(1.1);
+}
+
+.dark .room-icon {
+    background: linear-gradient(135deg, rgba(103, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
 }
 
 .room-info {

@@ -12,7 +12,7 @@
                 <div class="dialog-body">
                     <!-- 房间信息 -->
                     <div v-if="room" class="room-info">
-                        <div class="room-icon">{{ room.icon || '🔒' }}</div>
+                        <div class="room-icon">{{ roomIcon }}</div>
                         <div class="room-details">
                             <h4 class="room-name">{{ room.name }}</h4>
                             <p class="room-meta">
@@ -58,7 +58,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { apiService } from '@/services/api'
 
@@ -76,6 +76,11 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue', 'joined'])
+
+// 房间图标
+const roomIcon = computed(() => {
+    return props.room?.settings?.appearance?.icon || '🔒'
+})
 
 // 状态
 const password = ref('')
