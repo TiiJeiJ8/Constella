@@ -299,8 +299,8 @@ async function handleRoomClick(room) {
     }
     
     // 跳转到画布页面
-    // TODO: 创建 CanvasView 后实现路由跳转
-    console.log('进入房间:', room)
+    console.log('[Rooms] Entering room:', room.id)
+    emit('navigate', 'canvas', { roomId: room.id })
 }
 
 // 房间加入成功
@@ -308,11 +308,8 @@ function handleRoomJoined(room) {
     // 重新加载房间列表
     loadRooms()
     // 进入房间
-    console.log('成功加入房间，准备进入:', room)
-    // TODO: 跳转到画布页面
-    // TODO: 创建 CanvasView 后实现路由跳转
-    console.log('进入房间:', room)
-    // router.push({ name: 'canvas', params: { roomId: room.id } })
+    console.log('[Rooms] Successfully joined room:', room.id)
+    emit('navigate', 'canvas', { roomId: room.id })
 }
 
 // 处理删除房间点击

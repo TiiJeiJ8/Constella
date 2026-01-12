@@ -21,6 +21,21 @@
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
     --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
+
+    /* Canvas 专用变量 - 浅色主题 */
+    --canvas-bg: #f5f7fa;
+    --canvas-grid-color: #e4e7ed;
+    --canvas-grid-dot-color: #dcdfe6;
+    --canvas-node-bg: #ffffff;
+    --canvas-node-border: #dcdfe6;
+    --canvas-node-shadow: rgba(0, 0, 0, 0.1);
+    --canvas-edge-default: #909399;
+    --canvas-edge-hover: #606266;
+    --canvas-selection-stroke: #667eea;
+    --canvas-selection-fill: rgba(102, 126, 234, 0.1);
+    --canvas-panel-bg: rgba(255, 255, 255, 0.95);
+    --canvas-toolbar-bg: rgba(255, 255, 255, 0.9);
+    --canvas-statusbar-bg: rgba(255, 255, 255, 0.85);
 }
 
 /* 深色主题 */
@@ -45,6 +60,21 @@ html[data-theme='dark'] {
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+    /* Canvas 专用变量 - 深色主题 */
+    --canvas-bg: #1a1a1a;
+    --canvas-grid-color: rgba(255, 255, 255, 0.05);
+    --canvas-grid-dot-color: rgba(255, 255, 255, 0.08);
+    --canvas-node-bg: #2d2d2d;
+    --canvas-node-border: rgba(255, 255, 255, 0.1);
+    --canvas-node-shadow: rgba(0, 0, 0, 0.5);
+    --canvas-edge-default: #c0c4cc;
+    --canvas-edge-hover: #e4e7ed;
+    --canvas-selection-stroke: #667eea;
+    --canvas-selection-fill: rgba(102, 126, 234, 0.2);
+    --canvas-panel-bg: rgba(30, 30, 30, 0.95);
+    --canvas-toolbar-bg: rgba(30, 30, 30, 0.9);
+    --canvas-statusbar-bg: rgba(30, 30, 30, 0.85);
 }
 
 /* ==================== 全局样式重置 ==================== */

@@ -3,6 +3,7 @@
             <HomeView v-if="currentView === 'home'" @navigate="handleNavigate" />
             <LoginView v-else-if="currentView === 'login'" @navigate="handleNavigate" />
             <RoomsView v-else-if="currentView === 'rooms'" @navigate="handleNavigate" />
+            <CanvasView v-else-if="currentView === 'canvas'" :room-id="currentRoomId" @navigate="handleNavigate" />
             <AboutView v-else-if="currentView === 'about'" @navigate="handleNavigate" />
         </Transition>
 
@@ -21,11 +22,13 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import HomeView from './views/HomeView.vue'
 import LoginView from './views/LoginView.vue'
 import RoomsView from './views/RoomsView.vue'
+import CanvasView from './views/CanvasView.vue'
 import AboutView from './views/AboutView.vue'
 import Toast from './components/base/Toast.vue'
 import { apiService } from './services/api'
 
 const currentView = ref('home')
+const currentRoomId = ref('')
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastType = ref('info')
@@ -120,12 +123,18 @@ function handleTokenExpired() {
     }, 1500)
 }
 
-function handleNavigate(view) {
+function handleNavigate(view, params) {
     // 暂时只支持这些视图，其他的保持在 rooms
-    const supportedViews = ['home', 'login', 'rooms', 'about']
+    const supportedViews = ['home', 'login', 'rooms', 'canvas', 'about']
     
     if (supportedViews.includes(view)) {
         currentView.value = view
+        
+        // 如果是 canvas 视图，保存 roomId
+        if (view === 'canvas' && params?.roomId) {
+            currentRoomId.value = params.roomId
+            console.log('[App] Navigating to canvas, roomId:', params.roomId)
+        }
         
         // 如果导航到登录页，停止 Token 刷新
         if (view === 'login' || view === 'home') {

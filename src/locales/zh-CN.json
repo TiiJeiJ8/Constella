@@ -147,6 +147,56 @@
             "createFailed": "创建房间失败，请重试"
         }
     },
+    "canvas": {
+        "loading": "加载画布中...",
+        "loadError": "加载画布失败",
+        "permissionDenied": "权限不足",
+        "toolbar": {
+            "select": "选择工具",
+            "pan": "抓手工具",
+            "node": "创建节点",
+            "edge": "创建连线",
+            "undo": "撤销",
+            "redo": "重做",
+            "zoomIn": "放大",
+            "zoomOut": "缩小",
+            "fitView": "适应视图"
+        },
+        "panels": {
+            "layers": "图层",
+            "properties": "属性",
+            "assets": "资源",
+            "history": "历史"
+        },
+        "statusBar": {
+            "zoom": "缩放",
+            "position": "位置",
+            "selected": "已选择",
+            "nodes": "个节点",
+            "syncing": "同步中",
+            "synced": "已同步",
+            "offline": "离线",
+            "connecting": "连接中"
+        },
+        "topBar": {
+            "roomTitle": "房间",
+            "save": "保存",
+            "export": "导出",
+            "snapshot": "快照",
+            "share": "分享",
+            "settings": "设置",
+            "members": "成员",
+            "exitRoom": "退出房间"
+        },
+        "errors": {
+            "loadFailed": "加载画布失败",
+            "syncFailed": "同步失败",
+            "saveFailed": "保存失败",
+            "exportFailed": "导出失败",
+            "permissionDenied": "您没有权限执行此操作",
+            "connectionLost": "与服务器的连接已断开"
+        }
+    },
     "joinRoom": {
         "title": "加入房间",
         "password": "房间密码",

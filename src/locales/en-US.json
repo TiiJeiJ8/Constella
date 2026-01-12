@@ -147,6 +147,56 @@
             "createFailed": "Failed to create room, please try again"
         }
     },
+    "canvas": {
+        "loading": "Loading canvas...",
+        "loadError": "Failed to load canvas",
+        "permissionDenied": "Permission denied",
+        "toolbar": {
+            "select": "Select Tool",
+            "pan": "Pan Tool",
+            "node": "Create Node",
+            "edge": "Create Edge",
+            "undo": "Undo",
+            "redo": "Redo",
+            "zoomIn": "Zoom In",
+            "zoomOut": "Zoom Out",
+            "fitView": "Fit View"
+        },
+        "panels": {
+            "layers": "Layers",
+            "properties": "Properties",
+            "assets": "Assets",
+            "history": "History"
+        },
+        "statusBar": {
+            "zoom": "Zoom",
+            "position": "Position",
+            "selected": "Selected",
+            "nodes": "nodes",
+            "syncing": "Syncing",
+            "synced": "Synced",
+            "offline": "Offline",
+            "connecting": "Connecting"
+        },
+        "topBar": {
+            "roomTitle": "Room",
+            "save": "Save",
+            "export": "Export",
+            "snapshot": "Snapshot",
+            "share": "Share",
+            "settings": "Settings",
+            "members": "Members",
+            "exitRoom": "Exit Room"
+        },
+        "errors": {
+            "loadFailed": "Failed to load canvas",
+            "syncFailed": "Sync failed",
+            "saveFailed": "Save failed",
+            "exportFailed": "Export failed",
+            "permissionDenied": "You don't have permission to perform this action",
+            "connectionLost": "Connection to server lost"
+        }
+    },
     "joinRoom": {
         "title": "Join Room",
         "password": "Room Password",
