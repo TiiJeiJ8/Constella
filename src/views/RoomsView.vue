@@ -136,7 +136,7 @@ const activeTab = ref('all')
 
 // 定时刷新
 let refreshInterval = null
-const REFRESH_INTERVAL = 30000 // 30秒刷新一次
+const REFRESH_INTERVAL = 5000 // 5秒刷新一次
 
 // 加载房间列表
 async function loadRooms(silent = false) {
