@@ -1,5 +1,9 @@
 import { ref } from 'vue'
 import * as Y from 'yjs'
+import type { ContentKind, NodeContent, DisplayMode } from '../plugins'
+
+// 重新导出类型
+export type { NodeContent, ContentKind, DisplayMode }
 
 /**
  * 节点数据结构（与 Yjs 同步）
@@ -12,10 +16,11 @@ export interface CanvasNode {
     height: number
     fill: string
     stroke: string
-    text: string
+    content: NodeContent
     rotation?: number
     scaleX?: number
     scaleY?: number
+    zIndex?: number  // 图层（数字越大越在上面）
 }
 
 /**
@@ -25,6 +30,10 @@ export interface RenderNode {
     id: string
     x: number
     y: number
+    width: number
+    height: number
+    content: NodeContent
+    zIndex: number  // 图层
     rectConfig: {
         x: number
         y: number
@@ -38,23 +47,15 @@ export interface RenderNode {
         shadowBlur: number
         shadowOffset: { x: number; y: number }
     }
-    textConfig: {
-        x: number
-        y: number
-        width: number
-        text: string
-        fontSize: number
-        fontFamily: string
-        fill: string
-        align: string
-        verticalAlign: string
-        listening: boolean
-    }
 }
 
 interface UseYjsNodesOptions {
     getDoc: () => Y.Doc | null
     onNodesChange?: (nodes: RenderNode[]) => void
+    /**
+     * 额外需要 UndoManager 跟踪的 Y.Map（如 edges）
+     */
+    additionalTrackedMaps?: () => Y.Map<any>[]
 }
 
 /**
@@ -62,7 +63,7 @@ interface UseYjsNodesOptions {
  * 管理节点数据与 Yjs Y.Map 的双向绑定
  */
 export function useYjsNodes(options: UseYjsNodesOptions) {
-    const { getDoc, onNodesChange } = options
+    const { getDoc, onNodesChange, additionalTrackedMaps } = options
 
     // 本地节点状态（用于渲染）
     const nodes = ref<RenderNode[]>([])
@@ -87,6 +88,10 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
             id: node.id,
             x: node.x,
             y: node.y,
+            width: node.width,
+            height: node.height,
+            content: node.content,
+            zIndex: node.zIndex ?? 0,
             rectConfig: {
                 x: 0,
                 y: 0,
@@ -99,18 +104,6 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
                 shadowColor: 'rgba(0,0,0,0.2)',
                 shadowBlur: 10,
                 shadowOffset: { x: 0, y: 2 }
-            },
-            textConfig: {
-                x: 0,
-                y: 30,
-                width: node.width,
-                text: node.text,
-                fontSize: 14,
-                fontFamily: 'Arial',
-                fill: '#ffffff',
-                align: 'center',
-                verticalAlign: 'middle',
-                listening: false
             }
         }
     }
@@ -125,6 +118,18 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
 
         nodesMap.forEach((yNode, nodeId) => {
             if (yNode instanceof Y.Map) {
+                // 读取 content，兼容旧数据
+                let content = yNode.get('content')
+                if (!content) {
+                    // 兼容旧的 text 字段，转为 markdown
+                    const text = yNode.get('text')
+                    if (text) {
+                        content = { kind: 'markdown', data: text }
+                    } else {
+                        content = { kind: 'blank', data: '' }
+                    }
+                }
+
                 const node: CanvasNode = {
                     id: nodeId,
                     x: yNode.get('x') || 0,
@@ -133,10 +138,11 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
                     height: yNode.get('height') || 100,
                     fill: yNode.get('fill') || '#667eea',
                     stroke: yNode.get('stroke') || '#5568d3',
-                    text: yNode.get('text') || '新节点',
+                    content: content,
                     rotation: yNode.get('rotation'),
                     scaleX: yNode.get('scaleX'),
-                    scaleY: yNode.get('scaleY')
+                    scaleY: yNode.get('scaleY'),
+                    zIndex: yNode.get('zIndex') ?? 0
                 }
                 newNodes.push(toRenderNode(node))
             }
@@ -178,8 +184,15 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
         nodesMap = doc.getMap<Y.Map<any>>('nodes')
         isInitialized.value = true
 
-        // 创建 UndoManager
-        undoManager = new Y.UndoManager(nodesMap, {
+        // 获取额外需要跟踪的 Y.Map
+        const trackedMaps: Y.Map<any>[] = [nodesMap]
+        if (additionalTrackedMaps) {
+            const additional = additionalTrackedMaps()
+            trackedMaps.push(...additional)
+        }
+
+        // 创建 UndoManager，跟踪所有 Map（节点和连线）
+        undoManager = new Y.UndoManager(trackedMaps, {
             // 500ms 内的操作合并为一个 undo 步骤
             captureTimeout: 500
         })
@@ -196,35 +209,26 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
         if (nodesMap.size === 0) {
             console.log('[useYjsNodes] Initializing with sample nodes')
             doc.transact(() => {
+                // 创建示例空白节点
                 createNode({
                     id: 'node-1',
                     x: 100,
                     y: 100,
-                    width: 150,
-                    height: 100,
+                    width: 180,
+                    height: 120,
                     fill: '#667eea',
                     stroke: '#5568d3',
-                    text: '示例节点 1'
+                    content: { kind: 'blank', data: '' }
                 })
                 createNode({
                     id: 'node-2',
                     x: 350,
                     y: 200,
-                    width: 150,
-                    height: 100,
+                    width: 180,
+                    height: 120,
                     fill: '#48bb78',
                     stroke: '#38a169',
-                    text: '示例节点 2'
-                })
-                createNode({
-                    id: 'node-3',
-                    x: 200,
-                    y: 350,
-                    width: 150,
-                    height: 100,
-                    fill: '#f56565',
-                    stroke: '#e53e3e',
-                    text: '示例节点 3'
+                    content: { kind: 'blank', data: '' }
                 })
             })
         } else {
@@ -246,7 +250,7 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
         yNode.set('height', node.height)
         yNode.set('fill', node.fill)
         yNode.set('stroke', node.stroke)
-        yNode.set('text', node.text)
+        yNode.set('content', node.content)
         if (node.rotation !== undefined) yNode.set('rotation', node.rotation)
         if (node.scaleX !== undefined) yNode.set('scaleX', node.scaleX)
         if (node.scaleY !== undefined) yNode.set('scaleY', node.scaleY)
@@ -326,6 +330,54 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
     }
 
     /**
+     * 更新节点内容
+     */
+    function updateNodeContent(nodeId: string, data: string) {
+        if (!doc || !nodesMap) return
+
+        const yNode = nodesMap.get(nodeId)
+        if (yNode && yNode instanceof Y.Map) {
+            const content = yNode.get('content') || { kind: 'blank', data: '' }
+            doc.transact(() => {
+                yNode.set('content', { ...content, data })
+            })
+            console.log('[useYjsNodes] Updated content:', nodeId)
+        }
+    }
+
+    /**
+     * 更新节点类型（更改 content.kind）
+     */
+    function updateNodeKind(nodeId: string, kind: ContentKind) {
+        if (!doc || !nodesMap) return
+
+        const yNode = nodesMap.get(nodeId)
+        if (yNode && yNode instanceof Y.Map) {
+            const content = yNode.get('content') || { kind: 'blank', data: '' }
+            doc.transact(() => {
+                yNode.set('content', { ...content, kind })
+            })
+            console.log('[useYjsNodes] Updated kind:', nodeId, '->', kind)
+        }
+    }
+
+    /**
+     * 更新节点显示模式（全文/卡片）
+     */
+    function updateNodeDisplayMode(nodeId: string, displayMode: DisplayMode) {
+        if (!doc || !nodesMap) return
+
+        const yNode = nodesMap.get(nodeId)
+        if (yNode && yNode instanceof Y.Map) {
+            const content = yNode.get('content') || { kind: 'blank', data: '' }
+            doc.transact(() => {
+                yNode.set('content', { ...content, displayMode })
+            })
+            console.log('[useYjsNodes] Updated displayMode:', nodeId, '->', displayMode)
+        }
+    }
+
+    /**
      * 更新 Undo/Redo 状态
      */
     function updateUndoRedoState() {
@@ -365,6 +417,9 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
         createNode,
         updateNodePosition,
         updateNode,
+        updateNodeContent,
+        updateNodeKind,
+        updateNodeDisplayMode,
         deleteNode,
         deleteNodes,
         getNode,

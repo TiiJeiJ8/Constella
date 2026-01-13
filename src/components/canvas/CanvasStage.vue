@@ -23,6 +23,30 @@
 
             <!-- 主内容层 -->
             <v-layer ref="mainLayerRef">
+                <!-- 连线 -->
+                <EdgeRenderer
+                    v-for="edge in displayEdges"
+                    :key="edge.id"
+                    :edge="edge"
+                    :source-node="getNodeRect(edge.sourceId)"
+                    :target-node="getNodeRect(edge.targetId)"
+                    :is-selected="selectedEdgeIds.has(edge.id)"
+                    @click="handleEdgeClick"
+                    @dblclick="handleEdgeDblClick"
+                />
+                
+                <!-- 正在创建的连线预览 -->
+                <v-line
+                    v-if="edgeCreation.active"
+                    :config="{
+                        points: [edgeCreation.startX, edgeCreation.startY, edgeCreation.currentX, edgeCreation.currentY],
+                        stroke: '#667eea',
+                        strokeWidth: 2,
+                        dash: [8, 4],
+                        opacity: 0.7
+                    }"
+                />
+                
                 <!-- 节点（使用 Group 组合，数据来自 Yjs） -->
                 <v-group
                     v-for="node in displayNodes"
@@ -34,13 +58,16 @@
                     }"
                     @click="handleNodeClick(node, $event)"
                     @tap="handleNodeClick(node, $event)"
+                    @dblclick="handleNodeDblClick(node, $event)"
+                    @dbltap="handleNodeDblClick(node, $event)"
                     @dragstart="handleNodeDragStart(node)"
                     @dragmove="handleNodeDragMove(node, $event)"
                     @dragend="handleNodeDragEnd(node, $event)"
                     @transformend="handleNodeTransformEnd(node, $event)"
                 >
+                    <!-- 节点背景矩形 -->
                     <v-rect :config="node.rectConfig" />
-                    <v-text :config="node.textConfig" />
+                    <!-- 内容由 NodeContentOverlay 在 HTML 层渲染 -->
                 </v-group>
                 
                 <!-- 框选矩形 -->
@@ -98,6 +125,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import Konva from 'konva'
+import EdgeRenderer from './EdgeRenderer.vue'
 
 const props = defineProps({
     activeTool: {
@@ -121,14 +149,24 @@ const props = defineProps({
         type: Array,
         default: () => []
     },
+    // Yjs 连线数据
+    yjsEdges: {
+        type: Array,
+        default: () => []
+    },
     // 远程用户光标
     remoteCursors: {
         type: Array,
         default: () => []
+    },
+    // 编辑器是否打开（打开时禁用 Delete 快捷键）
+    isEditorOpen: {
+        type: Boolean,
+        default: false
     }
 })
 
-const emit = defineEmits(['zoom-change', 'position-change', 'node-select', 'node-update', 'node-delete', 'node-create', 'cursor-move', 'cursor-leave', 'undo', 'redo'])
+const emit = defineEmits(['zoom-change', 'position-change', 'node-select', 'node-update', 'node-delete', 'node-create', 'node-dblclick', 'cursor-move', 'cursor-leave', 'undo', 'redo', 'stage-transform', 'edge-select', 'edge-create', 'edge-delete', 'edge-dblclick'])
 
 // Refs
 const containerRef = ref(null)
@@ -154,6 +192,7 @@ const lastPointerPosition = ref({ x: 0, y: 0 })
 
 // 选中状态
 const selectedNodeIds = ref(new Set())
+const selectedEdgeIds = ref(new Set())
 const isSelecting = ref(false)
 const selectionRect = ref({
     visible: false,
@@ -171,8 +210,39 @@ const selectionRect = ref({
 })
 const selectionStart = ref({ x: 0, y: 0 })
 
-// 使用传入的 Yjs 节点数据
-const displayNodes = computed(() => props.yjsNodes || [])
+// 使用传入的 Yjs 节点数据，按 zIndex 排序（低的先渲染，在下面）
+const displayNodes = computed(() => {
+    const nodes = props.yjsNodes || []
+    return [...nodes].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
+})
+
+// 连线数据（按 zIndex 排序）
+const displayEdges = computed(() => {
+    const edges = props.yjsEdges || []
+    return [...edges].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
+})
+
+// 连线创建状态
+const edgeCreation = ref({
+    active: false,
+    sourceNodeId: '',
+    startX: 0,
+    startY: 0,
+    currentX: 0,
+    currentY: 0
+})
+
+// 获取节点矩形信息（用于连线计算）
+function getNodeRect(nodeId) {
+    const node = props.yjsNodes?.find(n => n.id === nodeId)
+    if (!node) return null
+    return {
+        x: node.x,
+        y: node.y,
+        width: node.width,
+        height: node.height
+    }
+}
 
 // 过滤有光标位置的远程用户
 const remoteCursorsInView = computed(() => {
@@ -249,6 +319,7 @@ function handleWheel(e) {
     
     emitZoomChange()
     emitPositionChange()
+    emitStageTransform()
 }
 
 // 鼠标按下
@@ -319,6 +390,18 @@ function handleMouseMove(e) {
         
         lastPointerPosition.value = pointer
         emitPositionChange()
+        emitStageTransform()
+        return
+    }
+    
+    // 连线创建模式
+    if (edgeCreation.value.active) {
+        const pos = stage.getPointerPosition()
+        const canvasPos = {
+            x: (pos.x - stage.x()) / stage.scaleX(),
+            y: (pos.y - stage.y()) / stage.scaleY()
+        }
+        updateEdgeCreationPreview(canvasPos.x, canvasPos.y)
         return
     }
     
@@ -355,6 +438,15 @@ function handleMouseMove(e) {
 // 鼠标释放
 function handleMouseUp(e) {
     const stage = stageRef.value.getNode()
+    
+    // 取消连线创建（点击空白处）
+    if (edgeCreation.value.active) {
+        // 如果是点击在空白处（没有点击到节点），取消连线
+        const target = e.target
+        if (target === stage || target.getParent() === stage) {
+            cancelEdgeCreation()
+        }
+    }
     
     // 结束平移
     if (isPanning.value) {
@@ -410,10 +502,25 @@ function handleMouseLeave() {
 
 // 节点点击
 function handleNodeClick(node, e) {
-    if (props.activeTool !== 'select') return
-    
     // 阻止事件冒泡（避免触发 stage 点击）
     e.cancelBubble = true
+    
+    // 连线工具模式
+    if (props.activeTool === 'edge') {
+        if (edgeCreation.value.active) {
+            // 完成连线
+            finishEdgeCreation(node.id)
+        } else {
+            // 开始创建连线
+            startEdgeCreation(node.id)
+        }
+        return
+    }
+    
+    if (props.activeTool !== 'select') return
+    
+    // 清除连线选中
+    selectedEdgeIds.value.clear()
     
     // Ctrl/Cmd + 点击 = 切换选中状态
     if (e.evt.ctrlKey || e.evt.metaKey) {
@@ -437,6 +544,98 @@ function handleNodeClick(node, e) {
     emitSelection()
     
     console.log('[CanvasStage] Node clicked:', node.id, 'Selected:', Array.from(selectedNodeIds.value))
+}
+
+// 节点双击 - 进入编辑模式
+function handleNodeDblClick(node, e) {
+    e.cancelBubble = true
+    emit('node-dblclick', node.id)
+    console.log('[CanvasStage] Node double-clicked:', node.id)
+}
+
+// 连线点击
+function handleEdgeClick(edgeId) {
+    // 清除节点选中
+    selectedNodeIds.value.clear()
+    updateTransformer()
+    
+    // 选中连线
+    selectedEdgeIds.value.clear()
+    selectedEdgeIds.value.add(edgeId)
+    
+    emit('edge-select', [edgeId])
+    console.log('[CanvasStage] Edge clicked:', edgeId)
+}
+
+// 连线双击 - 编辑标签
+function handleEdgeDblClick(edgeId) {
+    emit('edge-dblclick', edgeId)
+    console.log('[CanvasStage] Edge double-clicked:', edgeId)
+}
+
+// 开始创建连线
+function startEdgeCreation(nodeId) {
+    const node = props.yjsNodes?.find(n => n.id === nodeId)
+    if (!node) return
+    
+    const centerX = node.x + node.width / 2
+    const centerY = node.y + node.height / 2
+    
+    edgeCreation.value = {
+        active: true,
+        sourceNodeId: nodeId,
+        startX: centerX,
+        startY: centerY,
+        currentX: centerX,
+        currentY: centerY
+    }
+    
+    console.log('[CanvasStage] Edge creation started from:', nodeId)
+}
+
+// 更新连线预览位置
+function updateEdgeCreationPreview(x, y) {
+    if (!edgeCreation.value.active) return
+    edgeCreation.value.currentX = x
+    edgeCreation.value.currentY = y
+}
+
+// 完成连线创建
+function finishEdgeCreation(targetNodeId) {
+    if (!edgeCreation.value.active) return
+    
+    const sourceId = edgeCreation.value.sourceNodeId
+    
+    // 不能连接到自己
+    if (sourceId === targetNodeId) {
+        cancelEdgeCreation()
+        return
+    }
+    
+    emit('edge-create', {
+        sourceId,
+        targetId: targetNodeId,
+        type: 'bezier',
+        color: '#667eea',
+        strokeWidth: 2,
+        startArrow: 'none',
+        endArrow: 'arrow'
+    })
+    
+    console.log('[CanvasStage] Edge created:', sourceId, '->', targetNodeId)
+    cancelEdgeCreation()
+}
+
+// 取消连线创建
+function cancelEdgeCreation() {
+    edgeCreation.value = {
+        active: false,
+        sourceNodeId: '',
+        startX: 0,
+        startY: 0,
+        currentX: 0,
+        currentY: 0
+    }
 }
 
 // 节流函数：限制函数执行频率
@@ -512,22 +711,35 @@ function handleNodeDragEnd(node, e) {
 // 节点变换结束（缩放、旋转）
 function handleNodeTransformEnd(node, e) {
     const group = e.target
+    const rect = group.findOne('Rect')
     
-    // 发送节点更新事件（包含变换数据）
+    // 计算实际的新尺寸（原始尺寸 * 缩放比例）
+    const newWidth = Math.max(50, rect.width() * group.scaleX())
+    const newHeight = Math.max(50, rect.height() * group.scaleY())
+    
+    // 重置缩放比例（因为我们已经将缩放转换为实际尺寸）
+    group.scaleX(1)
+    group.scaleY(1)
+    
+    // 更新矩形尺寸
+    rect.width(newWidth)
+    rect.height(newHeight)
+    
+    // 发送节点更新事件（包含实际尺寸）
     emit('node-update', {
         id: node.id,
         x: group.x(),
         y: group.y(),
-        scaleX: group.scaleX(),
-        scaleY: group.scaleY(),
+        width: newWidth,
+        height: newHeight,
         rotation: group.rotation()
     })
     
     console.log('[CanvasStage] Node transformed:', node.id, {
         x: group.x(),
         y: group.y(),
-        scaleX: group.scaleX(),
-        scaleY: group.scaleY(),
+        width: newWidth,
+        height: newHeight,
         rotation: group.rotation()
     })
 }
@@ -559,6 +771,15 @@ function emitPositionChange() {
         y: Math.round(-stageConfig.value.y / stageConfig.value.scaleY)
     }
     emit('position-change', position)
+}
+
+// 发送 stage 变换事件（用于内容叠加层同步）
+function emitStageTransform() {
+    emit('stage-transform', {
+        scale: stageConfig.value.scaleX,
+        x: stageConfig.value.x,
+        y: stageConfig.value.y
+    })
 }
 
 // 发送选中事件
@@ -626,6 +847,17 @@ watch(() => props.activeTool, (newTool) => {
 
 // 监听空格键
 function handleKeyDown(e) {
+    // 如果编辑器打开或焦点在输入框/文本区域中，跳过所有快捷键
+    const activeEl = document.activeElement
+    const isInEditor = activeEl?.tagName === 'TEXTAREA' || 
+                       activeEl?.tagName === 'INPUT' || 
+                       activeEl?.isContentEditable ||
+                       props.isEditorOpen
+    
+    if (isInEditor) {
+        return  // 不处理任何快捷键
+    }
+    
     if (e.code === 'Space' && !e.repeat) {
         e.preventDefault()
         isSpacePressed.value = true
@@ -696,6 +928,7 @@ onMounted(() => {
     // 发送初始状态
     emitZoomChange()
     emitPositionChange()
+    emitStageTransform()
     
     console.log('[CanvasStage] Mounted with', displayNodes.value.length, 'nodes')
 })
@@ -704,6 +937,25 @@ onUnmounted(() => {
     window.removeEventListener('resize', resizeStage)
     window.removeEventListener('keydown', handleKeyDown)
     window.removeEventListener('keyup', handleKeyUp)
+})
+
+// 提供给外部调用的方法
+function selectNode(nodeId) {
+    selectedNodeIds.value.clear()
+    selectedNodeIds.value.add(nodeId)
+    emit('node-select', [nodeId])
+    updateTransformer()
+}
+
+// 获取 Konva Stage 实例
+function getStage() {
+    return stageRef.value?.getNode() || null
+}
+
+// 暴露方法给父组件
+defineExpose({
+    selectNode,
+    getStage
 })
 </script>
 
@@ -714,6 +966,7 @@ onUnmounted(() => {
     overflow: hidden;
     background: v-bind(backgroundColor);
     position: relative;
+    z-index: 0;  /* 确保画布在最底层 */
 }
 
 /* Konva 容器样式 */

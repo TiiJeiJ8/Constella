@@ -6,6 +6,10 @@ import VueKonva from 'vue-konva'
 import 'element-plus/dist/index.css'
 import './style.css'
 import App from './App.vue'
+import { registerPlugins } from './plugins/register'
+
+// 注册所有内容类型插件
+registerPlugins()
 
 const app = createApp(App)
 

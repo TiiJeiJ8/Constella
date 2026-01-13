@@ -14,6 +14,7 @@
             :show="showToast"
             @update:show="showToast = $event"
         />
+        <ToastManager ref="toastManagerRef" />
         <!-- eslint-enable vue/no-multiple-template-root -->
 </template>
 
@@ -25,6 +26,8 @@ import RoomsView from './views/RoomsView.vue'
 import CanvasView from './views/CanvasView.vue'
 import AboutView from './views/AboutView.vue'
 import Toast from './components/base/Toast.vue'
+import ToastManager from './components/base/ToastManager.vue'
+import { setToastInstance } from './utils/useToast'
 import { apiService } from './services/api'
 
 const currentView = ref('home')
@@ -32,6 +35,7 @@ const currentRoomId = ref('')
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastType = ref('info')
+const toastManagerRef = ref(null)
 
 // Token 自动刷新
 let tokenRefreshInterval = null
@@ -41,6 +45,11 @@ const TOKEN_REFRESH_INTERVAL = 15 * 60 * 1000 // 15分钟刷新一次
 onMounted(() => {
     const savedTheme = localStorage.getItem('theme') || 'light'
     document.documentElement.setAttribute('data-theme', savedTheme)
+    
+    // 初始化全局 Toast 实例
+    if (toastManagerRef.value) {
+        setToastInstance(toastManagerRef.value)
+    }
     
     // 启动 Token 自动刷新（如果已登录）
     startTokenRefresh()

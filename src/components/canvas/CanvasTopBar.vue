@@ -55,16 +55,31 @@
                     <span class="icon menu-icon">≡</span>
                 </button>
                 <!-- 其他功能按钮 -->
-                <button class="circular-btn" :title="t('canvas.topBar.save')">
-                    <span class="icon">💾</span>
-                </button>
-                <button class="circular-btn" :title="t('canvas.topBar.snapshot')">
+                <button class="circular-btn" @click="$emit('create-snapshot')" :title="t('canvas.topBar.snapshot')">
                     <span class="icon">📸</span>
                 </button>
-                <button class="circular-btn" :title="t('canvas.topBar.export')">
-                    <span class="icon">📤</span>
-                </button>
-                <button class="circular-btn members-btn" :title="t('canvas.topBar.members')">
+                <div class="export-dropdown">
+                    <button 
+                        class="circular-btn" 
+                        @click="toggleExportMenu"
+                        :title="t('canvas.topBar.export')"
+                    >
+                        <span class="icon">📤</span>
+                    </button>
+                    <Transition name="fade">
+                        <div v-if="isExportMenuOpen" class="export-menu">
+                            <button class="export-option" @click="exportAsPNG">
+                                <span class="option-icon">🖼️</span>
+                                <span class="option-text">{{ t('canvas.topBar.exportPNG') }}</span>
+                            </button>
+                            <button class="export-option" @click="exportAsSVG">
+                                <span class="option-icon">📐</span>
+                                <span class="option-text">{{ t('canvas.topBar.exportSVG') }}</span>
+                            </button>
+                        </div>
+                    </Transition>
+                </div>
+                <button class="circular-btn members-btn" :title="t('canvas.topBar.members')" @click="$emit('members-click')">
                     <span class="icon">👥</span>
                     <span class="badge">1</span>
                 </button>
@@ -77,7 +92,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SettingsPanel from '@/components/base/SettingsPanel.vue'
 
@@ -85,10 +100,40 @@ const { t, locale } = useI18n()
 
 const isMenuExpanded = ref(false)
 const isSettingsPanelOpen = ref(false)
+const isExportMenuOpen = ref(false)
 
 const toggleMenu = () => {
     isMenuExpanded.value = !isMenuExpanded.value
 }
+
+const toggleExportMenu = () => {
+    isExportMenuOpen.value = !isExportMenuOpen.value
+}
+
+const exportAsPNG = () => {
+    emit('export', { format: 'png' })
+    isExportMenuOpen.value = false
+}
+
+const exportAsSVG = () => {
+    emit('export', { format: 'svg' })
+    isExportMenuOpen.value = false
+}
+
+// 点击外部关闭导出菜单
+const handleClickOutside = (e) => {
+    if (isExportMenuOpen.value && !e.target.closest('.export-dropdown')) {
+        isExportMenuOpen.value = false
+    }
+}
+
+onMounted(() => {
+    document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside)
+})
 
 const toggleLanguage = () => {
     locale.value = locale.value === 'zh-CN' ? 'en-US' : 'zh-CN'
@@ -122,7 +167,7 @@ const props = defineProps({
     }
 })
 
-defineEmits(['exit'])
+const emit = defineEmits(['exit', 'export', 'create-snapshot', 'members-click'])
 </script>
 
 <style scoped>
@@ -354,5 +399,63 @@ defineEmits(['exit'])
     .sync-status {
         display: none;
     }
+}
+
+/* 导出下拉菜单 */
+.export-dropdown {
+    position: relative;
+}
+
+.export-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 140px;
+    background: var(--canvas-toolbar-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+}
+
+.export-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.export-option:hover {
+    background: var(--bg-tertiary);
+}
+
+.option-icon {
+    font-size: 16px;
+}
+
+.option-text {
+    flex: 1;
+    text-align: left;
+}
+
+/* Fade 动画 */
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
 }
 </style>

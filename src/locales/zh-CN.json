@@ -1,4 +1,15 @@
 {
+    "common": {
+        "confirm": "确定",
+        "cancel": "取消",
+        "close": "关闭",
+        "save": "保存",
+        "delete": "删除",
+        "edit": "编辑",
+        "create": "创建",
+        "loading": "加载中...",
+        "anonymous": "匿名用户"
+    },
     "home": {
         "title": "Constella",
         "subtitle": "开源 ⦁ 协作 ⦁ 无限可能",
@@ -87,6 +98,12 @@
             "joined": "已加入",
             "public": "公开"
         }
+    },
+    "members": {
+        "online": "在线",
+        "offline": "离线",
+        "me": "我",
+        "roomId": "房间 ID"
     },
     "rooms": {
         "noDescription": "暂无描述",
@@ -182,11 +199,63 @@
             "roomTitle": "房间",
             "save": "保存",
             "export": "导出",
+            "exportPNG": "导出 PNG",
+            "exportSVG": "导出 SVG",
             "snapshot": "快照",
             "share": "分享",
             "settings": "设置",
             "members": "成员",
             "exitRoom": "退出房间"
+        },
+        "properties": {
+            "noSelection": "未选择节点",
+            "nodeType": "节点类型",
+            "color": "颜色",
+            "fill": "填充",
+            "stroke": "边框",
+            "size": "尺寸",
+            "width": "宽",
+            "height": "高",
+            "position": "位置",
+            "multiSelect": "已选择 {count} 个节点"
+        },
+        "layers": {
+            "emptyNode": "空节点",
+            "toTop": "置顶",
+            "toBottom": "置底",
+            "moveUp": "上移",
+            "moveDown": "下移",
+            "noLayers": "暂无图层"
+        },
+        "edge": {
+            "properties": "连线属性",
+            "lineType": "线型",
+            "lineColor": "线色",
+            "lineWidth": "线宽",
+            "arrow": "箭头",
+            "startPoint": "起点",
+            "endPoint": "终点",
+            "arrowNone": "无",
+            "arrowArrow": "箭头",
+            "arrowDiamond": "菱形",
+            "arrowCircle": "圆形",
+            "label": "标签",
+            "labelTitle": "编辑连线标签",
+            "labelPlaceholder": "输入连线标签...",
+            "dashed": "虚线",
+            "enableDash": "启用虚线",
+            "delete": "删除连线",
+            "multiSelect": "已选择 {count} 条连线"
+        },
+        "toast": {
+            "saved": "保存成功",
+            "snapshotCreated": "快照创建成功",
+            "snapshotRestored": "快照恢复成功",
+            "snapshotDeleted": "快照已删除",
+            "assetDeleted": "资源已删除",
+            "exportSuccess": "导出 {format} 成功",
+            "exportFailed": "导出失败",
+            "edgeLabelUpdated": "连线标签已更新"
         },
         "errors": {
             "loadFailed": "加载画布失败",
@@ -195,6 +264,42 @@
             "exportFailed": "导出失败",
             "permissionDenied": "您没有权限执行此操作",
             "connectionLost": "与服务器的连接已断开"
+        },
+        "node": {
+            "defaultContent": "# 新节点\n\n双击编辑内容"
+        },
+        "assets": {
+            "upload": "上传资源",
+            "supportedFormats": "支持 JPG、PNG、GIF、SVG",
+            "uploading": "上传中...",
+            "empty": "暂无资源",
+            "emptyHint": "拖拽文件到此处或点击上传按钮",
+            "insertToCanvas": "插入到画布",
+            "copyLink": "复制链接",
+            "delete": "删除资源",
+            "deleteConfirmTitle": "删除资源",
+            "deleteConfirmMessage": "确定要删除这个资源吗？此操作不可撤销。"
+        },
+        "history": {
+            "createSnapshot": "创建快照",
+            "creating": "创建中...",
+            "autoSaveEnabled": "自动保存已开启",
+            "snapshotList": "快照列表",
+            "snapshot": "快照",
+            "restore": "恢复到此快照",
+            "delete": "删除快照",
+            "empty": "暂无快照",
+            "emptyHint": "点击\"创建快照\"保存当前状态",
+            "autoSaveSnapshot": "自动保存快照",
+            "interval": "间隔时间",
+            "seconds": "秒",
+            "minute": "分钟",
+            "minutes": "分钟",
+            "autoSave": "自动保存",
+            "restoreConfirmTitle": "恢复快照",
+            "restoreConfirmMessage": "确定要恢复到此快照吗？当前未保存的更改将丢失。",
+            "deleteConfirmTitle": "删除快照",
+            "deleteConfirmMessage": "确定要删除这个快照吗？此操作不可撤销。"
         }
     },
     "joinRoom": {

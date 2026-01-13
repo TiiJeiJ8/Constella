@@ -34,7 +34,14 @@
     "common": {
         "confirm": "Confirm",
         "cancel": "Cancel",
+        "close": "Close",
+        "save": "Save",
+        "delete": "Delete",
+        "edit": "Edit",
+        "create": "Create",
+        "loading": "Loading...",
         "retry": "Retry",
+        "anonymous": "Anonymous",
         "errors": {
             "userNotLoggedIn": "Please log in first",
             "tokenExpired": "Session expired, please log in again",
@@ -87,6 +94,12 @@
             "joined": "Joined",
             "public": "Public"
         }
+    },
+    "members": {
+        "online": "Online",
+        "offline": "Offline",
+        "me": "Me",
+        "roomId": "Room ID"
     },
     "rooms": {
         "noDescription": "No description",
@@ -182,11 +195,63 @@
             "roomTitle": "Room",
             "save": "Save",
             "export": "Export",
+            "exportPNG": "Export PNG",
+            "exportSVG": "Export SVG",
             "snapshot": "Snapshot",
             "share": "Share",
             "settings": "Settings",
             "members": "Members",
             "exitRoom": "Exit Room"
+        },
+        "properties": {
+            "noSelection": "No node selected",
+            "nodeType": "Node Type",
+            "color": "Color",
+            "fill": "Fill",
+            "stroke": "Stroke",
+            "size": "Size",
+            "width": "Width",
+            "height": "Height",
+            "position": "Position",
+            "multiSelect": "{count} nodes selected"
+        },
+        "layers": {
+            "emptyNode": "Empty Node",
+            "toTop": "Bring to Top",
+            "toBottom": "Send to Bottom",
+            "moveUp": "Move Up",
+            "moveDown": "Move Down",
+            "noLayers": "No layers yet"
+        },
+        "edge": {
+            "properties": "Edge Properties",
+            "lineType": "Line Type",
+            "lineColor": "Line Color",
+            "lineWidth": "Line Width",
+            "arrow": "Arrow",
+            "startPoint": "Start",
+            "endPoint": "End",
+            "arrowNone": "None",
+            "arrowArrow": "Arrow",
+            "arrowDiamond": "Diamond",
+            "arrowCircle": "Circle",
+            "label": "Label",
+            "labelTitle": "Edit Edge Label",
+            "labelPlaceholder": "Enter edge label...",
+            "dashed": "Dashed",
+            "enableDash": "Enable Dashed Line",
+            "delete": "Delete Edge",
+            "multiSelect": "{count} edges selected"
+        },
+        "toast": {
+            "saved": "Saved successfully",
+            "snapshotCreated": "Snapshot created",
+            "snapshotRestored": "Snapshot restored",
+            "snapshotDeleted": "Snapshot deleted",
+            "assetDeleted": "Asset deleted",
+            "exportSuccess": "Export {format} successfully",
+            "exportFailed": "Export failed",
+            "edgeLabelUpdated": "Edge label updated"
         },
         "errors": {
             "loadFailed": "Failed to load canvas",
@@ -195,6 +260,42 @@
             "exportFailed": "Export failed",
             "permissionDenied": "You don't have permission to perform this action",
             "connectionLost": "Connection to server lost"
+        },
+        "node": {
+            "defaultContent": "# New Node\n\nDouble-click to edit"
+        },
+        "assets": {
+            "upload": "Upload Assets",
+            "supportedFormats": "Supports JPG, PNG, GIF, SVG",
+            "uploading": "Uploading...",
+            "empty": "No assets yet",
+            "emptyHint": "Drag files here or click upload button",
+            "insertToCanvas": "Insert to Canvas",
+            "copyLink": "Copy Link",
+            "delete": "Delete Asset",
+            "deleteConfirmTitle": "Delete Asset",
+            "deleteConfirmMessage": "Are you sure you want to delete this asset? This action cannot be undone."
+        },
+        "history": {
+            "createSnapshot": "Create Snapshot",
+            "creating": "Creating...",
+            "autoSaveEnabled": "Auto-save enabled",
+            "snapshotList": "Snapshot List",
+            "snapshot": "Snapshot",
+            "restore": "Restore to this snapshot",
+            "delete": "Delete Snapshot",
+            "empty": "No snapshots yet",
+            "emptyHint": "Click \"Create Snapshot\" to save current state",
+            "autoSaveSnapshot": "Auto-save Snapshots",
+            "interval": "Interval",
+            "seconds": "seconds",
+            "minute": "minute",
+            "minutes": "minutes",
+            "autoSave": "Auto-save",
+            "restoreConfirmTitle": "Restore Snapshot",
+            "restoreConfirmMessage": "Are you sure you want to restore to this snapshot? Unsaved changes will be lost.",
+            "deleteConfirmTitle": "Delete Snapshot",
+            "deleteConfirmMessage": "Are you sure you want to delete this snapshot? This action cannot be undone."
         }
     },
     "joinRoom": {
