@@ -477,6 +477,41 @@ class ApiService {
     }
 
     /**
+     * 获取房间 Relay Token（用于 Yjs WebSocket 连接）
+     */
+    async getRoomRelayToken(roomId: string): Promise<ApiResponse> {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/v1/rooms/${roomId}/relay-token`, {
+                method: 'POST',
+                headers: this.getAuthHeaders()
+            })
+
+            const result = await response.json()
+
+            if (response.ok) {
+                return {
+                    success: true,
+                    code: result.code,
+                    message: result.message,
+                    data: result.data
+                }
+            } else {
+                return {
+                    success: false,
+                    code: result.code || response.status,
+                    message: result.message || 'Failed to get relay token',
+                    errorCode: result.data
+                }
+            }
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            }
+        }
+    }
+
+    /**
      * 删除房间
      */
     async deleteRoom(roomId: string, password?: string): Promise<ApiResponse> {

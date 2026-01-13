@@ -54,6 +54,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useYjs } from '@/composables/useYjs'
 import WindowControls from '@/components/base/WindowControls.vue'
 import CanvasTopBar from '@/components/canvas/CanvasTopBar.vue'
 import Toolbox from '@/components/canvas/Toolbox.vue'
@@ -83,6 +84,34 @@ const isSyncing = ref(false)
 const isOffline = ref(false)
 const isDark = ref(false)
 const isPanelCollapsed = ref(false)
+
+// 获取存储的 token
+const getStoredToken = () => {
+    return localStorage.getItem('accessToken') || ''
+}
+
+// Yjs 实时协作
+const yjs = useYjs({
+    roomId: props.roomId,
+    token: getStoredToken(),
+    onConnect: () => {
+        console.log('[Canvas] Yjs connected')
+        isSyncing.value = false
+        isOffline.value = false
+    },
+    onDisconnect: () => {
+        console.log('[Canvas] Yjs disconnected')
+        isOffline.value = true
+    },
+    onSync: (synced) => {
+        console.log('[Canvas] Yjs synced:', synced)
+        isSyncing.value = !synced
+    },
+    onError: (error) => {
+        console.error('[Canvas] Yjs error:', error)
+        isOffline.value = true
+    }
+})
 
 // 主题监听
 function updateTheme() {
@@ -148,6 +177,10 @@ async function loadRoomData() {
 onMounted(() => {
     updateTheme()
     loadRoomData()
+    
+    // 连接 Yjs
+    console.log('[Canvas] Connecting to Yjs room:', props.roomId)
+    yjs.connect()
     
     // 监听主题变化
     const observer = new MutationObserver(updateTheme)
