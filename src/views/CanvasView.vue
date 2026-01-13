@@ -32,6 +32,7 @@
                 @node-select="handleNodeSelect"
                 @node-update="handleNodeUpdate"
                 @node-delete="handleNodeDelete"
+                @node-create="handleNodeCreate"
             />
         </div>
 
@@ -180,6 +181,40 @@ function handleNodeUpdate(updateData) {
 function handleNodeDelete(nodeIds) {
     console.log('[Canvas] Node delete:', nodeIds)
     yjsNodes.deleteNodes(nodeIds)
+}
+
+// 节点创建（同步到 Yjs）
+function handleNodeCreate(createData) {
+    // 生成唯一 ID
+    const nodeId = `node-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    
+    // 预设颜色列表
+    const colors = [
+        { fill: '#667eea', stroke: '#5568d3' },
+        { fill: '#48bb78', stroke: '#38a169' },
+        { fill: '#f56565', stroke: '#e53e3e' },
+        { fill: '#ed8936', stroke: '#dd6b20' },
+        { fill: '#9f7aea', stroke: '#805ad5' },
+        { fill: '#38b2ac', stroke: '#319795' }
+    ]
+    const color = colors[Math.floor(Math.random() * colors.length)]
+    
+    // 创建节点
+    yjsNodes.createNode({
+        id: nodeId,
+        x: createData.x - 75,  // 居中节点（宽度150的一半）
+        y: createData.y - 50,  // 居中节点（高度100的一半）
+        width: 150,
+        height: 100,
+        fill: color.fill,
+        stroke: color.stroke,
+        text: '新节点'
+    })
+    
+    console.log('[Canvas] Node created:', nodeId, createData)
+    
+    // 创建后切换回选择工具
+    activeTool.value = 'select'
 }
 
 // 切换面板折叠

@@ -80,7 +80,7 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['zoom-change', 'position-change', 'node-select', 'node-update', 'node-delete'])
+const emit = defineEmits(['zoom-change', 'position-change', 'node-select', 'node-update', 'node-delete', 'node-create'])
 
 // Refs
 const containerRef = ref(null)
@@ -207,6 +207,25 @@ function handleMouseDown(e) {
         isPanning.value = true
         lastPointerPosition.value = stage.getPointerPosition()
         stage.container().style.cursor = 'grabbing'
+        return
+    }
+    
+    // 节点工具：点击空白处创建新节点
+    if (props.activeTool === 'node' && e.target === stage) {
+        const pos = stage.getPointerPosition()
+        // 转换为画布坐标
+        const canvasPos = {
+            x: (pos.x - stage.x()) / stage.scaleX(),
+            y: (pos.y - stage.y()) / stage.scaleY()
+        }
+        
+        // 发送创建节点事件
+        emit('node-create', {
+            x: canvasPos.x,
+            y: canvasPos.y
+        })
+        
+        console.log('[CanvasStage] Create node at:', canvasPos)
         return
     }
     
@@ -531,6 +550,20 @@ function handleKeyDown(e) {
             const stage = stageRef.value.getNode()
             stage.container().style.cursor = 'grab'
         }
+    }
+    
+    // Delete/Backspace 删除选中节点
+    if ((e.code === 'Delete' || e.code === 'Backspace') && selectedNodeIds.value.size > 0) {
+        e.preventDefault()
+        const idsToDelete = Array.from(selectedNodeIds.value)
+        
+        // 清除选中状态
+        clearSelection()
+        
+        // 发送删除事件
+        emit('node-delete', idsToDelete)
+        
+        console.log('[CanvasStage] Delete nodes:', idsToDelete)
     }
 }
 
