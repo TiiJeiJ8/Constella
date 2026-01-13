@@ -16,10 +16,22 @@
         <div class="tool-divider"></div>
 
         <div class="tool-group">
-            <button class="tool-btn" :title="t('canvas.toolbar.undo')">
+            <button 
+                class="tool-btn" 
+                :class="{ disabled: !canUndo }"
+                :title="t('canvas.toolbar.undo')"
+                :disabled="!canUndo"
+                @click="$emit('undo')"
+            >
                 <span class="tool-icon">↶</span>
             </button>
-            <button class="tool-btn" :title="t('canvas.toolbar.redo')">
+            <button 
+                class="tool-btn" 
+                :class="{ disabled: !canRedo }"
+                :title="t('canvas.toolbar.redo')"
+                :disabled="!canRedo"
+                @click="$emit('redo')"
+            >
                 <span class="tool-icon">↷</span>
             </button>
         </div>
@@ -36,10 +48,18 @@ defineProps({
     activeTool: {
         type: String,
         default: 'select'
+    },
+    canUndo: {
+        type: Boolean,
+        default: false
+    },
+    canRedo: {
+        type: Boolean,
+        default: false
     }
 })
 
-defineEmits(['tool-change'])
+defineEmits(['tool-change', 'undo', 'redo'])
 
 const tools = computed(() => [
     { id: 'select', icon: '⬚', label: t('canvas.toolbar.select') },
@@ -100,6 +120,19 @@ const tools = computed(() => [
     background: var(--color-primary);
     color: white;
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.tool-btn.disabled,
+.tool-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.tool-btn.disabled:hover,
+.tool-btn:disabled:hover {
+    background: transparent;
+    transform: none;
 }
 
 .tool-icon {

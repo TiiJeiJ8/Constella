@@ -15,7 +15,11 @@
         <!-- 左侧工具栏 -->
         <Toolbox
             :active-tool="activeTool"
+            :can-undo="canUndo"
+            :can-redo="canRedo"
             @tool-change="handleToolChange"
+            @undo="handleUndo"
+            @redo="handleRedo"
             style="user-select: none;"
         />
 
@@ -27,12 +31,17 @@
                 :grid-color="isDark ? '#333333' : '#e0e0e0'"
                 :background-color="isDark ? '#1a1a1a' : '#ffffff'"
                 :yjs-nodes="canvasNodes"
+                :remote-cursors="remoteCursors"
                 @zoom-change="handleZoomChange"
                 @position-change="handlePositionChange"
                 @node-select="handleNodeSelect"
                 @node-update="handleNodeUpdate"
                 @node-delete="handleNodeDelete"
                 @node-create="handleNodeCreate"
+                @cursor-move="handleCursorMove"
+                @cursor-leave="handleCursorLeave"
+                @undo="handleUndo"
+                @redo="handleRedo"
             />
         </div>
 
@@ -60,6 +69,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useYjs } from '@/composables/useYjs'
 import { useYjsNodes } from '@/composables/useYjsNodes'
+import { useAwareness } from '@/composables/useAwareness'
 import WindowControls from '@/components/base/WindowControls.vue'
 import CanvasTopBar from '@/components/canvas/CanvasTopBar.vue'
 import Toolbox from '@/components/canvas/Toolbox.vue'
@@ -103,6 +113,9 @@ const yjs = useYjs({
         console.log('[Canvas] Yjs connected')
         isSyncing.value = false
         isOffline.value = false
+        
+        // 初始化 Awareness
+        awareness.initialize()
     },
     onDisconnect: () => {
         console.log('[Canvas] Yjs disconnected')
@@ -123,6 +136,14 @@ const yjs = useYjs({
     }
 })
 
+// Awareness 用户感知
+const awareness = useAwareness({
+    provider: yjs.provider
+})
+
+// 其他用户光标
+const remoteCursors = computed(() => awareness.otherUsers.value)
+
 // Yjs 节点数据管理
 const yjsNodes = useYjsNodes({
     getDoc: () => yjs.doc
@@ -130,6 +151,10 @@ const yjsNodes = useYjsNodes({
 
 // 渲染用的节点数据（从 Yjs 同步）
 const canvasNodes = computed(() => yjsNodes.nodes.value)
+
+// Undo/Redo 状态
+const canUndo = computed(() => yjsNodes.canUndo.value)
+const canRedo = computed(() => yjsNodes.canRedo.value)
 
 // 主题监听
 function updateTheme() {
@@ -215,6 +240,26 @@ function handleNodeCreate(createData) {
     
     // 创建后切换回选择工具
     activeTool.value = 'select'
+}
+
+// 光标移动（同步到 Awareness）
+function handleCursorMove(cursorData) {
+    awareness.updateCursor(cursorData.x, cursorData.y)
+}
+
+// 光标离开画布
+function handleCursorLeave() {
+    awareness.clearCursor()
+}
+
+// 撤销
+function handleUndo() {
+    yjsNodes.undo()
+}
+
+// 重做
+function handleRedo() {
+    yjsNodes.redo()
 }
 
 // 切换面板折叠

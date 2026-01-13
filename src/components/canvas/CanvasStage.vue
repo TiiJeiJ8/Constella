@@ -1,5 +1,9 @@
 <template>
-    <div class="canvas-stage-container" ref="containerRef">
+    <div 
+        class="canvas-stage-container" 
+        ref="containerRef"
+        @mouseleave="handleMouseLeave"
+    >
         <v-stage
             ref="stageRef"
             :config="stageConfig"
@@ -48,6 +52,45 @@
                 <!-- Transformer 选中效果 -->
                 <v-transformer ref="transformerRef" />
             </v-layer>
+            
+            <!-- 远程光标层 -->
+            <v-layer ref="cursorLayerRef">
+                <v-group
+                    v-for="cursor in remoteCursorsInView"
+                    :key="cursor.clientId"
+                    :config="{ x: cursor.cursor.x, y: cursor.cursor.y }"
+                >
+                    <!-- 光标箭头 -->
+                    <v-line
+                        :config="{
+                            points: [0, 0, 0, 16, 4, 12, 8, 20, 10, 19, 6, 11, 12, 11],
+                            fill: cursor.user.color,
+                            closed: true,
+                            shadowColor: 'rgba(0,0,0,0.3)',
+                            shadowBlur: 2,
+                            shadowOffset: { x: 1, y: 1 }
+                        }"
+                    />
+                    <!-- 用户名标签 -->
+                    <v-label :config="{ x: 14, y: 14 }">
+                        <v-tag
+                            :config="{
+                                fill: cursor.user.color,
+                                cornerRadius: 3
+                            }"
+                        />
+                        <v-text
+                            :config="{
+                                text: cursor.user.name,
+                                fontSize: 11,
+                                fontFamily: 'Arial',
+                                fill: '#ffffff',
+                                padding: 4
+                            }"
+                        />
+                    </v-label>
+                </v-group>
+            </v-layer>
         </v-stage>
     </div>
 </template>
@@ -77,10 +120,15 @@ const props = defineProps({
     yjsNodes: {
         type: Array,
         default: () => []
+    },
+    // 远程用户光标
+    remoteCursors: {
+        type: Array,
+        default: () => []
     }
 })
 
-const emit = defineEmits(['zoom-change', 'position-change', 'node-select', 'node-update', 'node-delete', 'node-create'])
+const emit = defineEmits(['zoom-change', 'position-change', 'node-select', 'node-update', 'node-delete', 'node-create', 'cursor-move', 'cursor-leave', 'undo', 'redo'])
 
 // Refs
 const containerRef = ref(null)
@@ -125,6 +173,11 @@ const selectionStart = ref({ x: 0, y: 0 })
 
 // 使用传入的 Yjs 节点数据
 const displayNodes = computed(() => props.yjsNodes || [])
+
+// 过滤有光标位置的远程用户
+const remoteCursorsInView = computed(() => {
+    return (props.remoteCursors || []).filter(user => user.cursor)
+})
 
 // 计算网格线
 const gridLines = computed(() => {
@@ -285,6 +338,18 @@ function handleMouseMove(e) {
         selectionRect.value.config.width = Math.abs(width)
         selectionRect.value.config.height = Math.abs(height)
     }
+    
+    // 发送光标位置（节流）
+    throttle('cursor-move', () => {
+        const pos = stage.getPointerPosition()
+        if (pos) {
+            const canvasPos = {
+                x: (pos.x - stage.x()) / stage.scaleX(),
+                y: (pos.y - stage.y()) / stage.scaleY()
+            }
+            emit('cursor-move', canvasPos)
+        }
+    }, 50)  // 50ms 节流，约 20fps
 }
 
 // 鼠标释放
@@ -336,6 +401,11 @@ function handleMouseUp(e) {
         // 发送选中事件
         emitSelection()
     }
+}
+
+// 鼠标离开画布
+function handleMouseLeave() {
+    emit('cursor-leave')
 }
 
 // 节点点击
@@ -405,6 +475,19 @@ function handleNodeDragMove(node, e) {
             _realtime: true  // 标记为实时更新
         })
     }, 16)
+    
+    // 拖动节点时也更新光标位置
+    const stage = stageRef.value.getNode()
+    throttle('cursor-move', () => {
+        const pos = stage.getPointerPosition()
+        if (pos) {
+            const canvasPos = {
+                x: (pos.x - stage.x()) / stage.scaleX(),
+                y: (pos.y - stage.y()) / stage.scaleY()
+            }
+            emit('cursor-move', canvasPos)
+        }
+    }, 50)
 }
 
 // 节点拖拽结束
@@ -564,6 +647,20 @@ function handleKeyDown(e) {
         emit('node-delete', idsToDelete)
         
         console.log('[CanvasStage] Delete nodes:', idsToDelete)
+    }
+    
+    // Ctrl+Z 撤销
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ' && !e.shiftKey) {
+        e.preventDefault()
+        emit('undo')
+        console.log('[CanvasStage] Undo triggered')
+    }
+    
+    // Ctrl+Shift+Z 或 Ctrl+Y 重做
+    if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey))) {
+        e.preventDefault()
+        emit('redo')
+        console.log('[CanvasStage] Redo triggered')
     }
 }
 

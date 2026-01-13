@@ -70,9 +70,14 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
     // 是否已初始化
     const isInitialized = ref(false)
 
+    // Undo/Redo 状态
+    const canUndo = ref(false)
+    const canRedo = ref(false)
+
     // 缓存的 doc 和 nodesMap
     let doc: Y.Doc | null = null
     let nodesMap: Y.Map<any> | null = null
+    let undoManager: Y.UndoManager | null = null
 
     /**
      * 将 CanvasNode 转换为 RenderNode
@@ -172,6 +177,17 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
 
         nodesMap = doc.getMap<Y.Map<any>>('nodes')
         isInitialized.value = true
+
+        // 创建 UndoManager
+        undoManager = new Y.UndoManager(nodesMap, {
+            // 500ms 内的操作合并为一个 undo 步骤
+            captureTimeout: 500
+        })
+
+        // 监听 UndoManager 状态变化
+        undoManager.on('stack-item-added', updateUndoRedoState)
+        undoManager.on('stack-item-popped', updateUndoRedoState)
+        undoManager.on('stack-cleared', updateUndoRedoState)
 
         // 监听 Yjs 变化
         observeYjs()
@@ -309,10 +325,42 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
         return nodes.value.find(n => n.id === nodeId)
     }
 
+    /**
+     * 更新 Undo/Redo 状态
+     */
+    function updateUndoRedoState() {
+        if (undoManager) {
+            canUndo.value = undoManager.undoStack.length > 0
+            canRedo.value = undoManager.redoStack.length > 0
+        }
+    }
+
+    /**
+     * 撤销
+     */
+    function undo() {
+        if (undoManager && canUndo.value) {
+            undoManager.undo()
+            console.log('[useYjsNodes] Undo')
+        }
+    }
+
+    /**
+     * 重做
+     */
+    function redo() {
+        if (undoManager && canRedo.value) {
+            undoManager.redo()
+            console.log('[useYjsNodes] Redo')
+        }
+    }
+
     return {
         nodes,
         nodesMap,
         isInitialized,
+        canUndo,
+        canRedo,
         initialize,
         createNode,
         updateNodePosition,
@@ -320,6 +368,8 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
         deleteNode,
         deleteNodes,
         getNode,
-        syncFromYjs
+        syncFromYjs,
+        undo,
+        redo
     }
 }
