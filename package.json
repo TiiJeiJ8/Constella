@@ -15,10 +15,12 @@
     "@element-plus/icons-vue": "^2.3.2",
     "electron-store": "^11.0.2",
     "element-plus": "^2.13.0",
+    "konva": "^10.0.12",
     "lib0": "^0.2.117",
     "tdesign-icons-vue-next": "^0.4.1",
     "vue": "^3.5.26",
     "vue-i18n": "^9.14.4",
+    "vue-konva": "^3.3.0",
     "y-websocket": "^3.0.0",
     "yjs": "^13.6.29"
   },
