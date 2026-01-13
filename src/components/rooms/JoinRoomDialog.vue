@@ -106,6 +106,7 @@ async function handleSubmit() {
         const response = await apiService.joinRoom(props.room.id, password.value)
         
         if (response.success) {
+            console.log('[JoinRoom] Successfully joined room')
             emit('joined', props.room)
             handleClose()
             resetForm()
@@ -114,12 +115,17 @@ async function handleSubmit() {
             if (response.errorCode === 'ROOM_WRONG_PASSWORD') {
                 error.value = t('joinRoom.errors.wrongPassword')
             } else if (response.errorCode === 'ROOM_ALREADY_MEMBER') {
-                error.value = t('joinRoom.errors.alreadyMember')
+                // 如果已经是成员，说明列表数据过期，通知父组件刷新并进入
+                console.log('[JoinRoom] User is already a member, notifying parent')
+                emit('joined', props.room)
+                handleClose()
+                resetForm()
             } else {
                 error.value = response.message || t('joinRoom.errors.joinFailed')
             }
         }
     } catch (err) {
+        console.error('[JoinRoom] Error:', err)
         error.value = err.message || t('joinRoom.errors.joinFailed')
     } finally {
         loading.value = false

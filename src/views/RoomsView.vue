@@ -136,7 +136,7 @@ const activeTab = ref('all')
 
 // 定时刷新
 let refreshInterval = null
-const REFRESH_INTERVAL = 5000 // 5秒刷新一次
+const REFRESH_INTERVAL = 10000 // 10秒刷新一次
 
 // 加载房间列表
 async function loadRooms(silent = false) {
@@ -199,7 +199,7 @@ async function loadRooms(silent = false) {
                         creator: room.owner?.username || 'Unknown',
                         memberCount: Math.max(0, room.member_count || 0),
                         isPrivate: Boolean(room.is_private),
-                        role: room.user_role || 'member',
+                        role: room.user_role || null,  // 不给默认值，未加入的房间角色为 null
                         lastActive: room.updated_at ? new Date(room.updated_at).getTime() : Date.now(),
                         createdAt: room.created_at,
                         settings: room.settings || {}
@@ -291,24 +291,83 @@ function handleRoomCreated(room) {
 
 // 处理房间点击
 async function handleRoomClick(room) {
-    // 如果是私密房间且不是成员，需要先加入
-    if (room.isPrivate && (!room.role || room.role === 'none')) {
-        selectedRoom.value = room
-        showJoinDialog.value = true
+    console.log('[Rooms] Room click:', {
+        id: room.id,
+        role: room.role,
+        isPrivate: room.isPrivate,
+        memberCount: room.memberCount
+    })
+    
+    // 如果已经有角色，直接进入
+    if (room.role && room.role !== 'none') {
+        console.log('[Rooms] User already has role:', room.role, ', entering room')
+        emit('navigate', 'canvas', { roomId: room.id })
         return
     }
     
-    // 跳转到画布页面
-    console.log('[Rooms] Entering room:', room.id)
-    emit('navigate', 'canvas', { roomId: room.id })
+    // 如果没有角色，需要加入房间
+    if (room.isPrivate) {
+        // 私密房间需要密码
+        console.log('[Rooms] Private room, showing join dialog')
+        selectedRoom.value = room
+        showJoinDialog.value = true
+    } else {
+        // 公开房间直接加入（不需要密码）
+        console.log('[Rooms] Public room, joining automatically')
+        try {
+            const response = await apiService.joinRoom(room.id, '')
+            if (response.success) {
+                console.log('[Rooms] Successfully joined public room')
+                // 更新本地房间角色
+                const roomIndex = rooms.value.findIndex(r => r.id === room.id)
+                if (roomIndex !== -1) {
+                    const userId = localStorage.getItem('user_id')
+                    rooms.value[roomIndex].role = rooms.value[roomIndex].creator === userId ? 'owner' : 'member'
+                    rooms.value[roomIndex].memberCount = (rooms.value[roomIndex].memberCount || 0) + 1
+                }
+                // 刷新房间列表并进入
+                await loadRooms()
+                emit('navigate', 'canvas', { roomId: room.id })
+            } else if (response.errorCode === 'ROOM_ALREADY_MEMBER') {
+                // 如果已经是成员，说明列表数据过期，更新本地数据并进入
+                console.log('[Rooms] Already a member, updating local data and entering')
+                const roomIndex = rooms.value.findIndex(r => r.id === room.id)
+                if (roomIndex !== -1) {
+                    const userId = localStorage.getItem('user_id')
+                    rooms.value[roomIndex].role = rooms.value[roomIndex].creator === userId ? 'owner' : 'member'
+                    console.log('[Rooms] Updated local room role to:', rooms.value[roomIndex].role)
+                }
+                // 强制刷新后进入
+                await loadRooms()
+                emit('navigate', 'canvas', { roomId: room.id })
+            } else {
+                console.error('Failed to join public room:', response.message)
+                error.value = response.message || t('rooms.errors.joinFailed')
+            }
+        } catch (err) {
+            console.error('Error joining public room:', err)
+            error.value = err.message || t('rooms.errors.joinFailed')
+        }
+    }
 }
 
 // 房间加入成功
-function handleRoomJoined(room) {
-    // 重新加载房间列表
-    loadRooms()
-    // 进入房间
+async function handleRoomJoined(room) {
     console.log('[Rooms] Successfully joined room:', room.id)
+    
+    // 先更新本地房间数据的角色（临时修复后端 user_role 为 null 的问题）
+    const roomIndex = rooms.value.findIndex(r => r.id === room.id)
+    if (roomIndex !== -1) {
+        // 如果是房间创建者，设置为 owner，否则设置为 member
+        const userId = localStorage.getItem('user_id')
+        rooms.value[roomIndex].role = rooms.value[roomIndex].creator === userId ? 'owner' : 'member'
+        console.log('[Rooms] Updated local room role to:', rooms.value[roomIndex].role)
+    }
+    
+    // 然后刷新房间列表，获取最新数据（包括成员数）
+    await loadRooms()
+    
+    // 最后进入房间
     emit('navigate', 'canvas', { roomId: room.id })
 }
 

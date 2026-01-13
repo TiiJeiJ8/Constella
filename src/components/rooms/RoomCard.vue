@@ -32,6 +32,7 @@
             <!-- 卡片底部 -->
             <div class="card-footer">
                 <div class="tags">
+                    <!-- 只在有明确角色时显示徽章 -->
                     <span v-if="room.role === 'owner'" class="role-badge owner">
                         👑 {{ t('rooms.roles.owner') }}
                     </span>
@@ -41,6 +42,7 @@
                     <span v-else-if="room.role === 'member'" class="role-badge member">
                         {{ t('rooms.roles.member') }}
                     </span>
+                    <!-- 未加入的房间（role 为 null 或 undefined）不显示任何徽章 -->
                 </div>
                 
                 <!-- 删除按钮（仅owner在"我的房间"中可见） -->
