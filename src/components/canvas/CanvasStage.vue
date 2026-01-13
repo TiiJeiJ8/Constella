@@ -19,9 +19,9 @@
 
             <!-- 主内容层 -->
             <v-layer ref="mainLayerRef">
-                <!-- 示例节点（使用 Group 组合） -->
+                <!-- 节点（使用 Group 组合，数据来自 Yjs） -->
                 <v-group
-                    v-for="node in sampleNodes"
+                    v-for="node in displayNodes"
                     :key="node.id"
                     :config="{
                         x: node.x,
@@ -31,6 +31,7 @@
                     @click="handleNodeClick(node, $event)"
                     @tap="handleNodeClick(node, $event)"
                     @dragstart="handleNodeDragStart(node)"
+                    @dragmove="handleNodeDragMove(node, $event)"
                     @dragend="handleNodeDragEnd(node, $event)"
                     @transformend="handleNodeTransformEnd(node, $event)"
                 >
@@ -71,10 +72,15 @@ const props = defineProps({
     backgroundColor: {
         type: String,
         default: '#ffffff'
+    },
+    // Yjs 节点数据
+    yjsNodes: {
+        type: Array,
+        default: () => []
     }
 })
 
-const emit = defineEmits(['zoom-change', 'position-change', 'node-select'])
+const emit = defineEmits(['zoom-change', 'position-change', 'node-select', 'node-update', 'node-delete'])
 
 // Refs
 const containerRef = ref(null)
@@ -117,99 +123,8 @@ const selectionRect = ref({
 })
 const selectionStart = ref({ x: 0, y: 0 })
 
-// 示例节点数据
-const sampleNodes = ref([
-    {
-        id: 'node-1',
-        x: 100,
-        y: 100,
-        rectConfig: {
-            x: 0,
-            y: 0,
-            width: 150,
-            height: 100,
-            fill: '#667eea',
-            stroke: '#5568d3',
-            strokeWidth: 2,
-            cornerRadius: 8,
-            shadowColor: 'rgba(0,0,0,0.2)',
-            shadowBlur: 10,
-            shadowOffset: { x: 0, y: 2 }
-        },
-        textConfig: {
-            x: 0,
-            y: 30,
-            width: 150,
-            text: '示例节点 1',
-            fontSize: 14,
-            fontFamily: 'Arial',
-            fill: '#ffffff',
-            align: 'center',
-            verticalAlign: 'middle',
-            listening: false
-        }
-    },
-    {
-        id: 'node-2',
-        x: 350,
-        y: 200,
-        rectConfig: {
-            x: 0,
-            y: 0,
-            width: 150,
-            height: 100,
-            fill: '#48bb78',
-            stroke: '#38a169',
-            strokeWidth: 2,
-            cornerRadius: 8,
-            shadowColor: 'rgba(0,0,0,0.2)',
-            shadowBlur: 10,
-            shadowOffset: { x: 0, y: 2 }
-        },
-        textConfig: {
-            x: 0,
-            y: 30,
-            width: 150,
-            text: '示例节点 2',
-            fontSize: 14,
-            fontFamily: 'Arial',
-            fill: '#ffffff',
-            align: 'center',
-            verticalAlign: 'middle',
-            listening: false
-        }
-    },
-    {
-        id: 'node-3',
-        x: 200,
-        y: 350,
-        rectConfig: {
-            x: 0,
-            y: 0,
-            width: 150,
-            height: 100,
-            fill: '#f56565',
-            stroke: '#e53e3e',
-            strokeWidth: 2,
-            cornerRadius: 8,
-            shadowColor: 'rgba(0,0,0,0.2)',
-            shadowBlur: 10,
-            shadowOffset: { x: 0, y: 2 }
-        },
-        textConfig: {
-            x: 0,
-            y: 30,
-            width: 150,
-            text: '示例节点 3',
-            fontSize: 14,
-            fontFamily: 'Arial',
-            fill: '#ffffff',
-            align: 'center',
-            verticalAlign: 'middle',
-            listening: false
-        }
-    }
-])
+// 使用传入的 Yjs 节点数据
+const displayNodes = computed(() => props.yjsNodes || [])
 
 // 计算网格线
 const gridLines = computed(() => {
@@ -370,7 +285,7 @@ function handleMouseUp(e) {
         
         // 计算框选范围内的节点
         const box = selectionRect.value.config
-        const selected = sampleNodes.value.filter(node => {
+        const selected = displayNodes.value.filter(node => {
             const nodeBox = {
                 x: node.x,
                 y: node.y,
@@ -435,6 +350,16 @@ function handleNodeClick(node, e) {
     console.log('[CanvasStage] Node clicked:', node.id, 'Selected:', Array.from(selectedNodeIds.value))
 }
 
+// 节流函数：限制函数执行频率
+const throttleTimers = new Map()
+function throttle(key, fn, delay = 16) {
+    if (throttleTimers.has(key)) return
+    fn()
+    throttleTimers.set(key, setTimeout(() => {
+        throttleTimers.delete(key)
+    }, delay))
+}
+
 // 节点拖拽开始
 function handleNodeDragStart(node) {
     // 如果拖拽的节点不在选中列表中，则单选它
@@ -446,31 +371,55 @@ function handleNodeDragStart(node) {
     }
 }
 
+// 节点拖拽中（实时同步）
+function handleNodeDragMove(node, e) {
+    const group = e.target
+    const newX = group.x()
+    const newY = group.y()
+    
+    // 节流：约60fps，避免发送过多更新
+    throttle(`drag-${node.id}`, () => {
+        emit('node-update', {
+            id: node.id,
+            x: newX,
+            y: newY,
+            _realtime: true  // 标记为实时更新
+        })
+    }, 16)
+}
+
 // 节点拖拽结束
 function handleNodeDragEnd(node, e) {
     const group = e.target
-    node.x = group.x()
-    node.y = group.y()
+    const newX = group.x()
+    const newY = group.y()
+    
+    // 发送节点更新事件（同步到 Yjs）
+    emit('node-update', {
+        id: node.id,
+        x: newX,
+        y: newY
+    })
     
     // 更新 Transformer 位置
     updateTransformer()
     
-    console.log('[CanvasStage] Node moved:', node.id, { x: group.x(), y: group.y() })
+    console.log('[CanvasStage] Node moved:', node.id, { x: newX, y: newY })
 }
 
 // 节点变换结束（缩放、旋转）
 function handleNodeTransformEnd(node, e) {
     const group = e.target
     
-    // 保存变换后的位置
-    node.x = group.x()
-    node.y = group.y()
-    
-    // 注意：Transformer 可能会改变 scale/rotation，这里只保存位置
-    // 如果需要保存 scale/rotation，可以添加：
-    // node.scaleX = group.scaleX()
-    // node.scaleY = group.scaleY()  
-    // node.rotation = group.rotation()
+    // 发送节点更新事件（包含变换数据）
+    emit('node-update', {
+        id: node.id,
+        x: group.x(),
+        y: group.y(),
+        scaleX: group.scaleX(),
+        scaleY: group.scaleY(),
+        rotation: group.rotation()
+    })
     
     console.log('[CanvasStage] Node transformed:', node.id, {
         x: group.x(),
@@ -543,7 +492,7 @@ function updateTransformer() {
     layer.children.forEach(child => {
         // 检查是否是 Group（跳过框选矩形和 Transformer）
         if (child.getClassName() === 'Group') {
-            const node = sampleNodes.value.find(n => {
+            const node = displayNodes.value.find(n => {
                 return Math.abs(child.x() - n.x) < 1 && 
                        Math.abs(child.y() - n.y) < 1
             })
@@ -618,7 +567,7 @@ onMounted(() => {
     emitZoomChange()
     emitPositionChange()
     
-    console.log('[CanvasStage] Mounted with', sampleNodes.value.length, 'sample nodes')
+    console.log('[CanvasStage] Mounted with', displayNodes.value.length, 'nodes')
 })
 
 onUnmounted(() => {

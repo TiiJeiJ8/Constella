@@ -40,7 +40,19 @@ export function useYjs(options: UseYjsOptions): UseYjsReturn {
     // 获取 WebSocket URL
     const getWebSocketUrl = () => {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-        const host = import.meta.env.VITE_WS_URL || window.location.host
+
+        // 优先使用环境变量，否则使用当前访问的 host
+        // 开发环境下，如果通过 IP 访问前端，WebSocket 也会使用相同的 IP
+        let host = import.meta.env.VITE_WS_URL
+
+        if (!host) {
+            // 前端和后端端口不同时的处理
+            // 开发环境：前端 5173，后端 3000
+            const currentHost = window.location.hostname
+            const backendPort = import.meta.env.DEV ? '3000' : window.location.port
+            host = `${currentHost}:${backendPort}`
+        }
+
         return `${protocol}//${host}/ws`
     }
 

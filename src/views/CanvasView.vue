@@ -26,9 +26,12 @@
                 :grid-size="20"
                 :grid-color="isDark ? '#333333' : '#e0e0e0'"
                 :background-color="isDark ? '#1a1a1a' : '#ffffff'"
+                :yjs-nodes="canvasNodes"
                 @zoom-change="handleZoomChange"
                 @position-change="handlePositionChange"
                 @node-select="handleNodeSelect"
+                @node-update="handleNodeUpdate"
+                @node-delete="handleNodeDelete"
             />
         </div>
 
@@ -52,9 +55,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useYjs } from '@/composables/useYjs'
+import { useYjsNodes } from '@/composables/useYjsNodes'
 import WindowControls from '@/components/base/WindowControls.vue'
 import CanvasTopBar from '@/components/canvas/CanvasTopBar.vue'
 import Toolbox from '@/components/canvas/Toolbox.vue'
@@ -106,12 +110,25 @@ const yjs = useYjs({
     onSync: (synced) => {
         console.log('[Canvas] Yjs synced:', synced)
         isSyncing.value = !synced
+        
+        // 同步完成后初始化节点管理
+        if (synced && yjs.doc) {
+            yjsNodes.initialize()
+        }
     },
     onError: (error) => {
         console.error('[Canvas] Yjs error:', error)
         isOffline.value = true
     }
 })
+
+// Yjs 节点数据管理
+const yjsNodes = useYjsNodes({
+    getDoc: () => yjs.doc
+})
+
+// 渲染用的节点数据（从 Yjs 同步）
+const canvasNodes = computed(() => yjsNodes.nodes.value)
 
 // 主题监听
 function updateTheme() {
@@ -152,6 +169,19 @@ function handleNodeSelect(selectedNodeIds) {
     selectedCount.value = selectedNodeIds.length
     console.log('[Canvas] Nodes selected:', selectedNodeIds)
 }
+
+// 节点更新（同步到 Yjs）
+function handleNodeUpdate(updateData) {
+    console.log('[Canvas] Node update:', updateData)
+    yjsNodes.updateNode(updateData.id, updateData)
+}
+
+// 节点删除（同步到 Yjs）
+function handleNodeDelete(nodeIds) {
+    console.log('[Canvas] Node delete:', nodeIds)
+    yjsNodes.deleteNodes(nodeIds)
+}
+
 // 切换面板折叠
 function togglePanel() {
     isPanelCollapsed.value = !isPanelCollapsed.value
