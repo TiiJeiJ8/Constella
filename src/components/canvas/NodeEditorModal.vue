@@ -87,6 +87,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
+// @ts-ignore
 import { pluginRegistry, type NodeContent } from '@/plugins'
 import MarkdownIt from 'markdown-it'
 import DOMPurify from 'dompurify'

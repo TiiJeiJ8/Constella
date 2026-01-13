@@ -48,6 +48,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+// @ts-ignore
 import type { RenderEdge, ArrowType } from '@/composables/useYjsEdges'
 
 interface NodeRect {

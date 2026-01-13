@@ -17,6 +17,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+// @ts-ignore
 import { pluginRegistry, type NodeContent, type ContentKind } from '@/plugins'
 
 const props = defineProps<{
