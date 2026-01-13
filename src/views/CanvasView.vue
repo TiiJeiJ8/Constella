@@ -19,13 +19,17 @@
             style="user-select: none;"
         />
 
-        <!-- 中央画布区 - 占位符 -->
+        <!-- 中央画布区 -->
         <div class="canvas-area">
-            <div class="canvas-placeholder"  style="user-select: none;">
-                <div class="placeholder-icon">🎨</div>
-                <div class="placeholder-text">{{ t('canvas.loading') }}</div>
-                <div class="placeholder-hint">{{ roomName }}</div>
-            </div>
+            <CanvasStage
+                :active-tool="activeTool"
+                :grid-size="20"
+                :grid-color="isDark ? '#333333' : '#e0e0e0'"
+                :background-color="isDark ? '#1a1a1a' : '#ffffff'"
+                @zoom-change="handleZoomChange"
+                @position-change="handlePositionChange"
+                @node-select="handleNodeSelect"
+            />
         </div>
 
         <!-- 右侧面板 -->
@@ -55,6 +59,7 @@ import CanvasTopBar from '@/components/canvas/CanvasTopBar.vue'
 import Toolbox from '@/components/canvas/Toolbox.vue'
 import RightPanel from '@/components/canvas/RightPanel.vue'
 import StatusBar from '@/components/canvas/StatusBar.vue'
+import CanvasStage from '@/components/canvas/CanvasStage.vue'
 
 const { t } = useI18n()
 
@@ -102,6 +107,22 @@ function handleExit() {
     emit('navigate', 'rooms')
 }
 
+
+// 缩放变化
+function handleZoomChange(newZoom) {
+    zoom.value = newZoom
+}
+
+// 位置变化
+function handlePositionChange(newPosition) {
+    position.value = newPosition
+}
+
+// 节点选择
+function handleNodeSelect(selectedNodeIds) {
+    selectedCount.value = selectedNodeIds.length
+    console.log('[Canvas] Nodes selected:', selectedNodeIds)
+}
 // 切换面板折叠
 function togglePanel() {
     isPanelCollapsed.value = !isPanelCollapsed.value
@@ -165,53 +186,8 @@ onUnmounted(() => {
     background: var(--canvas-bg);
 }
 
-/* ==================== 占位符样式 ==================== */
-.canvas-placeholder {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    opacity: 0.6;
-}
-
-.placeholder-icon {
-    font-size: 64px;
-    margin-bottom: 16px;
-    animation: pulse 2s ease-in-out infinite;
-}
-
-.placeholder-text {
-    font-size: 18px;
-    font-weight: 500;
-    color: var(--text-primary);
-    margin-bottom: 8px;
-}
-
-.placeholder-hint {
-    font-size: 14px;
-    color: var(--text-secondary);
-}
-
-@keyframes pulse {
-    0%, 100% {
-        opacity: 0.6;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 1;
-        transform: scale(1.05);
-    }
-}
-
 /* ==================== 响应式设计 ==================== */
 @media (max-width: 768px) {
-    .placeholder-icon {
-        font-size: 48px;
-    }
-
-    .placeholder-text {
-        font-size: 16px;
-    }
+    /* 移动端适配 */
 }
 </style>
