@@ -61,6 +61,12 @@ export function useYjsEdges(options: UseYjsEdgesOptions) {
      * 初始化
      */
     function initialize() {
+        if (edgesMap) {
+            // 已初始化，仅同步数据
+            syncFromYjs()
+            return
+        }
+
         doc = getDoc()
         if (!doc) {
             console.warn('[useYjsEdges] Doc not available')

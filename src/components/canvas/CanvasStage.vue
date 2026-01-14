@@ -126,6 +126,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import Konva from 'konva'
 import EdgeRenderer from './EdgeRenderer.vue'
+import { CursorInterpolationManager } from '@/utils/cursorInterpolation'
 
 const props = defineProps({
     activeTool: {
@@ -244,10 +245,53 @@ function getNodeRect(nodeId) {
     }
 }
 
-// 过滤有光标位置的远程用户
-const remoteCursorsInView = computed(() => {
-    return (props.remoteCursors || []).filter(user => user.cursor)
+// 光标插帧管理器
+const cursorManager = new CursorInterpolationManager()
+const interpolatedCursors = ref(new Map())
+
+// 更新插帧后的光标
+cursorManager.onUpdate((positions) => {
+    interpolatedCursors.value = positions
 })
+
+// 过滤有光标位置的远程用户，并应用插帧
+const remoteCursorsInView = computed(() => {
+    const cursors = (props.remoteCursors || []).filter(user => user.cursor)
+    
+    // 返回插帧后的光标位置
+    return cursors.map(user => {
+        const interpolated = interpolatedCursors.value.get(user.clientId)
+        if (interpolated) {
+            return {
+                ...user,
+                cursor: interpolated
+            }
+        }
+        return user
+    })
+})
+
+// 监听远程光标变化，更新插帧管理器
+watch(() => props.remoteCursors, (newCursors) => {
+    if (!newCursors) return
+    
+    const currentClientIds = new Set(newCursors.map(u => u.clientId))
+    
+    // 更新或添加光标
+    newCursors.forEach(user => {
+        if (user.cursor) {
+            cursorManager.updateCursor(user.clientId, user.cursor)
+        }
+    })
+    
+    // 移除已离开的光标
+    const existingIds = Array.from(interpolatedCursors.value.keys())
+    existingIds.forEach(clientId => {
+        if (!currentClientIds.has(clientId)) {
+            cursorManager.removeCursor(clientId)
+        }
+    })
+}, { deep: true })
 
 // 计算网格线
 const gridLines = computed(() => {
@@ -937,6 +981,9 @@ onUnmounted(() => {
     window.removeEventListener('resize', resizeStage)
     window.removeEventListener('keydown', handleKeyDown)
     window.removeEventListener('keyup', handleKeyUp)
+    
+    // 销毁光标插帧管理器
+    cursorManager.destroy()
 })
 
 // 提供给外部调用的方法

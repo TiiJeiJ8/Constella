@@ -210,3 +210,60 @@ npm run dev
 - 只把上面的 Markdown 文档添加到仓库（我已完成）。
 
 文件位置： [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md)
+
+---
+
+## 附录：远程光标平滑移动实现
+
+本项目实现了基于插帧的远程光标平滑移动效果，技术细节如下：
+
+**实现位置**：
+- 插帧管理器：[src/utils/cursorInterpolation.ts](src/utils/cursorInterpolation.ts)
+- 集成位置：[src/components/canvas/CanvasStage.vue](src/components/canvas/CanvasStage.vue)
+
+**核心技术**：
+- **线性插值（LERP）**：使用 `current += (target - current) * speed` 实现平滑过渡
+- **requestAnimationFrame**：利用浏览器 RAF 循环，确保 60fps 流畅动画
+- **智能优化**：
+  - 死区（1px）：小于死区直接跳转，避免微小抖动
+  - 最大距离（500px）：超过则直接跳转，防止大延迟时的拖尾
+  - 空闲检测：无变化超过 16ms（1帧）自动停止动画，节省性能
+- **Map 数据结构**：用 `Map<clientId, position>` 管理多个光标，O(1) 查找
+
+**性能特点**：
+- 仅在有光标移动时运行 RAF 循环
+- 无光标或全部静止时自动暂停动画
+- 内存占用极低（每个光标仅约 100 字节）
+- 支持同时平滑渲染数十个远程光标
+
+**可调参数**（在 `CursorInterpolationManager` 类中）：
+```typescript
+INTERPOLATION_SPEED = 0.2  // 插值速度 (0-1)，越大越快跟随
+DEAD_ZONE = 1              // 死区半径（像素）
+MAX_DISTANCE = 500         // 最大距离（像素）
+IDLE_THRESHOLD = 16        // 空闲阈值（毫秒）
+```
+
+**使用示例**：
+```typescript
+import { CursorInterpolationManager } from '@/utils/cursorInterpolation'
+
+const manager = new CursorInterpolationManager()
+
+// 设置更新回调
+manager.onUpdate((positions) => {
+  // positions: Map<clientId, {x, y}>
+  // 在此更新 UI
+})
+
+// 更新光标目标位置
+manager.updateCursor(clientId, { x: 100, y: 200 })
+
+// 移除光标
+manager.removeCursor(clientId)
+
+// 销毁管理器
+manager.destroy()
+```
+
+

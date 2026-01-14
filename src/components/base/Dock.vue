@@ -133,12 +133,6 @@ const navItems = ref([
         icon: '⭐',
         active: false,
         action: () => emit('navigate', 'favorites')
-    },
-    { 
-        id: 'notifications', 
-        icon: '🔔',
-        active: false,
-        action: () => emit('navigate', 'notifications')
     }
 ])
 

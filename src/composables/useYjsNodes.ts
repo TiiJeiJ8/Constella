@@ -172,7 +172,11 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
      * 初始化：如果没有节点，创建示例节点
      */
     function initialize() {
-        if (isInitialized.value) return
+        if (isInitialized.value) {
+            // 已初始化,但仍需同步一次(防止初始化时数据未就绪)
+            syncFromYjs()
+            return
+        }
 
         // 获取 doc
         doc = getDoc()

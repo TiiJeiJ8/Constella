@@ -223,6 +223,20 @@ const getStoredToken = () => {
     return localStorage.getItem('accessToken') || ''
 }
 
+// 获取用户姓名（从 settings 中读取）
+const getUserName = () => {
+    const settings = JSON.parse(localStorage.getItem('settings') || '{}')
+    if (settings.lastName && settings.firstName) {
+        // 根据当前语言决定姓名顺序
+        const currentLocale = localStorage.getItem('locale') || 'zh-CN'
+        return currentLocale === 'zh-CN' 
+            ? `${settings.lastName}${settings.firstName}`
+            : `${settings.firstName} ${settings.lastName}`
+    }
+    // 降级使用 username 或 userId
+    return localStorage.getItem('username') || settings.userId || localStorage.getItem('user_id') || t('common.anonymous')
+}
+
 // Yjs 实时协作
 const yjs = useYjs({
     roomId: props.roomId,
@@ -234,6 +248,12 @@ const yjs = useYjs({
         
         // 初始化 Awareness
         awareness.initialize()
+        
+        // 连接后立即初始化节点和边管理（确保首次进入时能创建示例节点）
+        if (yjs.doc) {
+            yjsNodes.initialize()
+            yjsEdges.initialize()
+        }
     },
     onDisconnect: () => {
         console.log('[Canvas] Yjs disconnected')
@@ -243,7 +263,7 @@ const yjs = useYjs({
         console.log('[Canvas] Yjs synced:', synced)
         isSyncing.value = !synced
         
-        // 同步完成后初始化节点和边管理
+        // 同步完成后确保初始化已完成（防止连接回调未触发的情况）
         if (synced && yjs.doc) {
             yjsNodes.initialize()
             yjsEdges.initialize()
@@ -257,7 +277,8 @@ const yjs = useYjs({
 
 // Awareness 用户感知
 const awareness = useAwareness({
-    provider: yjs.provider
+    provider: yjs.provider,
+    userName: getUserName()
 })
 
 // 其他用户光标
