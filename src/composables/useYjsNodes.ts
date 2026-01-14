@@ -109,6 +109,22 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
     }
 
     /**
+     * 将 Y.Map 格式的 content 转换为普通对象
+     */
+    function convertYMapContent(yContent: Y.Map<any>): NodeContent {
+        const kind = yContent.get('kind') || 'blank'
+        const data = yContent.get('data') || ''
+        const displayMode = yContent.get('displayMode')
+        const metadata = yContent.get('metadata')
+        
+        const content: NodeContent = { kind, data }
+        if (displayMode) content.displayMode = displayMode
+        if (metadata) content.metadata = metadata
+        
+        return content
+    }
+
+    /**
      * 从 Y.Map 读取节点并转换为渲染格式
      */
     function syncFromYjs() {
@@ -118,9 +134,11 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
 
         nodesMap.forEach((yNode, nodeId) => {
             if (yNode instanceof Y.Map) {
-                // 读取 content，兼容旧数据
-                let content = yNode.get('content')
-                if (!content) {
+                // 读取 content，兼容多种格式
+                let content: NodeContent
+                const rawContent = yNode.get('content')
+                
+                if (!rawContent) {
                     // 兼容旧的 text 字段，转为 markdown
                     const text = yNode.get('text')
                     if (text) {
@@ -128,6 +146,20 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
                     } else {
                         content = { kind: 'blank', data: '' }
                     }
+                } else if (rawContent instanceof Y.Map) {
+                    // content 是 Y.Map（快照恢复后的格式）
+                    content = convertYMapContent(rawContent)
+                } else if (typeof rawContent === 'object' && rawContent !== null) {
+                    // content 是普通对象
+                    content = {
+                        kind: rawContent.kind || 'blank',
+                        data: rawContent.data || ''
+                    }
+                    if (rawContent.displayMode) content.displayMode = rawContent.displayMode
+                    if (rawContent.metadata) content.metadata = rawContent.metadata
+                } else {
+                    // 兜底处理
+                    content = { kind: 'blank', data: '' }
                 }
 
                 const node: CanvasNode = {

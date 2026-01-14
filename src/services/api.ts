@@ -597,6 +597,131 @@ class ApiService {
         }
         return this.getRooms({ userId })
     }
+
+    /**
+     * 上传资源到房间
+     */
+    async uploadAsset(roomId: string, file: File): Promise<ApiResponse> {
+        try {
+            const formData = new FormData()
+            formData.append('file', file)
+
+            const accessToken = localStorage.getItem('access_token')
+            const headers: HeadersInit = {}
+            if (accessToken) {
+                headers['Authorization'] = `Bearer ${accessToken}`
+            }
+            // 注意：不要设置 Content-Type，让浏览器自动设置 multipart/form-data 边界
+
+            const response = await this.fetchWithAuth(
+                `${this.baseUrl}/api/v1/rooms/${roomId}/assets`,
+                {
+                    method: 'POST',
+                    headers,
+                    body: formData
+                }
+            )
+
+            const result = await response.json()
+
+            if (response.ok) {
+                return {
+                    success: true,
+                    code: result.code,
+                    message: result.message,
+                    data: result.data
+                }
+            } else {
+                return {
+                    success: false,
+                    code: result.code || response.status,
+                    message: result.message || 'Failed to upload asset',
+                    errorCode: result.data
+                }
+            }
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            }
+        }
+    }
+
+    /**
+     * 获取房间资源列表
+     */
+    async getAssets(roomId: string): Promise<ApiResponse> {
+        try {
+            const response = await this.fetchWithAuth(
+                `${this.baseUrl}/api/v1/rooms/${roomId}/assets`,
+                {
+                    method: 'GET',
+                    headers: this.getAuthHeaders()
+                }
+            )
+
+            const result = await response.json()
+
+            if (response.ok) {
+                return {
+                    success: true,
+                    code: result.code,
+                    message: result.message,
+                    data: result.data
+                }
+            } else {
+                return {
+                    success: false,
+                    code: result.code || response.status,
+                    message: result.message || 'Failed to get assets',
+                    errorCode: result.data
+                }
+            }
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            }
+        }
+    }
+
+    /**
+     * 删除房间资源
+     */
+    async deleteAsset(roomId: string, assetId: string): Promise<ApiResponse> {
+        try {
+            const response = await this.fetchWithAuth(
+                `${this.baseUrl}/api/v1/rooms/${roomId}/assets/${assetId}`,
+                {
+                    method: 'DELETE',
+                    headers: this.getAuthHeaders()
+                }
+            )
+
+            const result = await response.json()
+
+            if (response.ok) {
+                return {
+                    success: true,
+                    code: result.code,
+                    message: result.message,
+                    data: result.data
+                }
+            } else {
+                return {
+                    success: false,
+                    code: result.code || response.status,
+                    message: result.message || 'Failed to delete asset',
+                    errorCode: result.data
+                }
+            }
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            }
+        }
+    }
 }
 
 // 导出单例

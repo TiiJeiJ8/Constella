@@ -253,6 +253,9 @@
             "snapshotRestored": "快照恢复成功",
             "snapshotDeleted": "快照已删除",
             "assetDeleted": "资源已删除",
+            "uploadSuccess": "上传成功",
+            "uploadFailed": "上传失败",
+            "deleteFailed": "删除失败",
             "exportSuccess": "导出 {format} 成功",
             "exportFailed": "导出失败",
             "edgeLabelUpdated": "连线标签已更新"
@@ -270,7 +273,7 @@
         },
         "assets": {
             "upload": "上传资源",
-            "supportedFormats": "支持 JPG、PNG、GIF、SVG",
+            "supportedFormats": "支持 JPG、PNG、GIF、SVG 等格式",
             "uploading": "上传中...",
             "empty": "暂无资源",
             "emptyHint": "拖拽文件到此处或点击上传按钮",

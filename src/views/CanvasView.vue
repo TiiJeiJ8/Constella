@@ -149,6 +149,7 @@ import { registerPlugins } from '@/plugins/register'
 import { pluginRegistry } from '@/plugins'
 import { exportCanvas } from '@/utils/canvasExport'
 import { useToast } from '@/utils/useToast'
+import { apiService } from '@/services/api'
 import WindowControls from '@/components/base/WindowControls.vue'
 import CanvasTopBar from '@/components/canvas/CanvasTopBar.vue'
 import Toolbox from '@/components/canvas/Toolbox.vue'
@@ -499,36 +500,58 @@ function handleEdgeLabelConfirm(newLabel) {
 async function handleAssetUpload(uploadData) {
     console.log('[Canvas] Asset upload:', uploadData)
     
-    // 创建本地 URL（实际应该上传到服务器）
     const file = uploadData.file
-    const localUrl = URL.createObjectURL(file)
+    
+    // 上传到服务器
+    const response = await apiService.uploadAsset(props.roomId, file)
+    
+    if (!response.success) {
+        console.error('[Canvas] Asset upload failed:', response.message)
+        toast.error(t('canvas.toast.uploadFailed'))
+        return
+    }
+    
+    const serverAsset = response.data
+    
+    // 构建完整的资源 URL
+    const baseUrl = apiService.getBaseUrl()
+    const fullUrl = serverAsset.url.startsWith('http') 
+        ? serverAsset.url 
+        : `${baseUrl}${serverAsset.url}`
     
     const asset = {
-        id: `asset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        name: uploadData.name,
-        type: uploadData.type,
-        size: uploadData.size,
-        url: localUrl,
-        uploadedAt: new Date().toISOString()
+        id: serverAsset.id,
+        name: serverAsset.name,
+        type: serverAsset.type,
+        size: serverAsset.size,
+        url: fullUrl,
+        uploadedAt: serverAsset.uploadedAt
     }
     
     roomAssets.value.push(asset)
     console.log('[Canvas] Asset added:', asset.id)
-    
-    // TODO: 上传到服务器
-    // const response = await apiService.uploadAsset(props.roomId, file)
-    // asset.url = response.url
+    toast.success(t('canvas.toast.uploadSuccess'))
 }
 
 // 资源删除
-function handleAssetDelete(assetId) {
+async function handleAssetDelete(assetId) {
     const index = roomAssets.value.findIndex(a => a.id === assetId)
     if (index !== -1) {
         const asset = roomAssets.value[index]
-        // 释放本地 URL
-        if (asset.url.startsWith('blob:')) {
+        
+        // 如果是服务器资源，调用 API 删除
+        if (!asset.url.startsWith('blob:')) {
+            const response = await apiService.deleteAsset(props.roomId, assetId)
+            if (!response.success) {
+                console.error('[Canvas] Asset delete failed:', response.message)
+                toast.error(t('canvas.toast.deleteFailed'))
+                return
+            }
+        } else {
+            // 释放本地 URL
             URL.revokeObjectURL(asset.url)
         }
+        
         roomAssets.value.splice(index, 1)
         console.log('[Canvas] Asset deleted:', assetId)
     }
@@ -889,10 +912,30 @@ async function loadRoomData() {
     }
 }
 
+// 加载房间资源列表
+async function loadRoomAssets() {
+    try {
+        console.log('[Canvas] Loading assets for room:', props.roomId)
+        const response = await apiService.getAssets(props.roomId)
+        
+        if (response.success && response.data) {
+            const baseUrl = apiService.getBaseUrl()
+            roomAssets.value = response.data.map(asset => ({
+                ...asset,
+                url: asset.url.startsWith('http') ? asset.url : `${baseUrl}${asset.url}`
+            }))
+            console.log('[Canvas] Loaded', roomAssets.value.length, 'assets')
+        }
+    } catch (error) {
+        console.error('[Canvas] Failed to load assets:', error)
+    }
+}
+
 // 组件挂载
 onMounted(() => {
     updateTheme()
     loadRoomData()
+    loadRoomAssets()
     
     // 连接 Yjs
     console.log('[Canvas] Connecting to Yjs room:', props.roomId)

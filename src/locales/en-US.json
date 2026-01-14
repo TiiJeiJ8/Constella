@@ -249,6 +249,9 @@
             "snapshotRestored": "Snapshot restored",
             "snapshotDeleted": "Snapshot deleted",
             "assetDeleted": "Asset deleted",
+            "uploadSuccess": "Upload successful",
+            "uploadFailed": "Upload failed",
+            "deleteFailed": "Delete failed",
             "exportSuccess": "Export {format} successfully",
             "exportFailed": "Export failed",
             "edgeLabelUpdated": "Edge label updated"
@@ -266,7 +269,7 @@
         },
         "assets": {
             "upload": "Upload Assets",
-            "supportedFormats": "Supports JPG, PNG, GIF, SVG",
+            "supportedFormats": "Supports JPG, PNG, GIF, SVG and more formats",
             "uploading": "Uploading...",
             "empty": "No assets yet",
             "emptyHint": "Drag files here or click upload button",
