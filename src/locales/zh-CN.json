@@ -266,7 +266,7 @@
         },
         "node": {
             "defaultContent": "新节点\n\n选择节点类型",
-            "emptyContent": "空内容"
+            "emptyContent": "[空内容]双击编辑"
         },
         "assets": {
             "upload": "上传资源",

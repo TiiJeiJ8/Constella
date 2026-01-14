@@ -54,7 +54,7 @@
                                     />
                                     <!-- 远程用户光标指示器 -->
                                     <div
-                                        v-for="cursor in remoteCursors" 
+                                        v-for="cursor in remoteCursors"
                                         :key="cursor.clientId"
                                         class="remote-cursor"
                                         :style="cursor.style"
@@ -122,7 +122,7 @@
                         <!-- 底部状态栏 -->
                         <div class="editor-footer">
                             <div class="footer-hint">
-                                <kbd>/</kbd> 插入块 · <kbd>$...$</kbd> 行内公式 · <kbd>$$...$$</kbd> 块级公式 · <kbd>Esc</kbd> 关闭
+                                <kbd>/</kbd> 插入块 · <kbd>Esc</kbd> 关闭
                             </div>
                             <div class="footer-right">
                                 <span v-if="editingUsers.length > 0" class="collab-indicator">
@@ -285,9 +285,9 @@ const isMarkdown = computed(() => props.content.kind === 'markdown')
 
 const placeholder = computed(() => {
     if (isMarkdown.value) {
-        return '输入 Markdown 内容...\n\n使用 / 插入块\n使用 $...$ 插入行内公式\n使用 $$...$$ 插入块级公式'
+        return '输入 Markdown 内容...\n\n使用 / 插入块'
     }
-    return '输入内容...\n\n使用 / 插入块'
+    return '输入内容...'
 })
 
 const slashMenuStyle = computed(() => ({
@@ -330,10 +330,13 @@ function getCaretCoordinates(position: number): { top: number; left: number } {
     const textarea = textareaRef.value
     if (!textarea) return { top: 0, left: 0 }
     
-    const text = textarea.value.substring(0, position)
+    // 限制 position 在有效范围内，避免超出文本长度
+    const safePos = Math.max(0, Math.min(position, textarea.value.length))
+    const text = textarea.value.substring(0, safePos)
     const lines = text.split('\n')
-    const lineIndex = lines.length - 1
-    const charIndex = lines[lineIndex].length
+    const lineIndex = Math.max(0, lines.length - 1)
+    const currentLine = lines[lineIndex] ?? ''
+    const charIndex = currentLine.length
     
     // 估算坐标（基于等宽字体）
     const lineHeight = 27 // 15px * 1.8 line-height

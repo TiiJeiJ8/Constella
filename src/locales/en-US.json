@@ -266,7 +266,7 @@
         },
         "node": {
             "defaultContent": "New Node\n\nChoose node type",
-            "emptyContent": "Empty"
+            "emptyContent": "[Empty]Double click to edit"
         },
         "assets": {
             "upload": "Upload Assets",
