@@ -65,10 +65,55 @@
                     @dragend="handleNodeDragEnd(node, $event)"
                     @transformend="handleNodeTransformEnd(node, $event)"
                 >
+                    <!-- 远程用户选中高亮边框（在节点背景下面） -->
+                    <v-rect
+                        v-if="remoteSelections.has(node.id)"
+                        :config="{
+                            x: -4,
+                            y: -4,
+                            width: node.width + 8,
+                            height: node.height + 8,
+                            stroke: getRemoteSelectionDisplay(node.id)?.userColor || '#667eea',
+                            strokeWidth: 3,
+                            cornerRadius: 10,
+                            dash: [8, 4],
+                            listening: false
+                        }"
+                    />
                     <!-- 节点背景矩形 -->
                     <v-rect :config="node.rectConfig" />
                     <!-- 内容由 NodeContentOverlay 在 HTML 层渲染 -->
                 </v-group>
+                
+                <!-- 远程用户编辑标签（独立渲染，避免影响 Transformer） -->
+                <v-label
+                    v-for="node in displayNodes.filter(n => remoteSelections.has(n.id))"
+                    :key="`remote-label-${node.id}`"
+                    :config="{ 
+                        x: node.x + node.width + 6, 
+                        y: node.y - 4,
+                        listening: false
+                    }"
+                >
+                    <v-tag
+                        :config="{
+                            fill: getRemoteSelectionDisplay(node.id)?.userColor || '#667eea',
+                            cornerRadius: 3,
+                            pointerDirection: 'left',
+                            pointerWidth: 6,
+                            pointerHeight: 10
+                        }"
+                    />
+                    <v-text
+                        :config="{
+                            text: getRemoteSelectionDisplay(node.id)?.userName || '',
+                            fontSize: 11,
+                            fontFamily: 'Arial',
+                            fill: '#ffffff',
+                            padding: 4
+                        }"
+                    />
+                </v-label>
                 
                 <!-- 框选矩形 -->
                 <v-rect
@@ -292,6 +337,50 @@ watch(() => props.remoteCursors, (newCursors) => {
         }
     })
 }, { deep: true })
+
+// 计算其他用户正在编辑的节点（nodeId -> 用户信息数组，支持多用户）
+const remoteSelections = computed(() => {
+    const selections = new Map()
+    const cursors = props.remoteCursors || []
+    
+    cursors.forEach(user => {
+        if (user.selection && user.selection.length > 0) {
+            user.selection.forEach(nodeId => {
+                const userInfo = {
+                    userName: user.user?.name || '用户',
+                    userColor: user.user?.color || '#667eea'
+                }
+                
+                if (selections.has(nodeId)) {
+                    // 已有用户选中此节点，添加到列表
+                    selections.get(nodeId).push(userInfo)
+                } else {
+                    // 第一个用户选中此节点
+                    selections.set(nodeId, [userInfo])
+                }
+            })
+        }
+    })
+    
+    return selections
+})
+
+// 获取节点的远程选择显示信息（合并多用户名称，混合颜色）
+function getRemoteSelectionDisplay(nodeId) {
+    const users = remoteSelections.value.get(nodeId)
+    if (!users || users.length === 0) return null
+    
+    // 合并所有用户名
+    const names = users.map(u => u.userName).join(', ')
+    // 使用第一个用户的颜色作为主色
+    const primaryColor = users[0].userColor
+    
+    return {
+        userName: names,
+        userColor: primaryColor,
+        userCount: users.length
+    }
+}
 
 // 计算网格线
 const gridLines = computed(() => {

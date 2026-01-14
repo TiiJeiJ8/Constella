@@ -138,7 +138,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, provide } from 'vue'
 import { useI18n } from 'vue-i18n'
 import * as Y from 'yjs'
 import { useYjs } from '@/composables/useYjs'
@@ -281,6 +281,12 @@ const awareness = useAwareness({
     userName: getUserName()
 })
 
+// 为子组件提供 Awareness（用于编辑器协作光标）
+provide('awareness', {
+    otherUsers: awareness.otherUsers,
+    updateTextCursor: awareness.updateTextCursor
+})
+
 // 其他用户光标
 const remoteCursors = computed(() => awareness.otherUsers.value)
 
@@ -357,6 +363,9 @@ function handleNodeSelect(selectedNodeIds) {
     selectedCount.value = selectedNodeIds.length
     selectedNodeIdList.value = selectedNodeIds
     console.log('[Canvas] Nodes selected:', selectedNodeIds)
+    
+    // 同步选中状态到 Awareness，让其他用户看到
+    awareness.updateSelection(selectedNodeIds)
 }
 
 // 节点更新（同步到 Yjs）

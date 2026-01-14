@@ -2,6 +2,15 @@ import { ref, onUnmounted, type Ref } from 'vue'
 import type { WebsocketProvider } from 'y-websocket'
 
 /**
+ * 文本编辑器光标信息
+ */
+export interface TextCursor {
+    nodeId: string      // 编辑的节点ID
+    position: number    // 光标位置
+    selectionEnd: number // 选区结束位置
+}
+
+/**
  * 用户状态（Awareness）
  */
 export interface UserState {
@@ -16,6 +25,7 @@ export interface UserState {
         y: number
     }
     selection?: string[]  // 选中的节点 IDs
+    textCursor?: TextCursor  // 文本编辑器光标
 }
 
 interface UseAwarenessOptions {
@@ -92,7 +102,8 @@ export function useAwareness(options: UseAwarenessOptions) {
                     clientId,
                     user: state.user,
                     cursor: state.cursor,
-                    selection: state.selection
+                    selection: state.selection,
+                    textCursor: state.textCursor
                 })
             }
         })
@@ -122,6 +133,23 @@ export function useAwareness(options: UseAwarenessOptions) {
     function updateSelection(nodeIds: string[]) {
         if (!awareness) return
         awareness.setLocalStateField('selection', nodeIds)
+    }
+
+    /**
+     * 更新文本编辑器光标位置
+     */
+    function updateTextCursor(nodeId: string, position: number, selectionEnd: number) {
+        if (!awareness) return
+        if (!nodeId || position < 0) {
+            // 清除文本光标
+            awareness.setLocalStateField('textCursor', null)
+        } else {
+            awareness.setLocalStateField('textCursor', {
+                nodeId,
+                position,
+                selectionEnd
+            })
+        }
     }
 
     /**
@@ -156,6 +184,7 @@ export function useAwareness(options: UseAwarenessOptions) {
         updateCursor,
         clearCursor,
         updateSelection,
+        updateTextCursor,
         setUserName,
         destroy
     }
