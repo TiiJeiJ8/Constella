@@ -15,9 +15,9 @@
         <div v-else class="panel-container">
             <!-- 标签栏（包含折叠按钮） -->
             <div class="panel-tabs">
-                <button 
-                    class="collapse-btn-inline" 
-                    @click="$emit('toggle-collapse')" 
+                <button
+                    class="collapse-btn-inline"
+                    @click="$emit('toggle-collapse')"
                     title="折叠面板"
                 >
                     <span class="icon">▶</span>
@@ -396,12 +396,12 @@ const props = defineProps({
 })
 
 defineEmits([
-    'panel-change', 
-    'toggle-collapse', 
-    'node-kind-change', 
-    'node-property-change', 
+    'panel-change',
+    'toggle-collapse',
+    'node-kind-change',
+    'node-property-change',
     'node-display-mode-change',
-    'node-select', 
+    'node-select',
     'node-zindex-change',
     'edge-property-change',
     'edge-select',

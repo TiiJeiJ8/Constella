@@ -265,7 +265,8 @@
             "connectionLost": "与服务器的连接已断开"
         },
         "node": {
-            "defaultContent": "# 新节点\n\n双击编辑内容"
+            "defaultContent": "新节点\n\n选择节点类型",
+            "emptyContent": "空内容"
         },
         "assets": {
             "upload": "上传资源",

@@ -7,7 +7,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { NodeContent, DisplayMode } from '../index'
+
+const { t } = useI18n()
 
 const props = defineProps<{
     content: NodeContent
@@ -48,7 +51,7 @@ const cardTitle = computed(() => {
     
     // 没有标题就用第一行，去掉 markdown 标记
     const firstLine = lines[0] || ''
-    return firstLine.replace(/^#+\s*/, '').replace(/[*_`]/g, '') || '空内容'
+    return firstLine.replace(/^#+\s*/, '').replace(/[*_`]/g, '') || t('canvas.node.emptyContent')
 })
 
 // 是否有更多内容

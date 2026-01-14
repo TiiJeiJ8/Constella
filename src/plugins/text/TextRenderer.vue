@@ -7,7 +7,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { NodeContent, DisplayMode } from '../index'
+
+const { t } = useI18n()
 
 const props = defineProps<{
     content: NodeContent
@@ -40,7 +43,7 @@ const previewStyle = computed(() => ({
 const cardTitle = computed(() => {
     const text = props.content.data || ''
     const lines = text.split('\n').filter(l => l.trim())
-    return lines[0] || '空文本'
+    return lines[0] || t('canvas.node.emptyContent')
 })
 
 // 是否有更多内容

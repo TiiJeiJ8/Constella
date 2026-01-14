@@ -2,14 +2,17 @@
     <div class="blank-renderer" :style="containerStyle">
         <div class="blank-placeholder">
             <span class="icon">+</span>
-            <span class="hint">选择节点类型</span>
+            <span class="hint">{{ t('canvas.node.defaultContent') }}</span>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { NodeContent } from '../index'
+
+const { t } = useI18n()
 
 const props = defineProps<{
     content: NodeContent

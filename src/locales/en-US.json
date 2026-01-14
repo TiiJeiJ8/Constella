@@ -265,7 +265,8 @@
             "connectionLost": "Connection to server lost"
         },
         "node": {
-            "defaultContent": "# New Node\n\nDouble-click to edit"
+            "defaultContent": "New Node\n\nChoose node type",
+            "emptyContent": "Empty"
         },
         "assets": {
             "upload": "Upload Assets",

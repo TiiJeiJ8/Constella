@@ -1,9 +1,9 @@
 <template>
     <Teleport to="body">
         <Transition name="modal-fade">
-            <div 
+            <div
                 v-if="true"
-                class="editor-overlay" 
+                class="editor-overlay"
                 @click.self="handleClose"
                 @keydown.esc.stop="handleClose"
                 tabindex="-1"
@@ -18,8 +18,8 @@
                                 <span class="type-label">{{ pluginMeta?.label || '编辑' }}</span>
                                 <!-- 在线协作用户指示器 -->
                                 <div v-if="editingUsers.length > 0" class="collab-users">
-                                    <div 
-                                        v-for="user in editingUsers" 
+                                    <div
+                                        v-for="user in editingUsers"
                                         :key="user.clientId"
                                         class="collab-avatar"
                                         :style="{ backgroundColor: user.user.color }"
@@ -53,27 +53,27 @@
                                         spellcheck="false"
                                     />
                                     <!-- 远程用户光标指示器 -->
-                                    <div 
+                                    <div
                                         v-for="cursor in remoteCursors" 
                                         :key="cursor.clientId"
                                         class="remote-cursor"
                                         :style="cursor.style"
                                     >
-                                        <div 
+                                        <div
                                             class="remote-cursor-caret" 
                                             :style="{ backgroundColor: cursor.color }"
                                         />
-                                        <div 
+                                        <div
                                             class="remote-cursor-label"
                                             :style="{ backgroundColor: cursor.color }"
                                         >
                                             {{ cursor.name }}
                                         </div>
                                         <!-- 选区高亮 -->
-                                        <div 
+                                        <div
                                             v-if="cursor.selectionWidth > 0"
                                             class="remote-selection"
-                                            :style="{ 
+                                            :style="{
                                                 backgroundColor: cursor.color + '40',
                                                 width: cursor.selectionWidth + 'ch'
                                             }"
@@ -82,16 +82,16 @@
                                 </div>
                                 
                                 <!-- 斜杠命令菜单 -->
-                                <div 
-                                    v-if="showSlashMenu" 
+                                <div
+                                    v-if="showSlashMenu"
                                     class="slash-menu"
                                     :style="slashMenuStyle"
                                     ref="slashMenuRef"
                                 >
                                     <div class="slash-menu-header">插入块</div>
                                     <div class="slash-menu-scroll">
-                                        <div 
-                                            v-for="(cmd, index) in filteredCommands" 
+                                        <div
+                                            v-for="(cmd, index) in filteredCommands"
                                             :key="cmd.id"
                                             class="slash-menu-item"
                                             :class="{ active: index === selectedCommandIndex }"
