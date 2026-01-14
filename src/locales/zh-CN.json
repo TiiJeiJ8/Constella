@@ -1,15 +1,4 @@
 {
-    "common": {
-        "confirm": "确定",
-        "cancel": "取消",
-        "close": "关闭",
-        "save": "保存",
-        "delete": "删除",
-        "edit": "编辑",
-        "create": "创建",
-        "loading": "加载中...",
-        "anonymous": "匿名用户"
-    },
     "home": {
         "title": "Constella",
         "subtitle": "开源 ⦁ 协作 ⦁ 无限可能",
@@ -46,6 +35,13 @@
         "confirm": "确认",
         "cancel": "取消",
         "retry": "重试",
+        "close": "关闭",
+        "save": "保存",
+        "delete": "删除",
+        "edit": "编辑",
+        "create": "创建",
+        "loading": "加载中...",
+        "anonymous": "匿名用户",
         "errors": {
             "userNotLoggedIn": "请先登录",
             "tokenExpired": "登录已过期，请重新登录",
