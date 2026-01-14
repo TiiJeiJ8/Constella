@@ -11,8 +11,8 @@
 
         <!-- 中间：导航图标组 -->
         <div class="dock-section">
-            <button 
-                v-for="item in navItems" 
+            <button
+                v-for="item in navItems"
                 :key="item.id"
                 class="dock-item"
                 :class="{ active: item.active }"
@@ -28,21 +28,21 @@
 
         <!-- 右侧：系统控制组 -->
         <div class="dock-section">
-            <button 
+            <button
                 class="dock-item"
                 :title="t('dock.language')"
                 @click="toggleLanguage"
             >
                 <span class="dock-icon">🌐</span>
             </button>
-            <button 
+            <button
                 class="dock-item"
                 :title="t('dock.theme')"
                 @click="toggleTheme"
             >
                 <span class="dock-icon">{{ isDark ? '☀️' : '🌙' }}</span>
             </button>
-            <button 
+            <button
                 class="dock-item"
                 :title="t('dock.settings')"
                 @click="openSettings"
@@ -52,7 +52,7 @@
             
             <!-- 退出按钮 -->
             <div class="exit-menu-wrapper">
-                <button 
+                <button
                     class="dock-item exit-btn"
                     :title="t('dock.exit')"
                     @click="toggleExitMenu"
@@ -117,19 +117,19 @@ onUnmounted(() => {
 // 导航项配置
 const navItems = ref([
     { 
-        id: 'rooms', 
-        icon: '🏠', 
+        id: 'rooms',
+        icon: '🏠',
         active: true,
         action: () => emit('navigate', 'rooms')
     },
     { 
-        id: 'recent', 
+        id: 'recent',
         icon: '🕐',
         active: false,
         action: () => emit('navigate', 'recent')
     },
     { 
-        id: 'favorites', 
+        id: 'favorites',
         icon: '⭐',
         active: false,
         action: () => emit('navigate', 'favorites')
