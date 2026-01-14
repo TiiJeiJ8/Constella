@@ -27,7 +27,7 @@
         />
 
         <!-- 创建房间对话框 -->
-        <CreateRoomDialog 
+        <CreateRoomDialog
             v-model="showCreateDialog"
             @created="handleRoomCreated"
         />
@@ -48,8 +48,8 @@
 
         <!-- 底部 Dock 栏 -->
         <div class="dock-container">
-            <Dock 
-                @navigate="handleNavigate" 
+            <Dock
+                @navigate="handleNavigate"
                 @openSettings="showSettings = true"
                 @logout="handleLogout"
                 @disconnect="handleDisconnect"
@@ -58,7 +58,7 @@
 
         <!-- 顶部岛状栏 -->
         <div class="topbar-container">
-            <TopBar 
+            <TopBar
                 @createRoom="handleCreateRoom"
                 @search="handleSearch"
                 @tabChange="handleTabChange"
