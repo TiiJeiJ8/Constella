@@ -293,9 +293,9 @@ const isMarkdown = computed(() => props.content.kind === 'markdown')
 
 const placeholder = computed(() => {
     if (isMarkdown.value) {
-        return '输入 Markdown 内容...\n\n使用 / 插入块'
+        return t('canvas.editor.markdownPlaceholder')
     }
-    return '输入内容...'
+    return t('canvas.editor.textPlaceholder')
 })
 
 const slashMenuStyle = computed(() => ({
@@ -362,7 +362,7 @@ const renderedHtml = computed(() => {
     mermaidCounter = 0
     
     if (!localContent.value) {
-        return '<p class="placeholder">预览区域</p>'
+        return `<p class="placeholder">${t('canvas.editor.previewArea')}</p>`
     }
     
     // 1. 先用占位符保护数学公式
@@ -466,19 +466,19 @@ const slashCommands = computed<SlashCommand[]>(() => [
     { id: 'math-block', icon: '∫', iconClass: 'math-icon', label: t('canvas.editor.commands.mathBlock'), description: t('canvas.editor.commands.mathBlockDesc'), shortcut: '$$...$$', action: () => '$$\n\\int_{a}^{b} f(x) dx\n$$' },
     
     // 图表（Mermaid）
-    { id: 'mermaid-flow', icon: '📊', label: t('canvas.editor.commands.flowchart'), description: t('canvas.editor.commands.flowchartDesc'), action: () => '```mermaid\nflowchart TD\n    A[开始] --> B{判断}\n    B -->|是| C[执行]\n    B -->|否| D[结束]\n```' },
+    { id: 'mermaid-flow', icon: '📊', label: t('canvas.editor.commands.flowchart'), description: t('canvas.editor.commands.flowchartDesc'), action: () => `\`\`\`mermaid\nflowchart TD\n    A[${t('canvas.editor.examples.start')}] --> B{${t('canvas.editor.examples.decision')}}\n    B -->|${t('canvas.editor.examples.yes')}| C[${t('canvas.editor.examples.execute')}]\n    B -->|${t('canvas.editor.examples.no')}| D[${t('canvas.editor.examples.end')}]\n\`\`\`` },
     { id: 'mermaid-seq', icon: '📈', label: t('canvas.editor.commands.sequence'), description: t('canvas.editor.commands.sequenceDesc'), action: () => '```mermaid\nsequenceDiagram\n    Alice->>Bob: Hello\n    Bob-->>Alice: Hi\n```' },
-    { id: 'mermaid-mindmap', icon: '🧠', label: t('canvas.editor.commands.mindmap'), description: t('canvas.editor.commands.mindmapDesc'), action: () => '```mermaid\nmindmap\n  root((主题))\n    分支1\n      子项A\n      子项B\n    分支2\n      子项C\n```' },
+    { id: 'mermaid-mindmap', icon: '🧠', label: t('canvas.editor.commands.mindmap'), description: t('canvas.editor.commands.mindmapDesc'), action: () => `\`\`\`mermaid\nmindmap\n  root((${t('canvas.editor.examples.topic')}))\n    ${t('canvas.editor.examples.branch1')}\n      ${t('canvas.editor.examples.subitemA')}\n      ${t('canvas.editor.examples.subitemB')}\n    ${t('canvas.editor.examples.branch2')}\n      ${t('canvas.editor.examples.subitemC')}\n\`\`\`` },
     
     // 文本格式
-    { id: 'bold', icon: 'B', iconClass: 'bold-icon', label: t('canvas.editor.commands.bold'), description: t('canvas.editor.commands.boldDesc'), action: () => '**粗体**' },
-    { id: 'italic', icon: 'I', iconClass: 'italic-icon', label: t('canvas.editor.commands.italic'), description: t('canvas.editor.commands.italicDesc'), action: () => '*斜体*' },
-    { id: 'strike', icon: 'S', iconClass: 'strike-icon', label: t('canvas.editor.commands.strike'), description: t('canvas.editor.commands.strikeDesc'), action: () => '~~删除线~~' },
-    { id: 'link', icon: '🔗', label: t('canvas.editor.commands.link'), description: t('canvas.editor.commands.linkDesc'), action: () => '[文本](url)' },
-    { id: 'image', icon: '🖼️', label: t('canvas.editor.commands.image'), description: t('canvas.editor.commands.imageDesc'), action: () => '![描述](url)' },
+    { id: 'bold', icon: 'B', iconClass: 'bold-icon', label: t('canvas.editor.commands.bold'), description: t('canvas.editor.commands.boldDesc'), action: () => `**${t('canvas.editor.examples.bold')}**` },
+    { id: 'italic', icon: 'I', iconClass: 'italic-icon', label: t('canvas.editor.commands.italic'), description: t('canvas.editor.commands.italicDesc'), action: () => `*${t('canvas.editor.examples.italic')}*` },
+    { id: 'strike', icon: 'S', iconClass: 'strike-icon', label: t('canvas.editor.commands.strike'), description: t('canvas.editor.commands.strikeDesc'), action: () => `~~${t('canvas.editor.examples.strikethrough')}~~` },
+    { id: 'link', icon: '🔗', label: t('canvas.editor.commands.link'), description: t('canvas.editor.commands.linkDesc'), action: () => `[${t('canvas.editor.examples.text')}](${t('canvas.editor.examples.url')})` },
+    { id: 'image', icon: '🖼️', label: t('canvas.editor.commands.image'), description: t('canvas.editor.commands.imageDesc'), action: () => `![${t('canvas.editor.examples.description')}](${t('canvas.editor.examples.url')})` },
     
     // 表格
-    { id: 'table', icon: '▦', label: t('canvas.editor.commands.table'), description: t('canvas.editor.commands.tableDesc'), action: () => '| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n| 内容 | 内容 | 内容 |' },
+    { id: 'table', icon: '▦', label: t('canvas.editor.commands.table'), description: t('canvas.editor.commands.tableDesc'), action: () => `| ${t('canvas.editor.examples.col1')} | ${t('canvas.editor.examples.col2')} | ${t('canvas.editor.examples.col3')} |\n| --- | --- | --- |\n| ${t('canvas.editor.examples.content')} | ${t('canvas.editor.examples.content')} | ${t('canvas.editor.examples.content')} |` },
 ])
 
 // 过滤后的命令 - 默认显示所有命令
