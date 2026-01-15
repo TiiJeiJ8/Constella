@@ -17,7 +17,7 @@ interface UseYjsReturn {
     provider: Ref<WebsocketProvider | null>
     isConnected: Ref<boolean>
     isSynced: Ref<boolean>
-    connect: () => void
+    connect: () => Promise<void>
     disconnect: () => void
     getMap: (key: string) => Y.Map<any>
     getArray: (key: string) => Y.Array<any>
@@ -72,7 +72,7 @@ export function useYjs(options: UseYjsOptions): UseYjsReturn {
     }
 
     // 连接到 Yjs WebSocket 服务器
-    const connect = () => {
+    const connect = async () => {
         if (provider.value) {
             console.warn('[useYjs] Provider already connected')
             return
@@ -82,11 +82,28 @@ export function useYjs(options: UseYjsOptions): UseYjsReturn {
             const wsUrl = getWebSocketUrl()
             console.log('[useYjs] Connecting to:', wsUrl, 'Room:', roomId)
 
-            // 创建 WebSocket Provider
+            // 如果没有传入短期 relay token，则向后端请求一个
+            let relayToken = token
+            if (!relayToken) {
+                try {
+                    const res = await apiService.getRoomRelayToken(roomId)
+                    if (res.success && res.data) {
+                        // 支持不同后端返回结构
+                        relayToken = (res.data as any).relay_token || (res.data as any).token || (res as any).data?.relay_token
+                    } else {
+                        throw new Error(res.message || 'Failed to obtain relay token')
+                    }
+                } catch (err) {
+                    console.error('[useYjs] Failed to get relay token:', err)
+                    if (onError && err instanceof Error) onError(err)
+                    return
+                }
+            }
+
+            // 创建 WebSocket Provider，并通过 params 把 token 放入查询字符串
             provider.value = new WebsocketProvider(wsUrl, roomId, doc, {
                 connect: true,
-                // 传递认证 token
-                params: token ? { token } : {}
+                params: relayToken ? { token: relayToken } : {}
             })
 
             // 监听连接状态
