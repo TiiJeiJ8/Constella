@@ -216,10 +216,10 @@ const currentUsers = computed(() => {
     ]
     // 加上远程用户 - 使用正确的属性路径
     remoteCursors.value.forEach(cursor => {
-        users.push({ 
-            id: String(cursor.clientId), 
-            name: cursor.user?.name || t('common.anonymous'), 
-            isMe: false 
+        users.push({
+            id: String(cursor.clientId),
+            name: cursor.user?.name || t('common.anonymous'),
+            isMe: false
         })
     })
     return users
@@ -256,7 +256,7 @@ const getUserName = () => {
     if (settings.lastName && settings.firstName) {
         // 根据当前语言决定姓名顺序
         const currentLocale = localStorage.getItem('locale') || 'zh-CN'
-        return currentLocale === 'zh-CN' 
+        return currentLocale === 'zh-CN'
             ? `${settings.lastName}${settings.firstName}`
             : `${settings.firstName} ${settings.lastName}`
     }
@@ -389,6 +389,9 @@ function handleSendMessage(content) {
 watch(() => yjsChat.messages.value.length, (newLength, oldLength) => {
     if (newLength > oldLength) {
         const latestMessage = yjsChat.messages.value[newLength - 1]
+        if (bubbleContainerRef.value) {
+            bubbleContainerRef.value.addBubble(latestMessage)
+        }
     }
 })
 
