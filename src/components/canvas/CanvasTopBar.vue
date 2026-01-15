@@ -58,6 +58,17 @@
                 <button class="circular-btn" @click="$emit('create-snapshot')" :title="t('canvas.topBar.snapshot')">
                     <span class="icon">📸</span>
                 </button>
+                <!-- 导入按钮 -->
+                <button class="circular-btn" @click="triggerImport" :title="t('canvas.topBar.import')">
+                    <span class="icon">📥</span>
+                </button>
+                <input 
+                    ref="fileInputRef"
+                    type="file" 
+                    accept=".json,.constella"
+                    style="display: none;"
+                    @change="handleFileImport"
+                />
                 <div class="export-dropdown">
                     <button 
                         class="circular-btn" 
@@ -68,6 +79,11 @@
                     </button>
                     <Transition name="fade">
                         <div v-if="isExportMenuOpen" class="export-menu">
+                            <button class="export-option" @click="exportAsJSON">
+                                <span class="option-icon">💾</span>
+                                <span class="option-text">{{ t('canvas.topBar.exportJSON') }}</span>
+                            </button>
+                            <div class="export-divider"></div>
                             <button class="export-option" @click="exportAsPNG">
                                 <span class="option-icon">🖼️</span>
                                 <span class="option-text">{{ t('canvas.topBar.exportPNG') }}</span>
@@ -101,6 +117,7 @@ const { t, locale } = useI18n()
 const isMenuExpanded = ref(false)
 const isSettingsPanelOpen = ref(false)
 const isExportMenuOpen = ref(false)
+const fileInputRef = ref(null)
 
 const toggleMenu = () => {
     isMenuExpanded.value = !isMenuExpanded.value
@@ -118,6 +135,40 @@ const exportAsPNG = () => {
 const exportAsSVG = () => {
     emit('export', { format: 'svg' })
     isExportMenuOpen.value = false
+}
+
+const exportAsJSON = () => {
+    emit('export', { format: 'json' })
+    isExportMenuOpen.value = false
+}
+
+// 触发文件导入
+const triggerImport = () => {
+    fileInputRef.value?.click()
+}
+
+// 处理文件导入
+const handleFileImport = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    const reader = new FileReader()
+    reader.onload = (event) => {
+        try {
+            const content = event.target?.result
+            if (typeof content === 'string') {
+                const data = JSON.parse(content)
+                emit('import', data)
+            }
+        } catch (error) {
+            console.error('Failed to parse import file:', error)
+            alert(t('canvas.topBar.importError'))
+        }
+    }
+    reader.readAsText(file)
+    
+    // 重置 input，允许再次选择同一文件
+    e.target.value = ''
 }
 
 // 点击外部关闭导出菜单
@@ -171,7 +222,7 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['exit', 'export', 'create-snapshot', 'members-click'])
+const emit = defineEmits(['exit', 'export', 'import', 'create-snapshot', 'members-click'])
 </script>
 
 <style scoped>
@@ -442,6 +493,12 @@ const emit = defineEmits(['exit', 'export', 'create-snapshot', 'members-click'])
 
 .export-option:hover {
     background: var(--bg-tertiary);
+}
+
+.export-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 4px 0;
 }
 
 .option-icon {

@@ -11,6 +11,7 @@
             :online-count="currentUsers.length"
             @exit="handleExit"
             @export="handleExport"
+            @import="handleImport"
             @create-snapshot="handleTopBarSnapshot"
             @members-click="isMembersPanelOpen = true"
             style="margin-top: 10px"
@@ -737,6 +738,55 @@ async function handleExport(options) {
     console.log('[Canvas] Exporting canvas:', options)
     
     try {
+        // JSON 导出 - 导出画布数据
+        if (options.format === 'json') {
+            const exportData = {
+                version: '1.0',
+                exportedAt: new Date().toISOString(),
+                roomName: roomName.value,
+                nodes: canvasNodes.value.map(node => ({
+                    id: node.id,
+                    x: node.x,
+                    y: node.y,
+                    width: node.width,
+                    height: node.height,
+                    content: node.content,
+                    zIndex: node.zIndex || 0
+                })),
+                edges: canvasEdges.value.map(edge => ({
+                    id: edge.id,
+                    sourceId: edge.sourceId,
+                    targetId: edge.targetId,
+                    sourceAnchor: edge.sourceAnchor,
+                    targetAnchor: edge.targetAnchor,
+                    type: edge.type,
+                    color: edge.color,
+                    strokeWidth: edge.strokeWidth,
+                    dashArray: edge.dashArray,
+                    startArrow: edge.startArrow,
+                    endArrow: edge.endArrow,
+                    label: edge.label,
+                    labelPosition: edge.labelPosition,
+                    zIndex: edge.zIndex
+                }))
+            }
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${roomName.value}-${Date.now()}.constella.json`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+            
+            toast.success(t('canvas.toast.exportSuccess', { format: 'JSON' }))
+            console.log('[Canvas] JSON export completed')
+            return
+        }
+        
+        // 图片导出 - PNG/SVG
         // 获取 Konva Stage
         const stage = canvasStageRef.value?.getStage?.()
         
@@ -758,6 +808,103 @@ async function handleExport(options) {
     } catch (error) {
         console.error('[Canvas] Export failed:', error)
         toast.error(t('canvas.toast.exportFailed'))
+    }
+}
+
+// 导入画布数据
+function handleImport(data) {
+    console.log('[Canvas] Importing canvas data:', data)
+    
+    try {
+        // 验证数据格式 - 只检查基本结构，nodes 可以为空
+        if (!data || typeof data !== 'object') {
+            console.error('[Canvas] Import validation failed: data is not an object')
+            toast.error(t('canvas.topBar.importError'))
+            return
+        }
+        
+        // 兼容不同版本的数据格式
+        const nodes = data.nodes || []
+        const edges = data.edges || []
+        
+        if (!Array.isArray(nodes)) {
+            console.error('[Canvas] Import validation failed: nodes is not an array')
+            toast.error(t('canvas.topBar.importError'))
+            return
+        }
+        
+        // 如果没有节点，直接返回成功
+        if (nodes.length === 0) {
+            toast.success(t('canvas.topBar.importSuccess'))
+            return
+        }
+        
+        // 生成新的 ID 映射，避免和现有节点冲突
+        const idMap = new Map()
+        
+        // 计算偏移量，将导入的节点放在画布中心附近
+        let minX = Infinity, minY = Infinity
+        nodes.forEach(node => {
+            minX = Math.min(minX, node.x)
+            minY = Math.min(minY, node.y)
+        })
+        
+        // 获取当前视口中心
+        const viewportCenter = {
+            x: (window.innerWidth / 2 - stagePosition.value.x) / stageScale.value,
+            y: (window.innerHeight / 2 - stagePosition.value.y) / stageScale.value
+        }
+        
+        // 计算偏移
+        const offsetX = viewportCenter.x - minX
+        const offsetY = viewportCenter.y - minY
+        
+        // 导入节点
+        nodes.forEach(node => {
+            const newId = `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+            idMap.set(node.id, newId)
+            
+            yjsNodes.createNode({
+                id: newId,
+                x: node.x + offsetX,
+                y: node.y + offsetY,
+                width: node.width || 200,
+                height: node.height || 120,
+                content: node.content || { kind: 'blank' },
+                zIndex: node.zIndex || 0
+            })
+        })
+        
+        // 导入连线（更新节点 ID 引用）
+        edges.forEach(edge => {
+            const newSourceId = idMap.get(edge.sourceId)
+            const newTargetId = idMap.get(edge.targetId)
+            
+            // 只有当源节点和目标节点都存在时才创建连线
+            if (newSourceId && newTargetId) {
+                yjsEdges.createEdge({
+                    sourceId: newSourceId,
+                    targetId: newTargetId,
+                    sourceAnchor: edge.sourceAnchor,
+                    targetAnchor: edge.targetAnchor,
+                    type: edge.type || 'bezier',
+                    color: edge.color || '#667eea',
+                    strokeWidth: edge.strokeWidth || 2,
+                    dashArray: edge.dashArray,
+                    startArrow: edge.startArrow || 'none',
+                    endArrow: edge.endArrow || 'arrow',
+                    label: edge.label,
+                    labelPosition: edge.labelPosition,
+                    zIndex: edge.zIndex
+                })
+            }
+        })
+        
+        toast.success(t('canvas.topBar.importSuccess'))
+        console.log('[Canvas] Import completed, nodes:', nodes.length, 'edges:', edges.length)
+    } catch (error) {
+        console.error('[Canvas] Import failed:', error)
+        toast.error(t('canvas.topBar.importError'))
     }
 }
 
