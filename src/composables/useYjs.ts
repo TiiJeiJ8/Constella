@@ -1,7 +1,7 @@
 import { ref, onUnmounted, type Ref } from 'vue'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
-import apiService from '../services/api'
+import { apiService } from '../services/api'
 
 interface UseYjsOptions {
     roomId: string
