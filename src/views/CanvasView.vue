@@ -135,7 +135,20 @@
             :selected-count="selectedCount"
             :is-syncing="isSyncing"
             :is-offline="isOffline"
+            :unread-count="unreadCount"
+            @toggle-chat="isChatPanelOpen = !isChatPanelOpen"
+            @send-message="handleSendMessage"
         />
+
+        <!-- 聊天面板 -->
+        <ChatPanel
+            v-model="isChatPanelOpen"
+            :messages="chatMessages"
+            @send="handleSendMessage"
+        />
+
+        <!-- 聊天气泡容器 -->
+        <ChatBubbleContainer ref="bubbleContainerRef" />
     </div>
 </template>
 
@@ -146,6 +159,7 @@ import * as Y from 'yjs'
 import { useYjs } from '@/composables/useYjs'
 import { useYjsNodes } from '@/composables/useYjsNodes'
 import { useYjsEdges } from '@/composables/useYjsEdges'
+import { useYjsChat } from '@/composables/useYjsChat'
 import { useAwareness } from '@/composables/useAwareness'
 import { registerPlugins } from '@/plugins/register'
 import { pluginRegistry } from '@/plugins'
@@ -162,6 +176,8 @@ import NodeContentOverlay from '@/components/canvas/NodeContentOverlay.vue'
 import NodeEditorModal from '@/components/canvas/NodeEditorModal.vue'
 import MembersPanel from '@/components/canvas/MembersPanel.vue'
 import InputDialog from '@/components/base/InputDialog.vue'
+import ChatPanel from '@/components/canvas/ChatPanel.vue'
+import ChatBubbleContainer from '@/components/canvas/ChatBubbleContainer.vue'
 
 // 注册插件
 registerPlugins()
@@ -208,6 +224,10 @@ const currentUsers = computed(() => {
     })
     return users
 })
+
+// 聊天功能
+const isChatPanelOpen = ref(false)
+const bubbleContainerRef = ref(null)
 
 // 边标签编辑对话框
 const isEdgeLabelDialogOpen = ref(false)
@@ -260,6 +280,8 @@ const yjs = useYjs({
         if (yjs.doc) {
             yjsNodes.initialize()
             yjsEdges.initialize()
+            // 初始化聊天
+            yjsChat.initialize()
         }
     },
     onDisconnect: () => {
@@ -274,6 +296,7 @@ const yjs = useYjs({
         if (synced && yjs.doc) {
             yjsNodes.initialize()
             yjsEdges.initialize()
+            yjsChat.initialize()
         }
     },
     onError: (error) => {
@@ -311,6 +334,17 @@ const yjsNodes = useYjsNodes({
     }
 })
 
+// Yjs 聊天数据管理
+const userId = localStorage.getItem('user_id') || 'current'
+const yjsChat = useYjsChat({
+    getDoc: () => yjs.doc,
+    userId,
+    userName: getUserName()
+})
+
+const chatMessages = computed(() => yjsChat.messages.value)
+const unreadCount = computed(() => yjsChat.unreadCount.value)
+
 // 渲染用的节点数据（从 Yjs 同步）
 const canvasNodes = computed(() => yjsNodes.nodes.value)
 
@@ -343,6 +377,31 @@ function handleExit() {
     console.log('[Canvas] Exiting room:', props.roomId)
     emit('navigate', 'rooms')
 }
+
+// 聊天功能
+function handleSendMessage(content) {
+    if (content.trim()) {
+        yjsChat.sendMessage(content)
+    }
+}
+
+// 监听新消息，显示气泡提示（仅非本人消息）
+watch(() => yjsChat.messages.value.length, (newLength, oldLength) => {
+    if (newLength > oldLength) {
+        const latestMessage = yjsChat.messages.value[newLength - 1]
+        // 只显示非本人的消息气泡
+        if (!latestMessage.isOwn && bubbleContainerRef.value) {
+            bubbleContainerRef.value.addBubble(latestMessage)
+        }
+    }
+})
+
+// 监听聊天面板打开，标记为已读
+watch(isChatPanelOpen, (isOpen) => {
+    if (isOpen) {
+        yjsChat.markAsRead()
+    }
+})
 
 
 // 缩放变化

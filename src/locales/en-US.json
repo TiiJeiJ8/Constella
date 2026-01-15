@@ -191,6 +191,13 @@
             "offline": "Offline",
             "connecting": "Connecting"
         },
+        "chat": {
+            "title": "Chat",
+            "expand": "Expand chat",
+            "inputPlaceholder": "Type a message...",
+            "send": "Send",
+            "noMessages": "No messages yet"
+        },
         "topBar": {
             "roomTitle": "Room",
             "save": "Save",

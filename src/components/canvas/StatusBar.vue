@@ -1,6 +1,7 @@
 <template>
     <div class="status-bar-wrapper">
         <div class="status-bar" :class="{ 'visible': isVisible }" @mouseenter="show" @mouseleave="hide">
+            <!-- 左侧：统计信息 -->
             <div class="status-section">
                 <span class="status-item">
                     <span class="status-icon">🔍</span>
@@ -11,13 +12,20 @@
                     <span class="status-icon">📍</span>
                     <span class="status-text">{{ t('canvas.statusBar.position') }}: ({{ position.x }}, {{ position.y }})</span>
                 </span>
-            </div>
-
-            <div class="status-section">
+                <span v-if="selectedCount > 0" class="status-divider">|</span>
                 <span v-if="selectedCount > 0" class="status-item">
                     <span class="status-text">{{ t('canvas.statusBar.selected') }}: {{ selectedCount }}</span>
                 </span>
-                <span class="status-divider">|</span>
+            </div>
+
+            <!-- 中间：聊天功能 -->
+            <div class="status-section chat-section">
+                <ChatExpandButton :unreadCount="unreadCount" @click="$emit('toggleChat')" />
+                <ChatInputBar @send="$emit('sendMessage', $event)" />
+            </div>
+
+            <!-- 右侧：连接状态 -->
+            <div class="status-section">
                 <span class="status-item" :class="connectionStatus">
                     <span class="status-dot"></span>
                     <span class="status-text">{{ connectionText }}</span>
@@ -32,6 +40,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import ChatExpandButton from './ChatExpandButton.vue'
+import ChatInputBar from './ChatInputBar.vue'
 
 const { t } = useI18n()
 
@@ -69,8 +79,14 @@ const props = defineProps({
     isOffline: {
         type: Boolean,
         default: false
+    },
+    unreadCount: {
+        type: Number,
+        default: 0
     }
 })
+
+defineEmits(['toggleChat', 'sendMessage'])
 
 const connectionStatus = computed(() => {
     if (props.isOffline) return 'offline'
@@ -137,6 +153,10 @@ const connectionText = computed(() => {
     display: flex;
     align-items: center;
     gap: 12px;
+}
+
+.chat-section {
+    gap: 8px;
 }
 
 .status-item {

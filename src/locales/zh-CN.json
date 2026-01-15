@@ -191,6 +191,13 @@
             "offline": "离线",
             "connecting": "连接中"
         },
+        "chat": {
+            "title": "聊天",
+            "expand": "展开聊天",
+            "inputPlaceholder": "输入消息...",
+            "send": "发送",
+            "noMessages": "暂无消息"
+        },
         "topBar": {
             "roomTitle": "房间",
             "save": "保存",
