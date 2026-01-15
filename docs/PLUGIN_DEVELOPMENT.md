@@ -205,14 +205,6 @@ npm run dev
 
 ---
 
-如果你要，我可以：
-- 直接在仓库中为你创建上面的 `hello` 示例插件并提交修改（会修改 `src/plugins/register.ts`），或
-- 只把上面的 Markdown 文档添加到仓库（我已完成）。
-
-文件位置： [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md)
-
----
-
 ## 附录：远程光标平滑移动实现
 
 本项目实现了基于插帧的远程光标平滑移动效果，技术细节如下：
