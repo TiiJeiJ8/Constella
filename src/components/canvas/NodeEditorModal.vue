@@ -152,10 +152,7 @@ import type { UserState } from '@/composables/useAwareness'
 
 const { t } = useI18n()
 
-// 获取当前主题
-const isDarkTheme = computed(() => {
-    return document.documentElement.getAttribute('data-theme') === 'dark'
-})
+// 获取当前主题（unused removed to satisfy TS strict checks）
 
 // 初始化 Mermaid
 mermaid.initialize({
@@ -221,13 +218,14 @@ const md = new MarkdownIt({
     breaks: true,
     linkify: true,
     typographer: true,
-    highlight: function (str: string, lang: string) {
+    // highlight 在内部不要引用外部 md 变量以避免循环引用，使用新实例的 utils
+    highlight: function (str: string, lang: string): string {
         // Mermaid 图表特殊处理
         if (lang === 'mermaid') {
             const id = `mermaid-${mermaidCounter++}`
             return `<div class="mermaid-wrapper"><pre class="mermaid" id="${id}">${str}</pre></div>`
         }
-        
+
         // 代码语法高亮
         if (lang && hljs.getLanguage(lang)) {
             try {
@@ -236,7 +234,9 @@ const md = new MarkdownIt({
                 }</code></pre>`
             } catch (__) {}
         }
-        return `<pre class="hljs"><code>${md.utils.escapeHtml(str)}</code></pre>`
+
+        // 使用临时 MarkdownIt 实例的 utils.escapeHtml 来转义
+        return `<pre class="hljs"><code>${new MarkdownIt().utils.escapeHtml(str)}</code></pre>`
     }
 })
 

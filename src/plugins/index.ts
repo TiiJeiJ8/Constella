@@ -21,6 +21,7 @@ export interface NodeContent {
     kind: ContentKind
     data: string
     displayMode?: DisplayMode  // 显示模式：全文或卡片
+    metadata?: Record<string, any> // 可选的扩展元数据
 }
 
 /**

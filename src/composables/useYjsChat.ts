@@ -126,5 +126,5 @@ function getRandomColor(userId: string): string {
     for (let i = 0; i < userId.length; i++) {
         hash = userId.charCodeAt(i) + ((hash << 5) - hash)
     }
-    return colors[Math.abs(hash) % colors.length]
+    return colors[Math.abs(hash) % colors.length]!
 }
