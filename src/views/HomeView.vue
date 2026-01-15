@@ -190,9 +190,10 @@ async function connectToServer() {
         // 规范化 URL
         let normalizedUrl = serverUrl.value.trim()
         
-        // 如果没有协议，添加 http://
-        if (!normalizedUrl.match(/^https?:\/\//)) {
-            normalizedUrl = 'http://' + normalizedUrl
+        // 如果没有协议，使用当前页面协议
+        if (!normalizedUrl.match(/^[a-zA-Z][a-zA-Z0-9+.\-]*:\/\//)) {
+            const proto = (typeof window !== 'undefined' && window.location?.protocol) ? window.location.protocol : 'http:'
+            normalizedUrl = proto + '//' + normalizedUrl.replace(/^\/+/, '')
         }
 
         // 验证 URL 格式

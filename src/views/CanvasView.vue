@@ -385,14 +385,10 @@ function handleSendMessage(content) {
     }
 }
 
-// 监听新消息，显示气泡提示（仅非本人消息）
+// 监听新消息，显示气泡提示
 watch(() => yjsChat.messages.value.length, (newLength, oldLength) => {
     if (newLength > oldLength) {
         const latestMessage = yjsChat.messages.value[newLength - 1]
-        // 只显示非本人的消息气泡
-        if (!latestMessage.isOwn && bubbleContainerRef.value) {
-            bubbleContainerRef.value.addBubble(latestMessage)
-        }
     }
 })
 

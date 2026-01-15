@@ -1,7 +1,7 @@
-import { contextBridge as i, ipcRenderer as e } from "electron";
-i.exposeInMainWorld("electron", {
-  minimize: () => e.send("window-minimize"),
-  toggleMaximize: () => e.send("window-maximize"),
-  close: () => e.send("window-close"),
-  openExternal: (n) => e.send("open-external", n)
+import { contextBridge, ipcRenderer } from "electron";
+contextBridge.exposeInMainWorld("electron", {
+  minimize: () => ipcRenderer.send("window-minimize"),
+  toggleMaximize: () => ipcRenderer.send("window-maximize"),
+  close: () => ipcRenderer.send("window-close"),
+  openExternal: (url) => ipcRenderer.send("open-external", url)
 });

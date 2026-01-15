@@ -1,45 +1,69 @@
-import { ipcMain as o, shell as s, app as n, BrowserWindow as t } from "electron";
-import i, { dirname as d } from "path";
-import { fileURLToPath as f } from "url";
-const m = f(import.meta.url), a = d(m);
-let e = null;
-function l() {
-  e = new t({
+import { ipcMain, shell, app, BrowserWindow } from "electron";
+import path, { dirname } from "path";
+import { fileURLToPath } from "url";
+const __filename$1 = fileURLToPath(import.meta.url);
+const __dirname$1 = dirname(__filename$1);
+let mainWindow = null;
+function createWindow() {
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
-    frame: !1,
+    frame: false,
     // 隐藏默认边框
-    transparent: !1,
+    transparent: false,
     backgroundColor: "#ffffff",
-    roundedCorners: !0,
+    roundedCorners: true,
     // 启用圆角
     webPreferences: {
-      nodeIntegration: !1,
-      contextIsolation: !0,
-      preload: i.join(a, "preload.js"),
-      sandbox: !1
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname$1, "preload.js"),
+      sandbox: false,
+      webSecurity: false
     }
-  }), process.env.VITE_DEV_SERVER_URL ? (e.loadURL(process.env.VITE_DEV_SERVER_URL), e.webContents.openDevTools()) : e.loadFile(i.join(a, "../dist/index.html")), e.on("closed", () => {
-    e = null;
+  });
+  if (process.env.VITE_DEV_SERVER_URL) {
+    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
+    mainWindow.webContents.openDevTools();
+  } else {
+    mainWindow.loadFile(path.join(__dirname$1, "../dist/index.html"));
+  }
+  mainWindow.on("closed", () => {
+    mainWindow = null;
   });
 }
-o.on("window-minimize", () => {
-  e && e.minimize();
+ipcMain.on("window-minimize", () => {
+  if (mainWindow) {
+    mainWindow.minimize();
+  }
 });
-o.on("window-maximize", () => {
-  e && (e.isMaximized() ? e.unmaximize() : e.maximize());
+ipcMain.on("window-maximize", () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
 });
-o.on("window-close", () => {
-  e && e.close();
+ipcMain.on("window-close", () => {
+  if (mainWindow) {
+    mainWindow.close();
+  }
 });
-o.on("open-external", (w, r) => {
-  s.openExternal(r);
+ipcMain.on("open-external", (event, url) => {
+  shell.openExternal(url);
 });
-n.whenReady().then(() => {
-  l(), n.on("activate", () => {
-    t.getAllWindows().length === 0 && l();
+app.whenReady().then(() => {
+  createWindow();
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
   });
 });
-n.on("window-all-closed", () => {
-  process.platform !== "darwin" && n.quit();
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
 });
