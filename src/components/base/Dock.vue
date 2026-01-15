@@ -79,10 +79,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const { t, locale } = useI18n()
+
+const props = defineProps({
+    currentView: {
+        type: String,
+        default: 'rooms'
+    }
+})
+
 const emit = defineEmits(['navigate', 'openSettings', 'logout', 'disconnect'])
 
 // 从 localStorage 读取用户信息
@@ -135,6 +143,13 @@ const navItems = ref([
         action: () => emit('navigate', 'favorites')
     }
 ])
+
+// 监听当前视图变化，更新导航项激活状态
+watch(() => props.currentView, (newView) => {
+    navItems.value.forEach(item => {
+        item.active = item.id === newView
+    })
+}, { immediate: true })
 
 // 切换语言
 function toggleLanguage() {

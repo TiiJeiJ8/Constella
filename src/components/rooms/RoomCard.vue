@@ -22,6 +22,16 @@
                 <div class="privacy-badge" :class="room.isPrivate ? 'private' : 'public'">
                     <span class="icon">{{ room.isPrivate ? '🔒' : '🌐' }}</span>
                 </div>
+                
+                <!-- 收藏按钮 -->
+                <button 
+                    class="favorite-btn"
+                    :class="{ 'is-favorite': isFavorited }"
+                    @click.stop="toggleFavorite"
+                    :title="isFavorited ? t('rooms.unfavorite') : t('rooms.favorite')"
+                >
+                    ⭐
+                </button>
             </div>
 
             <!-- 卡片内容 -->
@@ -64,7 +74,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -80,7 +90,51 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['click', 'delete'])
+const emit = defineEmits(['click', 'delete', 'favoriteChange'])
+
+const isFavorited = ref(false)
+
+// 检查是否已收藏
+function checkFavoriteStatus() {
+    try {
+        const favorites = localStorage.getItem('favoriteRooms')
+        const favoriteList = favorites ? JSON.parse(favorites) : []
+        isFavorited.value = favoriteList.some(fav => fav.roomId === props.room.id)
+    } catch (e) {
+        console.error('Failed to check favorite status:', e)
+        isFavorited.value = false
+    }
+}
+
+// 切换收藏状态
+function toggleFavorite() {
+    try {
+        const favorites = localStorage.getItem('favoriteRooms')
+        let favoriteList = favorites ? JSON.parse(favorites) : []
+        
+        if (isFavorited.value) {
+            // 取消收藏
+            favoriteList = favoriteList.filter(fav => fav.roomId !== props.room.id)
+            isFavorited.value = false
+        } else {
+            // 添加收藏
+            favoriteList.push({
+                roomId: props.room.id,
+                addedAt: Date.now()
+            })
+            isFavorited.value = true
+        }
+        
+        localStorage.setItem('favoriteRooms', JSON.stringify(favoriteList))
+        emit('favoriteChange', props.room.id, isFavorited.value)
+    } catch (e) {
+        console.error('Failed to toggle favorite:', e)
+    }
+}
+
+onMounted(() => {
+    checkFavoriteStatus()
+})
 
 // 房间图标
 const roomIcon = computed(() => {
@@ -300,6 +354,34 @@ function formatTime(timestamp) {
 
 .privacy-badge.public {
     background: rgba(76, 175, 80, 0.1);
+}
+
+.favorite-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    filter: grayscale(100%);
+    opacity: 0.5;
+}
+
+.favorite-btn:hover {
+    opacity: 0.8;
+    transform: scale(1.1);
+}
+
+.favorite-btn.is-favorite {
+    filter: grayscale(0%);
+    opacity: 1;
+    background: rgba(255, 215, 0, 0.2);
 }
 
 /* ==================== 卡片内容 ==================== */

@@ -3,6 +3,8 @@
             <HomeView v-if="currentView === 'home'" @navigate="handleNavigate" />
             <LoginView v-else-if="currentView === 'login'" @navigate="handleNavigate" />
             <RoomsView v-else-if="currentView === 'rooms'" @navigate="handleNavigate" />
+            <RecentView v-else-if="currentView === 'recent'" @navigate="handleNavigate" />
+            <FavoritesView v-else-if="currentView === 'favorites'" @navigate="handleNavigate" />
             <CanvasView v-else-if="currentView === 'canvas'" :room-id="currentRoomId" @navigate="handleNavigate" />
             <AboutView v-else-if="currentView === 'about'" @navigate="handleNavigate" />
         </Transition>
@@ -23,6 +25,8 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import HomeView from './views/HomeView.vue'
 import LoginView from './views/LoginView.vue'
 import RoomsView from './views/RoomsView.vue'
+import RecentView from './views/RecentView.vue'
+import FavoritesView from './views/FavoritesView.vue'
 import CanvasView from './views/CanvasView.vue'
 import AboutView from './views/AboutView.vue'
 import Toast from './components/base/Toast.vue'
@@ -134,7 +138,7 @@ function handleTokenExpired() {
 
 function handleNavigate(view, params) {
     // 暂时只支持这些视图，其他的保持在 rooms
-    const supportedViews = ['home', 'login', 'rooms', 'canvas', 'about']
+    const supportedViews = ['home', 'login', 'rooms', 'recent', 'favorites', 'canvas', 'about']
     
     if (supportedViews.includes(view)) {
         currentView.value = view
@@ -148,8 +152,8 @@ function handleNavigate(view, params) {
         // 如果导航到登录页，停止 Token 刷新
         if (view === 'login' || view === 'home') {
             stopTokenRefresh()
-        } else if (view === 'rooms') {
-            // 进入房间页时启动 Token 刷新
+        } else if (view === 'rooms' || view === 'recent' || view === 'favorites') {
+            // 进入房间相关页面时启动 Token 刷新
             startTokenRefresh()
         }
     } else {

@@ -49,6 +49,7 @@
         <!-- 底部 Dock 栏 -->
         <div class="dock-container">
             <Dock
+                current-view="rooms"
                 @navigate="handleNavigate"
                 @openSettings="showSettings = true"
                 @logout="handleLogout"

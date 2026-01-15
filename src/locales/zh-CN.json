@@ -108,6 +108,8 @@
         "createFirst": "创建第一个房间",
         "private": "私密房间",
         "members": "成员",
+        "favorite": "收藏",
+        "unfavorite": "取消收藏",
         "errors": {
             "loadFailed": "加载房间列表失败"
         },
@@ -159,6 +161,25 @@
             "passwordTooShort": "密码至少需要4个字符",
             "createFailed": "创建房间失败，请重试"
         }
+    },
+    "recent": {
+        "title": "最近使用",
+        "searchPlaceholder": "搜索最近访问的房间...",
+        "empty": "还没有访问过任何房间",
+        "emptyHint": "访问房间后会在这里显示",
+        "loadError": "加载失败",
+        "justNow": "刚刚",
+        "minutesAgo": "{n} 分钟前",
+        "hoursAgo": "{n} 小时前",
+        "daysAgo": "{n} 天前"
+    },
+    "favorites": {
+        "title": "我的收藏",
+        "searchPlaceholder": "搜索收藏的房间...",
+        "empty": "还没有收藏任何房间",
+        "emptyHint": "在房间卡片上点击星标来收藏",
+        "loadError": "加载失败",
+        "remove": "取消收藏"
     },
     "canvas": {
         "loading": "加载画布中...",

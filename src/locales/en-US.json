@@ -108,6 +108,8 @@
         "createFirst": "Create your first room",
         "private": "Private Room",
         "members": "members",
+        "favorite": "Add to favorites",
+        "unfavorite": "Remove from favorites",
         "errors": {
             "loadFailed": "Failed to load rooms"
         },
@@ -159,6 +161,25 @@
             "passwordTooShort": "Password must be at least 4 characters",
             "createFailed": "Failed to create room, please try again"
         }
+    },
+    "recent": {
+        "title": "Recent",
+        "searchPlaceholder": "Search recent rooms...",
+        "empty": "No recent rooms",
+        "emptyHint": "Rooms you visit will appear here",
+        "loadError": "Failed to load",
+        "justNow": "Just now",
+        "minutesAgo": "{n} minutes ago",
+        "hoursAgo": "{n} hours ago",
+        "daysAgo": "{n} days ago"
+    },
+    "favorites": {
+        "title": "Favorites",
+        "searchPlaceholder": "Search favorite rooms...",
+        "empty": "No favorite rooms",
+        "emptyHint": "Click the star on room cards to add favorites",
+        "loadError": "Failed to load",
+        "remove": "Remove from favorites"
     },
     "canvas": {
         "loading": "Loading canvas...",

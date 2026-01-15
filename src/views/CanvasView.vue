@@ -1148,6 +1148,9 @@ onMounted(() => {
     loadRoomData()
     loadRoomAssets()
     
+    // 记录访问历史
+    recordVisit(props.roomId)
+    
     // 连接 Yjs
     console.log('[Canvas] Connecting to Yjs room:', props.roomId)
     yjs.connect()
@@ -1161,6 +1164,30 @@ onMounted(() => {
     
     console.log('[Canvas] CanvasView mounted, roomId:', props.roomId)
 })
+
+// 记录房间访问历史
+function recordVisit(roomId) {
+    try {
+        const visits = localStorage.getItem('recentVisits')
+        let visitList = visits ? JSON.parse(visits) : []
+        
+        // 移除旧的相同房间记录
+        visitList = visitList.filter(v => v.roomId !== roomId)
+        
+        // 添加新记录到开头
+        visitList.unshift({
+            roomId,
+            lastVisit: Date.now()
+        })
+        
+        // 最多保留 50 条记录
+        visitList = visitList.slice(0, 50)
+        
+        localStorage.setItem('recentVisits', JSON.stringify(visitList))
+    } catch (e) {
+        console.error('Failed to record visit:', e)
+    }
+}
 
 // 组件卸载
 onUnmounted(() => {
