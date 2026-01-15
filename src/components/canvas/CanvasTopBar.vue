@@ -81,7 +81,7 @@
                 </div>
                 <button class="circular-btn members-btn" :title="t('canvas.topBar.members')" @click="$emit('members-click')">
                     <span class="icon">👥</span>
-                    <span class="badge">1</span>
+                    <span class="badge">{{ onlineCount }}</span>
                 </button>
             </div>
         </div>
@@ -164,6 +164,10 @@ const props = defineProps({
     isSyncing: {
         type: Boolean,
         default: false
+    },
+    onlineCount: {
+        type: Number,
+        default: 1
     }
 })
 
@@ -298,6 +302,7 @@ const emit = defineEmits(['exit', 'export', 'create-snapshot', 'members-click'])
     align-items: center;
     justify-content: center;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    pointer-events: none; /* 确保点击能穿透到按钮 */
 }
 
 /* 菜单按钮组 */

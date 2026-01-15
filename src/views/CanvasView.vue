@@ -8,6 +8,7 @@
             :room-id="roomId"
             :room-name="roomName"
             :is-syncing="isSyncing"
+            :online-count="currentUsers.length"
             @exit="handleExit"
             @export="handleExport"
             @create-snapshot="handleTopBarSnapshot"
@@ -194,11 +195,15 @@ const isMembersPanelOpen = ref(false)
 const currentUsers = computed(() => {
     // 从 awareness 获取当前用户列表
     const users = [
-        { id: localStorage.getItem('user_id') || 'current', name: localStorage.getItem('username') || t('common.anonymous'), isMe: true }
+        { id: localStorage.getItem('user_id') || 'current', name: getUserName(), isMe: true }
     ]
-    // 加上远程用户
+    // 加上远程用户 - 使用正确的属性路径
     remoteCursors.value.forEach(cursor => {
-        users.push({ id: cursor.id, name: cursor.name, isMe: false })
+        users.push({ 
+            id: String(cursor.clientId), 
+            name: cursor.user?.name || t('common.anonymous'), 
+            isMe: false 
+        })
     })
     return users
 })
