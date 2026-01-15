@@ -1,6 +1,7 @@
 import { ref, onUnmounted, type Ref } from 'vue'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
+import apiService from '../services/api'
 
 interface UseYjsOptions {
     roomId: string
@@ -39,10 +40,24 @@ export function useYjs(options: UseYjsOptions): UseYjsReturn {
 
     // 获取 WebSocket URL
     const getWebSocketUrl = () => {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+        // 优先从 apiService 获取服务器地址（用户在首页输入的地址）
+        // 这确保了跨设备连接时使用正确的服务器 IP
+        const baseUrl = apiService.getBaseUrl()
+        
+        if (baseUrl) {
+            // 从 HTTP URL 转换为 WebSocket URL
+            // 例如: http://192.168.1.100:3000 -> ws://192.168.1.100:3000/ws
+            try {
+                const url = new URL(baseUrl)
+                const wsProtocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+                return `${wsProtocol}//${url.host}/ws`
+            } catch (e) {
+                console.warn('[useYjs] Invalid baseUrl, falling back to window.location')
+            }
+        }
 
-        // 优先使用环境变量，否则使用当前访问的 host
-        // 开发环境下，如果通过 IP 访问前端，WebSocket 也会使用相同的 IP
+        // 回退：使用环境变量或 window.location
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
         let host = import.meta.env.VITE_WS_URL
 
         if (!host) {
