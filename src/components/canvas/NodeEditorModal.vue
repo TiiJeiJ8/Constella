@@ -15,7 +15,7 @@
                         <div class="editor-header">
                             <div class="header-left">
                                 <span class="type-icon">{{ pluginMeta?.icon || '📝' }}</span>
-                                <span class="type-label">{{ pluginMeta?.label || '编辑' }}</span>
+                                <span class="type-label">{{ pluginMeta ? t(`canvas.nodeTypes.${pluginMeta.kind}`) : t('canvas.editor.edit') }}</span>
                                 <!-- 在线协作用户指示器 -->
                                 <div v-if="editingUsers.length > 0" class="collab-users">
                                     <div
@@ -29,7 +29,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <button class="close-btn" @click="handleClose" title="关闭 (Esc)">
+                            <button class="close-btn" @click="handleClose" :title="t('canvas.editor.closeHint')">
                                 <span>✕</span>
                             </button>
                         </div>
@@ -38,7 +38,7 @@
                         <div class="editor-body" :class="{ 'split-view': isMarkdown }">
                             <!-- 编辑区 -->
                             <div class="edit-pane">
-                                <div class="pane-header" v-if="isMarkdown">编辑</div>
+                                <div class="pane-header" v-if="isMarkdown">{{ t('canvas.editor.edit') }}</div>
                                 <div class="textarea-wrapper">
                                     <textarea
                                         ref="textareaRef"
@@ -88,7 +88,7 @@
                                     :style="slashMenuStyle"
                                     ref="slashMenuRef"
                                 >
-                                    <div class="slash-menu-header">插入块</div>
+                                    <div class="slash-menu-header">{{ t('canvas.editor.insertBlock') }}</div>
                                     <div class="slash-menu-scroll">
                                         <div
                                             v-for="(cmd, index) in filteredCommands"
@@ -107,14 +107,14 @@
                                         </div>
                                     </div>
                                     <div v-if="filteredCommands.length === 0" class="slash-menu-empty">
-                                        无匹配命令
+                                        {{ t('canvas.editor.noMatch') }}
                                     </div>
                                 </div>
                             </div>
                             
                             <!-- 预览区（仅 Markdown） -->
                             <div v-if="isMarkdown" class="preview-pane">
-                                <div class="pane-header">预览</div>
+                                <div class="pane-header">{{ t('canvas.editor.preview') }}</div>
                                 <div class="preview-content" v-html="renderedHtml" ref="previewRef" />
                             </div>
                         </div>
@@ -122,13 +122,13 @@
                         <!-- 底部状态栏 -->
                         <div class="editor-footer">
                             <div class="footer-hint">
-                                <kbd>/</kbd> 插入块 · <kbd>Esc</kbd> 关闭
+                                <kbd>/</kbd> {{ t('canvas.editor.footerHint') }} · <kbd>Esc</kbd> {{ t('canvas.editor.footerClose') }}
                             </div>
                             <div class="footer-right">
                                 <span v-if="editingUsers.length > 0" class="collab-indicator">
-                                    👥 {{ editingUsers.length + 1 }} 人协作中
+                                    👥 {{ t('canvas.editor.collaborating', { count: editingUsers.length + 1 }) }}
                                 </span>
-                                <span class="char-count">{{ localContent.length }} 字符</span>
+                                <span class="char-count">{{ t('canvas.editor.characters', { count: localContent.length }) }}</span>
                             </div>
                         </div>
                     </div>
@@ -140,6 +140,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, inject } from 'vue'
+import { useI18n } from 'vue-i18n'
 // @ts-ignore
 import { pluginRegistry, type NodeContent } from '@/plugins'
 import MarkdownIt from 'markdown-it'
@@ -148,6 +149,13 @@ import katex from 'katex'
 import hljs from 'highlight.js'
 import mermaid from 'mermaid'
 import type { UserState } from '@/composables/useAwareness'
+
+const { t } = useI18n()
+
+// 获取当前主题
+const isDarkTheme = computed(() => {
+    return document.documentElement.getAttribute('data-theme') === 'dark'
+})
 
 // 初始化 Mermaid
 mermaid.initialize({
@@ -425,59 +433,59 @@ watch(renderedHtml, () => {
     renderMermaidDiagrams()
 }, { flush: 'post' })
 
-// 扩展的斜杠命令列表
-const slashCommands: SlashCommand[] = [
+// 扩展的斜杠命令列表（使用多语言）
+const slashCommands = computed<SlashCommand[]>(() => [
     // 标题
-    { id: 'h1', icon: 'H1', label: '一级标题', description: '大标题', action: () => '# ' },
-    { id: 'h2', icon: 'H2', label: '二级标题', description: '中标题', action: () => '## ' },
-    { id: 'h3', icon: 'H3', label: '三级标题', description: '小标题', action: () => '### ' },
+    { id: 'h1', icon: 'H1', label: t('canvas.editor.commands.h1'), description: t('canvas.editor.commands.h1Desc'), action: () => '# ' },
+    { id: 'h2', icon: 'H2', label: t('canvas.editor.commands.h2'), description: t('canvas.editor.commands.h2Desc'), action: () => '## ' },
+    { id: 'h3', icon: 'H3', label: t('canvas.editor.commands.h3'), description: t('canvas.editor.commands.h3Desc'), action: () => '### ' },
     
     // 列表
-    { id: 'bullet', icon: '•', label: '无序列表', description: '项目符号列表', action: () => '- ' },
-    { id: 'numbered', icon: '1.', label: '有序列表', description: '编号列表', action: () => '1. ' },
-    { id: 'todo', icon: '☐', label: '待办事项', description: '任务列表', action: () => '- [ ] ' },
+    { id: 'bullet', icon: '•', label: t('canvas.editor.commands.bullet'), description: t('canvas.editor.commands.bulletDesc'), action: () => '- ' },
+    { id: 'numbered', icon: '1.', label: t('canvas.editor.commands.numbered'), description: t('canvas.editor.commands.numberedDesc'), action: () => '1. ' },
+    { id: 'todo', icon: '☐', label: t('canvas.editor.commands.todo'), description: t('canvas.editor.commands.todoDesc'), action: () => '- [ ] ' },
     
     // 引用和分割
-    { id: 'quote', icon: '"', label: '引用', description: '引用文本', action: () => '> ' },
-    { id: 'divider', icon: '—', label: '分割线', description: '水平分割线', action: () => '\n---\n' },
+    { id: 'quote', icon: '"', label: t('canvas.editor.commands.quote'), description: t('canvas.editor.commands.quoteDesc'), action: () => '> ' },
+    { id: 'divider', icon: '—', label: t('canvas.editor.commands.divider'), description: t('canvas.editor.commands.dividerDesc'), action: () => '\n---\n' },
     
     // 代码块（带语言选择）
-    { id: 'code', icon: '<>', iconClass: 'code-icon', label: '代码块', description: '代码片段', action: () => '```\n\n```' },
-    { id: 'code-js', icon: 'JS', iconClass: 'lang-js', label: 'JavaScript', description: 'JavaScript 代码', action: () => '```javascript\n\n```' },
-    { id: 'code-ts', icon: 'TS', iconClass: 'lang-ts', label: 'TypeScript', description: 'TypeScript 代码', action: () => '```typescript\n\n```' },
-    { id: 'code-py', icon: 'PY', iconClass: 'lang-py', label: 'Python', description: 'Python 代码', action: () => '```python\n\n```' },
-    { id: 'code-java', icon: '☕', label: 'Java', description: 'Java 代码', action: () => '```java\n\n```' },
-    { id: 'code-css', icon: '#', iconClass: 'lang-css', label: 'CSS', description: 'CSS 样式', action: () => '```css\n\n```' },
-    { id: 'code-html', icon: '<>', iconClass: 'lang-html', label: 'HTML', description: 'HTML 标记', action: () => '```html\n\n```' },
-    { id: 'code-sql', icon: 'DB', label: 'SQL', description: 'SQL 查询', action: () => '```sql\n\n```' },
-    { id: 'code-sh', icon: '$', label: 'Shell', description: 'Shell 命令', action: () => '```bash\n\n```' },
-    { id: 'code-json', icon: '{}', label: 'JSON', description: 'JSON 数据', action: () => '```json\n\n```' },
+    { id: 'code', icon: '<>', iconClass: 'code-icon', label: t('canvas.editor.commands.code'), description: t('canvas.editor.commands.codeDesc'), action: () => '```\n\n```' },
+    { id: 'code-js', icon: 'JS', iconClass: 'lang-js', label: t('canvas.editor.commands.codeJs'), description: t('canvas.editor.commands.codeJsDesc'), action: () => '```javascript\n\n```' },
+    { id: 'code-ts', icon: 'TS', iconClass: 'lang-ts', label: t('canvas.editor.commands.codeTs'), description: t('canvas.editor.commands.codeTsDesc'), action: () => '```typescript\n\n```' },
+    { id: 'code-py', icon: 'PY', iconClass: 'lang-py', label: t('canvas.editor.commands.codePy'), description: t('canvas.editor.commands.codePyDesc'), action: () => '```python\n\n```' },
+    { id: 'code-java', icon: '☕', label: t('canvas.editor.commands.codeJava'), description: t('canvas.editor.commands.codeJavaDesc'), action: () => '```java\n\n```' },
+    { id: 'code-css', icon: '#', iconClass: 'lang-css', label: t('canvas.editor.commands.codeCss'), description: t('canvas.editor.commands.codeCssDesc'), action: () => '```css\n\n```' },
+    { id: 'code-html', icon: '<>', iconClass: 'lang-html', label: t('canvas.editor.commands.codeHtml'), description: t('canvas.editor.commands.codeHtmlDesc'), action: () => '```html\n\n```' },
+    { id: 'code-sql', icon: 'DB', label: t('canvas.editor.commands.codeSql'), description: t('canvas.editor.commands.codeSqlDesc'), action: () => '```sql\n\n```' },
+    { id: 'code-sh', icon: '$', label: t('canvas.editor.commands.codeSh'), description: t('canvas.editor.commands.codeShDesc'), action: () => '```bash\n\n```' },
+    { id: 'code-json', icon: '{}', label: t('canvas.editor.commands.codeJson'), description: t('canvas.editor.commands.codeJsonDesc'), action: () => '```json\n\n```' },
     
     // 数学公式
-    { id: 'math', icon: '∑', iconClass: 'math-icon', label: '行内公式', description: 'LaTeX 行内数学公式', shortcut: '$...$', action: () => '$E = mc^2$' },
-    { id: 'math-block', icon: '∫', iconClass: 'math-icon', label: '块级公式', description: 'LaTeX 块级数学公式', shortcut: '$$...$$', action: () => '$$\n\\int_{a}^{b} f(x) dx\n$$' },
+    { id: 'math', icon: '∑', iconClass: 'math-icon', label: t('canvas.editor.commands.math'), description: t('canvas.editor.commands.mathDesc'), shortcut: '$...$', action: () => '$E = mc^2$' },
+    { id: 'math-block', icon: '∫', iconClass: 'math-icon', label: t('canvas.editor.commands.mathBlock'), description: t('canvas.editor.commands.mathBlockDesc'), shortcut: '$$...$$', action: () => '$$\n\\int_{a}^{b} f(x) dx\n$$' },
     
     // 图表（Mermaid）
-    { id: 'mermaid-flow', icon: '📊', label: '流程图', description: 'Mermaid 流程图', action: () => '```mermaid\nflowchart TD\n    A[开始] --> B{判断}\n    B -->|是| C[执行]\n    B -->|否| D[结束]\n```' },
-    { id: 'mermaid-seq', icon: '📈', label: '时序图', description: 'Mermaid 时序图', action: () => '```mermaid\nsequenceDiagram\n    Alice->>Bob: Hello\n    Bob-->>Alice: Hi\n```' },
-    { id: 'mermaid-mindmap', icon: '🧠', label: '思维导图', description: 'Mermaid 思维导图', action: () => '```mermaid\nmindmap\n  root((主题))\n    分支1\n      子项A\n      子项B\n    分支2\n      子项C\n```' },
+    { id: 'mermaid-flow', icon: '📊', label: t('canvas.editor.commands.flowchart'), description: t('canvas.editor.commands.flowchartDesc'), action: () => '```mermaid\nflowchart TD\n    A[开始] --> B{判断}\n    B -->|是| C[执行]\n    B -->|否| D[结束]\n```' },
+    { id: 'mermaid-seq', icon: '📈', label: t('canvas.editor.commands.sequence'), description: t('canvas.editor.commands.sequenceDesc'), action: () => '```mermaid\nsequenceDiagram\n    Alice->>Bob: Hello\n    Bob-->>Alice: Hi\n```' },
+    { id: 'mermaid-mindmap', icon: '🧠', label: t('canvas.editor.commands.mindmap'), description: t('canvas.editor.commands.mindmapDesc'), action: () => '```mermaid\nmindmap\n  root((主题))\n    分支1\n      子项A\n      子项B\n    分支2\n      子项C\n```' },
     
     // 文本格式
-    { id: 'bold', icon: 'B', iconClass: 'bold-icon', label: '粗体', description: '加粗文本', action: () => '**粗体**' },
-    { id: 'italic', icon: 'I', iconClass: 'italic-icon', label: '斜体', description: '斜体文本', action: () => '*斜体*' },
-    { id: 'strike', icon: 'S', iconClass: 'strike-icon', label: '删除线', description: '删除线文本', action: () => '~~删除线~~' },
-    { id: 'link', icon: '🔗', label: '链接', description: '超链接', action: () => '[文本](url)' },
-    { id: 'image', icon: '🖼️', label: '图片', description: '插入图片', action: () => '![描述](url)' },
+    { id: 'bold', icon: 'B', iconClass: 'bold-icon', label: t('canvas.editor.commands.bold'), description: t('canvas.editor.commands.boldDesc'), action: () => '**粗体**' },
+    { id: 'italic', icon: 'I', iconClass: 'italic-icon', label: t('canvas.editor.commands.italic'), description: t('canvas.editor.commands.italicDesc'), action: () => '*斜体*' },
+    { id: 'strike', icon: 'S', iconClass: 'strike-icon', label: t('canvas.editor.commands.strike'), description: t('canvas.editor.commands.strikeDesc'), action: () => '~~删除线~~' },
+    { id: 'link', icon: '🔗', label: t('canvas.editor.commands.link'), description: t('canvas.editor.commands.linkDesc'), action: () => '[文本](url)' },
+    { id: 'image', icon: '🖼️', label: t('canvas.editor.commands.image'), description: t('canvas.editor.commands.imageDesc'), action: () => '![描述](url)' },
     
     // 表格
-    { id: 'table', icon: '▦', label: '表格', description: '插入表格', action: () => '| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n| 内容 | 内容 | 内容 |' },
-]
+    { id: 'table', icon: '▦', label: t('canvas.editor.commands.table'), description: t('canvas.editor.commands.tableDesc'), action: () => '| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n| 内容 | 内容 | 内容 |' },
+])
 
-// 过滤后的命令
+// 过滤后的命令 - 默认显示所有命令
 const filteredCommands = computed(() => {
-    if (!slashQuery.value) return slashCommands.slice(0, 12) // 默认显示前12个
+    if (!slashQuery.value) return slashCommands.value // 显示所有命令
     const query = slashQuery.value.toLowerCase()
-    return slashCommands.filter(cmd => 
+    return slashCommands.value.filter(cmd => 
         cmd.label.toLowerCase().includes(query) ||
         cmd.id.toLowerCase().includes(query) ||
         cmd.description.toLowerCase().includes(query)
@@ -1005,7 +1013,7 @@ onUnmounted(() => {
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
     min-width: 280px;
     max-width: 320px;
-    max-height: 400px;
+    max-height: 480px;
     overflow: hidden;
     z-index: 100;
     display: flex;
@@ -1170,5 +1178,267 @@ onUnmounted(() => {
 .modal-scale-leave-to {
     opacity: 0;
     transform: scale(0.98);
+}
+
+/* ==================== 深浅色主题适配 ==================== */
+/* 浅色主题 */
+html[data-theme='light'] .editor-overlay {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme='light'] .editor-container {
+    background: #ffffff;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.2);
+}
+
+html[data-theme='light'] .editor-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.02);
+}
+
+html[data-theme='light'] .type-label {
+    color: rgba(0, 0, 0, 0.9);
+}
+
+html[data-theme='light'] .collab-users {
+    border-left: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+html[data-theme='light'] .collab-avatar {
+    border-color: #ffffff;
+}
+
+html[data-theme='light'] .close-btn {
+    background: rgba(0, 0, 0, 0.08);
+    color: rgba(0, 0, 0, 0.6);
+}
+
+html[data-theme='light'] .close-btn:hover {
+    background: rgba(0, 0, 0, 0.12);
+    color: rgba(0, 0, 0, 0.9);
+}
+
+html[data-theme='light'] .editor-body.split-view {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme='light'] .edit-pane,
+html[data-theme='light'] .preview-pane {
+    background: #ffffff;
+}
+
+html[data-theme='light'] .pane-header {
+    color: rgba(0, 0, 0, 0.5);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme='light'] .editor-textarea {
+    color: rgba(0, 0, 0, 0.9);
+    caret-color: #3b82f6;
+}
+
+html[data-theme='light'] .editor-textarea::placeholder {
+    color: rgba(0, 0, 0, 0.3);
+}
+
+html[data-theme='light'] .preview-content {
+    color: rgba(0, 0, 0, 0.9);
+}
+
+html[data-theme='light'] .preview-content :deep(code) {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+html[data-theme='light'] .preview-content :deep(pre) {
+    background: #f5f5f5;
+}
+
+html[data-theme='light'] .preview-content :deep(blockquote) {
+    border-left-color: rgba(0, 0, 0, 0.2);
+    color: rgba(0, 0, 0, 0.7);
+}
+
+html[data-theme='light'] .preview-content :deep(hr) {
+    border-top-color: rgba(0, 0, 0, 0.1);
+}
+
+html[data-theme='light'] .preview-content :deep(th),
+html[data-theme='light'] .preview-content :deep(td) {
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+html[data-theme='light'] .preview-content :deep(th) {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+/* 斜杠菜单浅色主题 */
+html[data-theme='light'] .slash-menu {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+html[data-theme='light'] .slash-menu-header {
+    color: rgba(0, 0, 0, 0.5);
+    border-bottom-color: rgba(0, 0, 0, 0.1);
+}
+
+html[data-theme='light'] .slash-menu-item:hover,
+html[data-theme='light'] .slash-menu-item.active {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+html[data-theme='light'] .cmd-icon {
+    background: rgba(0, 0, 0, 0.06);
+    color: rgba(0, 0, 0, 0.7);
+}
+
+html[data-theme='light'] .cmd-label {
+    color: rgba(0, 0, 0, 0.9);
+}
+
+html[data-theme='light'] .cmd-desc {
+    color: rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme='light'] .cmd-shortcut {
+    color: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.04);
+}
+
+html[data-theme='light'] .slash-menu-empty {
+    color: rgba(0, 0, 0, 0.5);
+}
+
+/* 底部状态栏浅色主题 */
+html[data-theme='light'] .editor-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.02);
+}
+
+html[data-theme='light'] .footer-hint {
+    color: rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme='light'] .footer-hint kbd {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme='light'] .char-count {
+    color: rgba(0, 0, 0, 0.5);
+}
+
+/* 预览区 hljs 浅色主题 */
+html[data-theme='light'] .preview-content :deep(.hljs-keyword) { color: #a626a4; }
+html[data-theme='light'] .preview-content :deep(.hljs-string) { color: #50a14f; }
+html[data-theme='light'] .preview-content :deep(.hljs-number) { color: #986801; }
+html[data-theme='light'] .preview-content :deep(.hljs-function) { color: #4078f2; }
+html[data-theme='light'] .preview-content :deep(.hljs-title) { color: #4078f2; }
+html[data-theme='light'] .preview-content :deep(.hljs-params) { color: #383a42; }
+html[data-theme='light'] .preview-content :deep(.hljs-comment) { color: #a0a1a7; font-style: italic; }
+
+/* KaTeX 浅色主题 */
+html[data-theme='light'] .preview-content :deep(.katex-block) {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+html[data-theme='light'] .preview-content :deep(.katex-error) {
+    color: #e45649;
+    background: rgba(228, 86, 73, 0.1);
+}
+
+/* Mermaid 浅色主题 */
+html[data-theme='light'] .preview-content :deep(.mermaid .nodeLabel),
+html[data-theme='light'] .preview-content :deep(.mermaid .edgeLabel),
+html[data-theme='light'] .preview-content :deep(.mermaid .label),
+html[data-theme='light'] .preview-content :deep(.mermaid text) {
+    fill: rgba(0, 0, 0, 0.9) !important;
+    color: rgba(0, 0, 0, 0.9) !important;
+}
+
+html[data-theme='light'] .preview-content :deep(.mermaid .node rect),
+html[data-theme='light'] .preview-content :deep(.mermaid .node circle),
+html[data-theme='light'] .preview-content :deep(.mermaid .node polygon) {
+    fill: rgba(0, 0, 0, 0.05) !important;
+    stroke: rgba(0, 0, 0, 0.2) !important;
+}
+
+/* ==================== 优化滚动条样式 ==================== */
+/* 斜杠菜单滚动条 */
+.slash-menu-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.slash-menu-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.slash-menu-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+.slash-menu-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+html[data-theme='light'] .slash-menu-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+html[data-theme='light'] .slash-menu-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
+}
+
+/* 预览区滚动条 */
+.preview-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.preview-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.preview-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+
+.preview-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+html[data-theme='light'] .preview-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+html[data-theme='light'] .preview-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
+}
+
+/* 编辑器文本区滚动条 */
+.editor-textarea::-webkit-scrollbar {
+    width: 8px;
+}
+
+.editor-textarea::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.editor-textarea::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+
+.editor-textarea::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+html[data-theme='light'] .editor-textarea::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+html[data-theme='light'] .editor-textarea::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
 }
 </style>

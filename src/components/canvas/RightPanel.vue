@@ -56,11 +56,11 @@
                                         :key="kind.kind"
                                         class="type-btn"
                                         :class="{ active: selectedNodes[0].content?.kind === kind.kind }"
-                                        :title="kind.description"
+                                        :title="t(`canvas.nodeTypeDesc.${kind.kind}`)"
                                         @click="$emit('node-kind-change', selectedNodes[0].id, kind.kind)"
                                     >
                                         <span class="type-icon">{{ kind.icon }}</span>
-                                        <span class="type-name">{{ kind.label }}</span>
+                                        <span class="type-name">{{ t(`canvas.nodeTypes.${kind.kind}`) }}</span>
                                     </button>
                                 </div>
                             </div>
@@ -424,11 +424,11 @@ const panels = computed(() => [
 ])
 
 // 连线类型选项
-const edgeTypes = [
-    { id: 'straight', icon: '➖', label: '直线' },
-    { id: 'bezier', icon: '〰️', label: '曲线' },
-    { id: 'step', icon: '📐', label: '折线' }
-]
+const edgeTypes = computed(() => [
+    { id: 'straight', icon: '➖', label: t('canvas.edgeTypes.straight') },
+    { id: 'bezier', icon: '〰️', label: t('canvas.edgeTypes.bezier') },
+    { id: 'step', icon: '📐', label: t('canvas.edgeTypes.step') }
+])
 
 // 可用的节点类型（包含图片类型）
 const availableKinds = computed(() => {
