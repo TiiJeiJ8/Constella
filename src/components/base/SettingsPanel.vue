@@ -121,25 +121,6 @@
                                     <option value="en-US">English</option>
                                 </select>
                             </div>
-
-                            <div class="setting-item">
-                                <label class="setting-label">{{ t('settings.general.autoSave') }}</label>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" v-model="settingsData.autoSave" />
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-
-                            <div class="setting-item" v-if="settingsData.autoSave">
-                                <label class="setting-label">{{ t('settings.general.autoSaveInterval') }}</label>
-                                <input 
-                                    type="number" 
-                                    v-model.number="settingsData.autoSaveInterval" 
-                                    class="setting-input"
-                                    min="10"
-                                    max="300"
-                                />
-                            </div>
                         </div>
 
                         <!-- 外观设置 -->
@@ -153,27 +134,7 @@
                                     <option value="dark">{{ t('theme.dark') }}</option>
                                 </select>
                             </div>
-
-                            <div class="setting-item">
-                                <label class="setting-label">{{ t('settings.appearance.fontSize') }}</label>
-                                <input 
-                                    type="number" 
-                                    v-model.number="settingsData.fontSize" 
-                                    class="setting-input"
-                                    min="12"
-                                    max="24"
-                                />
-                            </div>
-
-                            <div class="setting-item">
-                                <label class="setting-label">{{ t('settings.appearance.fontFamily') }}</label>
-                                <select v-model="settingsData.fontFamily" class="setting-select">
-                                    <option value="system">System Default</option>
-                                    <option value="serif">Serif</option>
-                                    <option value="sans-serif">Sans-serif</option>
-                                    <option value="monospace">Monospace</option>
-                                </select>
-                            </div>
+                            <!-- 仅保留主题设置；字体相关设置已移除 -->
                         </div>
 
                         <!-- 编辑器设置 -->
@@ -252,9 +213,6 @@ import {
     CloseIcon,
     SettingIcon,
     ViewListIcon,
-    Edit1Icon,
-    UserCircleIcon,
-    ToolsIcon,
     UserIcon,
     HelpCircleIcon,
     RefreshIcon
@@ -285,13 +243,10 @@ const activeCategory = ref('general')
 const categories = [
     { key: 'account', icon: UserIcon },
     { key: 'general', icon: SettingIcon },
-    { key: 'appearance', icon: ViewListIcon },
-    { key: 'editor', icon: Edit1Icon },
-    { key: 'collaboration', icon: UserCircleIcon },
-    { key: 'advanced', icon: ToolsIcon }
+    { key: 'appearance', icon: ViewListIcon }
 ]
 
-// 设置数据
+// 设置数据（仅保留必要项）
 const settingsData = reactive({
     // 账户信息
     userId: '',
@@ -301,20 +256,8 @@ const settingsData = reactive({
     email: '',
     // 通用设置
     language: 'zh-CN',
-    autoSave: true,
-    autoSaveInterval: 30,
-    // 外观设置
-    theme: 'light',
-    fontSize: 14,
-    fontFamily: 'system',
-    // 编辑器设置
-    defaultFormat: 'markdown',
-    spellCheck: true,
-    // 协作设置
-    showCursors: true,
-    showPresence: true,
-    // 高级设置
-    debugMode: false
+    // 外观设置（仅保留主题）
+    theme: 'light'
 })
 
 // 验证错误
@@ -391,12 +334,14 @@ const applySettings = () => {
         locale.value = settingsData.language
         localStorage.setItem('locale', settingsData.language)
     }
-    
+
     // 应用主题设置
     if (settingsData.theme) {
         document.documentElement.setAttribute('data-theme', settingsData.theme)
         localStorage.setItem('theme', settingsData.theme)
     }
+
+    // 移除字体设置（不再管理字体大小）
 }
 
 // 关闭面板
