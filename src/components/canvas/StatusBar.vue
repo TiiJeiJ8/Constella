@@ -134,6 +134,11 @@ const connectionText = computed(() => {
     pointer-events: auto;
 }
 
+.status-bar:focus-within {
+    transform: translateY(0);
+    opacity: 1;
+}
+
 .status-bar.visible {
     transform: translateY(0);
     opacity: 1;
