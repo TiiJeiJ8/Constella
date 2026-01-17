@@ -8,9 +8,30 @@
     "dev": "vite --host 0.0.0.0",
     "dev:electron": "vite",
     "build": "vue-tsc -b && vite build",
-    "build:electron": "vue-tsc -b && vite build && electron-builder",
+      "build:electron": "electron-builder",
     "preview": "vite preview"
   },
+    "build": {
+      "appId": "com.constella.app",
+      "productName": "Constella",
+      "directories": {
+        "output": "dist-electron"
+      },
+      "files": [
+        "dist/**",
+        "electron/**",
+        "../server/dist/**"
+      ],
+      "extraResources": [
+        {
+          "from": "../server/dist",
+          "to": "server"
+        }
+      ],
+      "win": {
+        "target": "nsis"
+      }
+    },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
     "@types/dompurify": "^3.0.5",
