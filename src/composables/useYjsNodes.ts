@@ -116,11 +116,11 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
         const data = yContent.get('data') || ''
         const displayMode = yContent.get('displayMode')
         const metadata = yContent.get('metadata')
-        
+
         const content: NodeContent = { kind, data }
         if (displayMode) content.displayMode = displayMode
         if (metadata) content.metadata = metadata
-        
+
         return content
     }
 
@@ -137,7 +137,7 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
                 // 读取 content，兼容多种格式
                 let content: NodeContent
                 const rawContent = yNode.get('content')
-                
+
                 if (!rawContent) {
                     // 兼容旧的 text 字段，转为 markdown
                     const text = yNode.get('text')
