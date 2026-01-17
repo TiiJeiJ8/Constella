@@ -478,9 +478,7 @@ function handleNodeCreate(createData) {
     })
     
     console.log('[Canvas] Node created:', nodeId, createData)
-    
-    // 创建后切换回选择工具
-    activeTool.value = 'select'
+
 }
 
 // 边选择
@@ -526,9 +524,7 @@ function handleEdgeCreate(edgeData) {
     })
     
     console.log('[Canvas] Edge created:', edgeId, edgeData)
-    
-    // 创建后切换回选择工具
-    activeTool.value = 'select'
+
 }
 
 // 边删除（同步到 Yjs）
