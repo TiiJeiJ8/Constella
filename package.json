@@ -12,28 +12,28 @@
     "build:electron": "npm run build && npm run build:electron-main && electron-builder",
     "preview": "vite preview"
   },
-    "build": {
-      "appId": "com.constella.app",
-      "productName": "Constella",
-      "directories": {
-        "output": "dist-electron"
-      },
-      "files": [
-        "dist/**",
-        "electron/dist/**",
-        "electron/**",
-        "../server/dist/**"
-      ],
-      "extraResources": [
-        {
-          "from": "../server/dist",
-          "to": "server"
-        }
-      ],
-      "win": {
-        "target": "nsis"
-      }
+  "build": {
+    "appId": "com.constella.app",
+    "productName": "Constella",
+    "directories": {
+      "output": "dist-electron"
     },
+    "files": [
+      "dist/**",
+      "electron/dist/**",
+      "electron/**",
+      "../server/dist/**"
+    ],
+    "extraResources": [
+      {
+        "from": "../server/dist",
+        "to": "server"
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    }
+  },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
     "@types/dompurify": "^3.0.5",
