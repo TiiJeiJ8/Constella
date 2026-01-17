@@ -85,7 +85,7 @@ Constella 的目标不是替代它们，而是探索一个不同方向：
 ### 1. 安装依赖
 
 ```bash
-cd client
+cd web
 npm install
 ```
 

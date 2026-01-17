@@ -84,7 +84,7 @@ This is not a demo-scale project, but a holistic engineering practice centered a
 ### 1. Install dependencies
 
 ```bash
-cd client
+cd web
 npm install
 ```
 

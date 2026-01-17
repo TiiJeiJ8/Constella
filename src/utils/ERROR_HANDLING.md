@@ -7,7 +7,7 @@
 ## 文件结构
 
 ```
-client/src/
+web/src/
 ├── locales/
 │   ├── errors/
 │   │   ├── zh-CN.json     # 中文错误码映射
@@ -170,8 +170,8 @@ async function handleLogin() {
 ## 添加新的错误码
 
 1. 在后端定义错误码（参见 `server/docs/ERROR_CODES.md`）
-2. 在 `client/src/locales/errors/zh-CN.json` 添加中文翻译
-3. 在 `client/src/locales/errors/en-US.json` 添加英文翻译
+2. 在 `web/src/locales/errors/zh-CN.json` 添加中文翻译
+3. 在 `web/src/locales/errors/en-US.json` 添加英文翻译
 
 示例：
 ```json
