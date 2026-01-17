@@ -50,7 +50,16 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { ChatMessage } from '@/composables/useYjsChat'
+
+interface ChatMessage {
+    id: string | number
+    userId?: string
+    userName: string
+    userColor?: string
+    content: string
+    timestamp: number
+    isOwn?: boolean
+}
 
 const { t } = useI18n()
 
