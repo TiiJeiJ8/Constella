@@ -19,6 +19,10 @@ Built with **Vue 3 + TypeScript + Vite**, Constella runs on both **Web browsers*
 
 ---
 
+![DEMO](IMG/demo.gif)
+
+---
+
 ## ✨ Why Constella
 
 Many existing tools (Notion, Obsidian, traditional whiteboards) make trade-offs:
