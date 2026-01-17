@@ -241,32 +241,10 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
         // 监听 Yjs 变化
         observeYjs()
 
-        // 如果 Y.Map 为空，创建示例节点
+        // 如果 Y.Map 为空，不自动创建示例节点，仅同步（保持空白房间）
         if (nodesMap.size === 0) {
-            console.log('[useYjsNodes] Initializing with sample nodes')
-            doc.transact(() => {
-                // 创建示例空白节点
-                createNode({
-                    id: 'node-1',
-                    x: 100,
-                    y: 100,
-                    width: 180,
-                    height: 120,
-                    fill: '#667eea',
-                    stroke: '#5568d3',
-                    content: { kind: 'blank', data: '' }
-                })
-                createNode({
-                    id: 'node-2',
-                    x: 350,
-                    y: 200,
-                    width: 180,
-                    height: 120,
-                    fill: '#48bb78',
-                    stroke: '#38a169',
-                    content: { kind: 'blank', data: '' }
-                })
-            })
+            console.log('[useYjsNodes] Initialized with empty node list (no sample nodes)')
+            // 保持 nodes.value 为空，外部组件可根据需要创建节点
         } else {
             // 从 Yjs 同步现有节点
             syncFromYjs()
