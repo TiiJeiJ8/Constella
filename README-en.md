@@ -81,6 +81,8 @@ This is not a demo-scale project, but a holistic engineering practice centered a
 
 ## 🚀 Getting Started
 
+Place the frontend and backend in the same directory (recommended to name them `web` and `backend` respectively).
+
 ### 1. Install dependencies
 
 ```bash
@@ -98,12 +100,6 @@ npm run dev
 
 ```bash
 npm run dev:electron
-```
-
-### 4. Build for production
-
-```bash
-npm run build
 ```
 
 ---
