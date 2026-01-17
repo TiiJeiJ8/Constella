@@ -20,15 +20,24 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { RendererProps } from '../index'
+import { apiService } from '../../services/api'
 
 const props = defineProps<RendererProps>()
 
 const loading = ref(true)
 const error = ref(false)
 
-// 图片源
+// 处理 constella:// 协议为后端地址，动态获取 baseUrl
+function resolveConstellaUrl(url: string): string {
+    const backendPrefix = apiService.getBaseUrl();
+    if (url?.startsWith("constella://")) {
+        return backendPrefix + url.replace("constella://", "/");
+    }
+    return url;
+}
+
 const imageSrc = computed(() => {
-    return props.content?.data || ''
+    return resolveConstellaUrl(props.content?.data || '');
 })
 
 // 替代文本

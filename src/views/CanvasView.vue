@@ -563,18 +563,41 @@ function handleEdgeLabelConfirm(newLabel) {
 // 资源上传
 async function handleAssetUpload(uploadData) {
     console.log('[Canvas] Asset upload:', uploadData)
-    
+    // 如果上传组件已完成上传并返回结果，直接使用它
+    if (uploadData && uploadData.success === true && uploadData.asset) {
+        const serverAsset = uploadData.asset
+
+        const baseUrl = apiService.getBaseUrl()
+        const fullUrl = serverAsset.url && serverAsset.url.startsWith('http')
+            ? serverAsset.url
+            : `${baseUrl}${serverAsset.url.replace(/^constella:\/\//, '/')}`
+
+        const asset = {
+            id: serverAsset.id,
+            name: serverAsset.name,
+            type: serverAsset.type,
+            size: serverAsset.size,
+            url: fullUrl,
+            uploadedAt: serverAsset.uploadedAt
+        }
+
+        roomAssets.value.push(asset)
+        console.log('[Canvas] Asset added:', asset.id)
+        toast.success(t('canvas.toast.uploadSuccess'))
+        return
+    }
+
     const file = uploadData.file
-    
-    // 上传到服务器
+
+    // 上传到服务器（回退逻辑）
     const response = await apiService.uploadAsset(props.roomId, file)
-    
+
     if (!response.success) {
         console.error('[Canvas] Asset upload failed:', response.message)
         toast.error(t('canvas.toast.uploadFailed'))
         return
     }
-    
+
     const serverAsset = response.data
     
     // 构建完整的资源 URL
@@ -1122,6 +1145,31 @@ async function loadRoomData() {
     }
 }
 
+function getMimeTypeFromUrl(url) {
+    const extension = url.split('.').pop().toLowerCase()
+    switch (extension) {
+        case 'png':
+        case 'jpg':
+        case 'jpeg':
+        case 'gif':
+        case 'bmp':
+        case 'webp':
+            return 'image'
+        case 'mp4':
+        case 'webm':
+        case 'ogg':
+            return 'video'
+        case 'mp3':
+        case 'wav':
+        case 'ogg':
+            return 'audio'
+        case 'pdf':
+            return 'pdf'
+        default:
+            return 'file'
+    }
+}
+
 // 加载房间资源列表
 async function loadRoomAssets() {
     try {
@@ -1132,7 +1180,8 @@ async function loadRoomAssets() {
             const baseUrl = apiService.getBaseUrl()
             roomAssets.value = response.data.map(asset => ({
                 ...asset,
-                url: asset.url.startsWith('http') ? asset.url : `${baseUrl}${asset.url}`
+                url: asset.url.startsWith('http') ? asset.url : `${baseUrl}${asset.url}`,
+                type: asset.type || getMimeTypeFromUrl(asset.url)
             }))
             console.log('[Canvas] Loaded', roomAssets.value.length, 'assets')
         }

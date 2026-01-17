@@ -625,11 +625,16 @@ class ApiService {
             const result = await response.json()
 
             if (response.ok) {
+                // 如果返回有资源路径，则加 constella:// 协议头
+                let patchedData = result.data;
+                if (patchedData && typeof patchedData === 'string' && patchedData.startsWith('uploads/assets/')) {
+                    patchedData = 'constella://' + patchedData;
+                }
                 return {
                     success: true,
                     code: result.code,
                     message: result.message,
-                    data: result.data
+                    data: patchedData
                 }
             } else {
                 return {

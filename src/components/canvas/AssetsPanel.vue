@@ -36,9 +36,9 @@
                 @dblclick="insertAsset(asset)"
             >
                 <div class="asset-preview">
-                    <img 
-                        v-if="asset.type.startsWith('image/')" 
-                        :src="asset.url" 
+                    <img
+                        v-if="asset.type.startsWith('image')"
+                        :src="asset.url"
                         :alt="asset.name"
                     />
                     <span v-else class="file-icon">📄</span>
@@ -87,6 +87,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { apiService } from '@/services/api'
 import { useI18n } from 'vue-i18n'
 import ConfirmDialog from '@/components/base/ConfirmDialog.vue'
 
@@ -135,29 +136,92 @@ function handleFileSelect(e) {
     e.target.value = ''
 }
 
-// 上传文件
+// 上传文件（使用 XHR 支持上传进度）
 async function uploadFiles(files) {
+    if (!files || files.length === 0) return
+
     uploading.value = true
     uploadProgress.value = 0
-    
+
+    const totalFiles = files.length
+
     try {
-        for (let i = 0; i < files.length; i++) {
+        for (let i = 0; i < totalFiles; i++) {
             const file = files[i]
-            
-            // 模拟上传进度
-            uploadProgress.value = Math.round((i / files.length) * 100)
-            
-            emit('upload', {
-                file,
-                name: file.name,
-                type: file.type,
-                size: file.size
+
+            // 使用 XMLHttpRequest 进行文件上传以获取进度
+            await new Promise((resolve) => {
+                const xhr = new XMLHttpRequest()
+                const url = `${apiService.getBaseUrl()}/api/v1/rooms/${props.roomId}/assets`
+
+                xhr.open('POST', url, true)
+
+                // 授权头（如果有）
+                const token = localStorage.getItem('access_token')
+                if (token) {
+                    xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+                }
+
+                xhr.upload.onprogress = (e) => {
+                    const fileProgress = e.lengthComputable ? e.loaded / e.total : 0
+                    // 计算整体进度（简单平均 + 当前文件进度）
+                    uploadProgress.value = Math.round(((i + fileProgress) / totalFiles) * 100)
+                }
+
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        let result = {}
+                        try {
+                            result = JSON.parse(xhr.responseText)
+                        } catch (err) {
+                            console.error('Invalid JSON response for upload:', err)
+                        }
+
+                        // 服务器可能返回 data 为资源相对路径或对象
+                        let assetUrl = ''
+                        if (result && result.data) {
+                            if (typeof result.data === 'string') {
+                                // 如果是相对路径（uploads/...）或已经带协议
+                                if (result.data.startsWith('uploads/')) {
+                                    assetUrl = 'constella://' + result.data
+                                } else {
+                                    assetUrl = result.data
+                                }
+                            } else if (typeof result.data === 'object' && result.data.url) {
+                                assetUrl = result.data.url
+                            }
+                        }
+
+                        const asset = {
+                            id: (result && result.data && result.data.id) || Date.now().toString(),
+                            name: file.name,
+                            size: file.size,
+                            type: file.type,
+                            url: assetUrl || `constella://uploads/assets/${file.name}`
+                        }
+
+                        // 通知父组件上传成功，带上服务器返回的资源信息
+                        emit('upload', { success: true, asset, raw: result })
+                        resolve(undefined)
+                    } else {
+                        console.error('Upload failed:', xhr.status, xhr.statusText)
+                        emit('upload', { success: false, error: xhr.statusText })
+                        resolve(undefined)
+                    }
+                }
+
+                xhr.onerror = () => {
+                    console.error('Upload network error')
+                    emit('upload', { success: false, error: 'Network error' })
+                    resolve(undefined)
+                }
+
+                const formData = new FormData()
+                formData.append('file', file)
+                xhr.send(formData)
             })
-            
-            // 模拟延迟
-            await new Promise(resolve => setTimeout(resolve, 500))
         }
-        
+
         uploadProgress.value = 100
     } catch (error) {
         console.error('Upload failed:', error)
