@@ -72,13 +72,6 @@
                         @click="handleRoomClick"
                         @unfavorite="handleUnfavorite(item.room.id)"
                     />
-                    <button 
-                        class="unfavorite-btn"
-                        :title="t('favorites.remove')"
-                        @click="handleUnfavorite(item.room.id)"
-                    >
-                        ⭐
-                    </button>
                 </div>
             </div>
         </div>
