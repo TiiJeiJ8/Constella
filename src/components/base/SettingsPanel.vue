@@ -199,6 +199,35 @@
                                 </button>
                             </div>
                         </div>
+
+                        <!-- 快捷键设置 -->
+                        <div v-show="activeCategory === 'shortcuts'" class="settings-section">
+                            <h3 class="section-title">{{ t('settings.shortcuts.title') }}</h3>
+
+                            <div class="setting-item">
+                                <label class="setting-label">{{ t('settings.shortcuts.select') }}</label>
+                                <input v-model="settingsData.shortcuts.select" class="setting-input" placeholder="V" />
+                            </div>
+
+                            <div class="setting-item">
+                                <label class="setting-label">{{ t('settings.shortcuts.pan') }}</label>
+                                <input v-model="settingsData.shortcuts.pan" class="setting-input" placeholder="P" />
+                            </div>
+
+                            <div class="setting-item">
+                                <label class="setting-label">{{ t('settings.shortcuts.node') }}</label>
+                                <input v-model="settingsData.shortcuts.node" class="setting-input" placeholder="N" />
+                            </div>
+
+                            <div class="setting-item">
+                                <label class="setting-label">{{ t('settings.shortcuts.edge') }}</label>
+                                <input v-model="settingsData.shortcuts.edge" class="setting-input" placeholder="E" />
+                            </div>
+
+                            <div class="setting-item">
+                                <button class="full-width-btn" @click="resetShortcuts">{{ t('settings.shortcuts.reset') }}</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -243,7 +272,8 @@ const activeCategory = ref('general')
 const categories = [
     { key: 'account', icon: UserIcon },
     { key: 'general', icon: SettingIcon },
-    { key: 'appearance', icon: ViewListIcon }
+    { key: 'appearance', icon: ViewListIcon },
+    { key: 'shortcuts', icon: SettingIcon }
 ]
 
 // 设置数据（仅保留必要项）
@@ -318,7 +348,14 @@ const initializeAccount = () => {
 
 // 保存设置
 const saveSettings = () => {
-    localStorage.setItem('settings', JSON.stringify(settingsData))
+    const payload = JSON.stringify(settingsData)
+    localStorage.setItem('settings', payload)
+    try {
+        // 广播设置更新，方便其他组件实时响应
+        window.dispatchEvent(new CustomEvent('settings-updated', { detail: JSON.parse(payload) }))
+    } catch (e) {
+        console.warn('Failed to dispatch settings-updated event', e)
+    }
 }
 
 // 监听设置变化并自动保存
@@ -360,6 +397,22 @@ const clearCache = () => {
         localStorage.clear()
         alert(locale.value === 'zh-CN' ? '缓存已清除，请重启应用' : 'Cache cleared, please restart the app')
     }
+}
+
+// 快捷键相关
+const defaultShortcuts = {
+    select: 'v',
+    pan: 'p',
+    node: 'n',
+    edge: 'e'
+}
+
+if (!settingsData.shortcuts) {
+    settingsData.shortcuts = { ...defaultShortcuts }
+}
+
+const resetShortcuts = () => {
+    settingsData.shortcuts = { ...defaultShortcuts }
 }
 
 // 重新生成用户 ID
@@ -849,6 +902,28 @@ applySettings()
 
 .danger-btn:hover {
     background: #c62828;
+}
+
+/* 全宽按钮（如：重置快捷键） */
+.full-width-btn {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    white-space: normal; /* 允许换行 */
+    word-break: break-word;
+}
+
+.full-width-btn:hover {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #fff;
 }
 
 /* ==================== 过渡动画 ==================== */

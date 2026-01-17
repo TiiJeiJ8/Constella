@@ -10,6 +10,7 @@
                 @click="$emit('tool-change', tool.id)"
             >
                 <span class="tool-icon">{{ tool.icon }}</span>
+                <small v-if="tool.hotkey" class="hotkey">{{ tool.hotkey }}</small>
             </button>
         </div>
 
@@ -44,7 +45,7 @@ import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 
-defineProps({
+const { activeTool, canUndo, canRedo, shortcuts } = defineProps({
     activeTool: {
         type: String,
         default: 'select'
@@ -56,18 +57,48 @@ defineProps({
     canRedo: {
         type: Boolean,
         default: false
+    },
+    shortcuts: {
+        type: Object,
+        default: () => ({ select: 'v', pan: 'p', node: 'n', edge: 'e' })
     }
 })
 
 defineEmits(['tool-change', 'undo', 'redo'])
 
-const tools = computed(() => [
-    { id: 'select', icon: '⬚', label: t('canvas.toolbar.select') },
-    { id: 'pan', icon: '✋', label: t('canvas.toolbar.pan') },
-    { id: 'node', icon: '📝', label: t('canvas.toolbar.node') },
-    { id: 'edge', icon: '🔗', label: t('canvas.toolbar.edge') }
-])
+
+
+const tools = computed(() => {
+    // 使用父组件传入的响应式 shortcuts，回退到 localStorage 默认
+    const map = (shortcuts && Object.keys(shortcuts).length > 0) ? shortcuts : (function(){
+        try { return JSON.parse(localStorage.getItem('settings') || '{}').shortcuts || { select: 'v', pan: 'p', node: 'n', edge: 'e' }
+        } catch (e) { return { select: 'v', pan: 'p', node: 'n', edge: 'e' } }
+    })()
+
+    return [
+        { id: 'select', icon: '⬚', label: t('canvas.toolbar.select'), hotkey: (map.select || '').toUpperCase() },
+        { id: 'pan', icon: '✋', label: t('canvas.toolbar.pan'), hotkey: (map.pan || '').toUpperCase() },
+        { id: 'node', icon: '📝', label: t('canvas.toolbar.node'), hotkey: (map.node || '').toUpperCase() },
+        { id: 'edge', icon: '🔗', label: t('canvas.toolbar.edge'), hotkey: (map.edge || '').toUpperCase() }
+    ]
+})
 </script>
+
+<style scoped>
+.hotkey {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    background: rgba(0,0,0,0.08);
+    color: var(--text-primary);
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    line-height: 1;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    user-select: none;
+}
+</style>
 
 <style scoped>
 .toolbox {

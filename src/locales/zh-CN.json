@@ -476,7 +476,8 @@
             "appearance": "外观",
             "editor": "编辑器",
             "collaboration": "协作",
-            "advanced": "高级"
+            "advanced": "高级",
+            "shortcuts": "快捷键设置"
         },
         "account": {
             "title": "账户设置",
@@ -533,6 +534,14 @@
             "title": "高级设置",
             "debugMode": "调试模式",
             "clearCache": "清除缓存"
+        },
+        "shortcuts": {
+            "title": "快捷键",
+            "select": "选择工具",
+            "pan": "抓手工具",
+            "node": "创建节点",
+            "edge": "创建连线",
+            "reset": "重置为默认"
         },
         "close": "关闭"
     },

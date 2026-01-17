@@ -476,7 +476,8 @@
             "appearance": "Appearance",
             "editor": "Editor",
             "collaboration": "Collaboration",
-            "advanced": "Advanced"
+            "advanced": "Advanced",
+            "shortcuts": "Shortcuts"
         },
         "account": {
             "title": "Account Settings",
@@ -533,6 +534,14 @@
             "title": "Advanced Settings",
             "debugMode": "Debug Mode",
             "clearCache": "Clear Cache"
+        },
+        "shortcuts": {
+            "title": "Keyboard Shortcuts",
+            "select": "Select Tool",
+            "pan": "Pan Tool",
+            "node": "Create Node",
+            "edge": "Create Edge",
+            "reset": "Reset to Default"
         },
         "close": "Close"
     },

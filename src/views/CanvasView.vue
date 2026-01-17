@@ -22,6 +22,7 @@
             :active-tool="activeTool"
             :can-undo="canUndo"
             :can-redo="canRedo"
+            :shortcuts="userShortcuts"
             @tool-change="handleToolChange"
             @undo="handleUndo"
             @redo="handleRedo"
@@ -365,6 +366,58 @@ function handleToolChange(tool) {
     activeTool.value = tool
     console.log('[Canvas] Tool changed:', tool)
 }
+
+// 从设置获取快捷键映射（tool -> key）
+function getShortcutMap() {
+    try {
+        const settings = JSON.parse(localStorage.getItem('settings') || '{}')
+        return settings.shortcuts || { select: 'v', pan: 'p', node: 'n', edge: 'e' }
+    } catch (e) {
+        return { select: 'v', pan: 'p', node: 'n', edge: 'e' }
+    }
+}
+
+// 响应式用户快捷键映射（SettingsPanel 会广播 settings-updated）
+const userShortcuts = ref(getShortcutMap())
+
+function handleSettingsUpdated(e) {
+    try {
+        const settings = e.detail || {}
+        userShortcuts.value = settings.shortcuts || getShortcutMap()
+    } catch (err) {
+        userShortcuts.value = getShortcutMap()
+    }
+}
+
+// 全局热键监听：根据用户设置切换工具
+function handleHotkey(e) {
+    const activeEl = document.activeElement
+    const isTyping = activeEl && (['INPUT', 'TEXTAREA'].includes(activeEl.tagName) || activeEl.isContentEditable || editingNodeId.value)
+    if (isTyping) return
+
+    const key = e.key.toLowerCase()
+    const shortcuts = userShortcuts.value || getShortcutMap()
+
+    // 以小写单字符为准
+    for (const tool of ['select', 'pan', 'node', 'edge']) {
+        const mapped = (shortcuts[tool] || '').toLowerCase()
+        if (mapped && mapped === key) {
+            activeTool.value = tool
+            e.preventDefault()
+            return
+        }
+    }
+}
+
+onMounted(() => {
+    window.addEventListener('keydown', handleHotkey)
+    window.addEventListener('settings-updated', handleSettingsUpdated)
+})
+
+onUnmounted(() => {
+    window.removeEventListener('keydown', handleHotkey)
+    window.removeEventListener('settings-updated', handleSettingsUpdated)
+})
 
 // 面板切换
 function handlePanelChange(panel) {
