@@ -49,7 +49,6 @@ const overlayStyle = computed(() => {
         top: `${screenY}px`,
         width: `${scaledWidth.value}px`,
         height: `${scaledHeight.value}px`,
-        fontSize: `${Math.max(10, 13 * props.stageScale)}px`,
         pointerEvents: 'none' as const,
         // 使用节点的 zIndex，确保文字层级与节点矩形一致
         // 基础值 1 保证在画布之上，乘以系数确保层级差异明显
