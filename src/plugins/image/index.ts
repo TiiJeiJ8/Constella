@@ -4,15 +4,12 @@
  */
 import type { NodePlugin } from '../index'
 import ImageRenderer from './ImageRenderer.vue'
+import { manifest } from './manifest'
 
-export const imagePlugin: NodePlugin = {
-    meta: {
-        kind: 'image',
-        label: '图片',
-        icon: '🖼️',
-        description: '图片内容',
-        editable: false,
-        supportsCardMode: false
-    },
+export const pluginPlugin: NodePlugin = {
+    meta: manifest,
     renderer: ImageRenderer
 }
+
+// 上下文兼容性导出（带丢的）
+export const imagePlugin = pluginPlugin

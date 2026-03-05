@@ -3,16 +3,13 @@
  */
 import type { NodePlugin } from '../index'
 import TextRenderer from './TextRenderer.vue'
+import { manifest } from './manifest'
 
-export const textPlugin: NodePlugin = {
-    meta: {
-        kind: 'text',
-        label: '文本',
-        icon: '📝',
-        description: '纯文本内容',
-        editable: true,
-        supportsCardMode: true
-    },
+export const pluginPlugin: NodePlugin = {
+    meta: manifest,
     renderer: TextRenderer
     // 使用通用编辑器，无需自定义
 }
+
+// 上下文兼容性导出（带丢的）
+export const textPlugin = pluginPlugin

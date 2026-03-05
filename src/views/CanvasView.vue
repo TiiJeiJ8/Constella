@@ -181,7 +181,9 @@ import ChatPanel from '@/components/canvas/ChatPanel.vue'
 import ChatBubbleContainer from '@/components/canvas/ChatBubbleContainer.vue'
 
 // 注册插件
-registerPlugins()
+registerPlugins().catch(err => {
+    console.error('[Plugins] Failed to register plugins:', err)
+})
 
 const { t } = useI18n()
 const toast = useToast()

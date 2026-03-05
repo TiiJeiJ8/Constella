@@ -3,15 +3,12 @@
  */
 import type { NodePlugin } from '../index'
 import BlankRenderer from './BlankRenderer.vue'
+import { manifest } from './manifest'
 
-export const blankPlugin: NodePlugin = {
-    meta: {
-        kind: 'blank',
-        label: '空白',
-        icon: '⬜',
-        description: '空白占位节点',
-        editable: false,
-        supportsCardMode: false
-    },
+export const pluginPlugin: NodePlugin = {
+    meta: manifest,
     renderer: BlankRenderer
 }
+
+// 上下文兼容性导出（带丢的）
+export const blankPlugin = pluginPlugin

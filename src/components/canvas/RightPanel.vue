@@ -350,7 +350,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { pluginsMeta } from '@/plugins'
+import { getPluginsMeta } from '@/plugins'
 import AssetsPanel from './AssetsPanel.vue'
 import HistoryPanel from './HistoryPanel.vue'
 
@@ -432,7 +432,7 @@ const edgeTypes = computed(() => [
 
 // 可用的节点类型（包含图片类型）
 const availableKinds = computed(() => {
-    return pluginsMeta.filter(k => ['blank', 'text', 'markdown', 'image'].includes(k.kind))
+    return getPluginsMeta().filter(k => ['blank', 'text', 'markdown', 'image'].includes(k.kind))
 })
 
 // 按 zIndex 排序的节点列表（从高到低）
@@ -448,7 +448,7 @@ function isNodeSelected(nodeId) {
 // 获取节点图标
 function getNodeIcon(node) {
     const kind = node.content?.kind || 'blank'
-    const meta = pluginsMeta.find(m => m.kind === kind)
+    const meta = getPluginsMeta().find(m => m.kind === kind)
     return meta?.icon || '📦'
 }
 

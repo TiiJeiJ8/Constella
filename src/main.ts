@@ -8,10 +8,13 @@ import './style.css'
 import App from './App.vue'
 import { registerPlugins } from './plugins/register'
 
-// 注册所有内容类型插件
-registerPlugins()
-
+// 创建应用实例
 const app = createApp(App)
+
+// 异步注册所有内容类型插件
+registerPlugins().catch(err => {
+    console.error('[Plugins] Failed to register plugins:', err)
+})
 
 // 注册所有图标
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {

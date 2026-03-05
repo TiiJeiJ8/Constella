@@ -3,16 +3,13 @@
  */
 import type { NodePlugin } from '../index'
 import MarkdownRenderer from './MarkdownRenderer.vue'
+import { manifest } from './manifest'
 
-export const markdownPlugin: NodePlugin = {
-    meta: {
-        kind: 'markdown',
-        label: 'Markdown',
-        icon: '📄',
-        description: 'Markdown 富文本',
-        editable: true,
-        supportsCardMode: true
-    },
+export const pluginPlugin: NodePlugin = {
+    meta: manifest,
     renderer: MarkdownRenderer
     // 使用通用编辑器
 }
+
+// 上下文兼容性导出（带丢的）
+export const markdownPlugin = pluginPlugin

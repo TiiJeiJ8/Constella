@@ -5,9 +5,9 @@
 import { markRaw, type Component } from 'vue'
 
 /**
- * 节点内容类型
+ * 节点内容类型 - 支持动态扩展
  */
-export type ContentKind = 'blank' | 'text' | 'markdown' | 'image' | 'link-preview' | 'embed'
+export type ContentKind = string
 
 /**
  * 节点显示模式
@@ -28,7 +28,7 @@ export interface NodeContent {
  * 插件元信息
  */
 export interface PluginMeta {
-    kind: ContentKind
+    kind: string  // 使用 string 以支持动态插件类型
     label: string
     icon: string
     description: string
@@ -66,22 +66,18 @@ export interface NodePlugin {
 }
 
 /**
- * 所有内容类型的元数据
+ * 获取所有插件的元数据
+ * 动态从注册表获取（在 registerPlugins() 之后调用）
  */
-export const pluginsMeta: PluginMeta[] = [
-    { kind: 'blank', label: '空白', icon: '⬜', description: '空白占位节点', editable: false, supportsCardMode: false },
-    { kind: 'text', label: '文本', icon: '📝', description: '纯文本内容', editable: true, supportsCardMode: true },
-    { kind: 'markdown', label: 'Markdown', icon: '📄', description: 'Markdown 富文本', editable: true, supportsCardMode: true },
-    { kind: 'image', label: '图片', icon: '🖼️', description: '图片内容', editable: false, supportsCardMode: false },
-    { kind: 'link-preview', label: '链接', icon: '🔗', description: '链接预览卡片', editable: true, supportsCardMode: false },
-    { kind: 'embed', label: '嵌入', icon: '📦', description: '嵌入外部内容', editable: false, supportsCardMode: false },
-]
+export function getPluginsMeta(): PluginMeta[] {
+    return pluginRegistry.getAllMeta()
+}
 
 /**
  * 插件注册表
  */
 class PluginRegistry {
-    private plugins: Map<ContentKind, NodePlugin> = new Map()
+    private plugins: Map<string, NodePlugin> = new Map()
     private fallbackPlugin: NodePlugin | null = null
 
     /**
@@ -148,7 +144,7 @@ class PluginRegistry {
     /**
      * 获取所有已注册的内容类型
      */
-    getRegisteredKinds(): ContentKind[] {
+    getRegisteredKinds(): string[] {
         return Array.from(this.plugins.keys())
     }
 
@@ -157,6 +153,14 @@ class PluginRegistry {
      */
     getAllMeta(): PluginMeta[] {
         return Array.from(this.plugins.values()).map(p => p.meta)
+    }
+
+    /**
+     * 清空所有已注册的插件（用于测试或重新加载）
+     */
+    clear(): void {
+        this.plugins.clear()
+        this.fallbackPlugin = null
     }
 }
 
