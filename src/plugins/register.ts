@@ -12,10 +12,10 @@ import { pluginRegistry } from './index'
 
 export async function registerPlugins() {
     console.log('[Plugins] Starting auto-discovery...')
-    
+
     // 动态导入所有插件，使用 eager: true 在同步函数中加载
     const pluginModules = import.meta.glob<any>('./**/index.ts', { eager: true })
-    
+
     // 遍历所有导入的模块
     for (const [path, module] of Object.entries(pluginModules)) {
         // 查找 pluginPlugin 导出
@@ -26,12 +26,12 @@ export async function registerPlugins() {
             continue
         }
     }
-    
+
     // 如果已注册 blank 插件，设置为回退
     const blankPlugin = pluginRegistry.get('blank')
     if (blankPlugin) {
         pluginRegistry.setFallback(blankPlugin)
     }
-    
+
     console.log('[Plugins] Auto-registered:', pluginRegistry.getRegisteredKinds())
 }

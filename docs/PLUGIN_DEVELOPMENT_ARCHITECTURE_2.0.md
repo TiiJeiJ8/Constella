@@ -212,12 +212,12 @@ export const manifest: PluginMeta = {
 
 ## 故障排查
 
-| 问题 | 原因 | 解决方案 |
-|-----|------|--------|
-| 插件没有被发现 | 导出名称不是 `pluginPlugin` | 检查 `index.ts` 中的导出名称 |
-| 类型错误 | 忘记导入 `PluginMeta` 类型 | `import type { PluginMeta } from '../index'` |
-| 编辑器不显示 | `meta.editable` 为 false | 设置 `editable: true` |
-| 渲染器样式冲突 | 样式未作用域化 | 添加 `<style scoped>` |
+| 问题           | 原因                        | 解决方案                                     |
+| -------------- | --------------------------- | -------------------------------------------- |
+| 插件没有被发现 | 导出名称不是 `pluginPlugin` | 检查 `index.ts` 中的导出名称                 |
+| 类型错误       | 忘记导入 `PluginMeta` 类型  | `import type { PluginMeta } from '../index'` |
+| 编辑器不显示   | `meta.editable` 为 false    | 设置 `editable: true`                        |
+| 渲染器样式冲突 | 样式未作用域化              | 添加 `<style scoped>`                        |
 
 ---
 
