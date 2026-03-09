@@ -1,5 +1,5 @@
 <template>
-    <div 
+    <div
         v-if="content && rendererComponent"
         class="node-content-overlay"
         :style="overlayStyle"

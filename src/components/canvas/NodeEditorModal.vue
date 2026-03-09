@@ -869,12 +869,20 @@ onUnmounted(() => {
     border-radius: 8px;
     overflow-x: auto;
     margin: 1em 0;
+    white-space: pre-wrap;
+    word-break: normal;
+    overflow-wrap: break-word;
 }
 .preview-content :deep(pre code) {
     background: transparent;
     padding: 0;
     font-size: 13px;
     line-height: 1.5;
+    display: block;
+    white-space: pre-wrap;
+    word-break: normal;
+    overflow-wrap: normal;
+    tab-size: 2;
 }
 .preview-content :deep(blockquote) {
     border-left: 4px solid rgba(255, 255, 255, 0.2);
@@ -938,6 +946,12 @@ onUnmounted(() => {
 /* highlight.js 代码高亮样式 */
 .preview-content :deep(.hljs) {
     background: transparent !important;
+    display: block;
+}
+.preview-content :deep(.hljs span) {
+    display: inline;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
 }
 .preview-content :deep(.hljs-keyword) { color: #c678dd; }
 .preview-content :deep(.hljs-string) { color: #98c379; }

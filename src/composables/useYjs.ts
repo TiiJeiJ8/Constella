@@ -158,6 +158,11 @@ export function useYjs(options: UseYjsOptions): UseYjsReturn {
     const disconnect = () => {
         if (provider.value) {
             console.log('[useYjs] Disconnecting...')
+            try {
+                provider.value.awareness?.setLocalState(null)
+            } catch (error) {
+                console.warn('[useYjs] Failed to clear awareness state before disconnect:', error)
+            }
             provider.value.destroy()
             provider.value = null
             isConnected.value = false

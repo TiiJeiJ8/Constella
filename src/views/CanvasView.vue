@@ -220,7 +220,7 @@ const currentUsers = computed(() => {
     // 加上远程用户 - 使用正确的属性路径
     remoteCursors.value.forEach(cursor => {
         users.push({
-            id: String(cursor.clientId),
+            id: cursor.user?.id || String(cursor.clientId),
             name: cursor.user?.name || t('common.anonymous'),
             isMe: false
         })
@@ -311,6 +311,7 @@ const yjs = useYjs({
 // Awareness 用户感知
 const awareness = useAwareness({
     provider: yjs.provider,
+    userId: localStorage.getItem('user_id') || undefined,
     userName: getUserName()
 })
 
