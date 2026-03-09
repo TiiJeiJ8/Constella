@@ -43,7 +43,7 @@ export function useYjs(options: UseYjsOptions): UseYjsReturn {
         // 优先从 apiService 获取服务器地址（用户在首页输入的地址）
         // 这确保了跨设备连接时使用正确的服务器 IP
         const baseUrl = apiService.getBaseUrl()
-        
+
         if (baseUrl) {
             // 从 HTTP URL 转换为 WebSocket URL
             // 例如: http://192.168.1.100:3000 -> ws://192.168.1.100:3000/ws
@@ -158,11 +158,6 @@ export function useYjs(options: UseYjsOptions): UseYjsReturn {
     const disconnect = () => {
         if (provider.value) {
             console.log('[useYjs] Disconnecting...')
-            try {
-                provider.value.awareness?.setLocalState(null)
-            } catch (error) {
-                console.warn('[useYjs] Failed to clear awareness state before disconnect:', error)
-            }
             provider.value.destroy()
             provider.value = null
             isConnected.value = false

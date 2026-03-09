@@ -17,7 +17,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import type { ChatMessage } from '@/composables/useYjsChat'
+import type { ChatMessage } from '../../composables/useYjsChat'
 
 interface Props {
     message: ChatMessage

@@ -16,11 +16,9 @@ export interface TextCursor {
 export interface UserState {
     clientId: number
     user: {
-        id?: string
         name: string
         color: string
         avatar?: string
-        joinedAt?: number
     }
     cursor?: {
         x: number
@@ -32,7 +30,6 @@ export interface UserState {
 
 interface UseAwarenessOptions {
     provider: Ref<WebsocketProvider | null>
-    userId?: string
     userName?: string
     userColor?: string
 }
@@ -49,17 +46,15 @@ const COLORS = [
  * 管理用户在线状态、光标位置、选中节点等信息
  */
 export function useAwareness(options: UseAwarenessOptions) {
-    const { provider, userId, userName, userColor } = options
+    const { provider, userName, userColor } = options
 
     // 其他用户状态
     const otherUsers = ref<UserState[]>([])
 
     // 本地用户信息
     const localUser = ref({
-        id: userId,
         name: userName || `用户 ${Math.floor(Math.random() * 1000)}`,
-        color: userColor || COLORS[Math.floor(Math.random() * COLORS.length)],
-        joinedAt: Date.now()
+        color: userColor || COLORS[Math.floor(Math.random() * COLORS.length)]
     })
 
     // Awareness 实例
@@ -96,39 +91,24 @@ export function useAwareness(options: UseAwarenessOptions) {
 
         const states = awareness.getStates() as Map<number, any>
         const localClientId = awareness.clientID
-        const usersByIdentity = new Map<string, UserState>()
+        const users: UserState[] = []
 
         states.forEach((state, clientId) => {
             // 跳过本地用户
             if (clientId === localClientId) return
 
             if (state.user) {
-                const nextUser: UserState = {
+                users.push({
                     clientId,
                     user: state.user,
                     cursor: state.cursor,
                     selection: state.selection,
                     textCursor: state.textCursor
-                }
-
-                const identityKey = state.user.id ? `user:${state.user.id}` : `client:${clientId}`
-                const existingUser = usersByIdentity.get(identityKey)
-
-                if (!existingUser) {
-                    usersByIdentity.set(identityKey, nextUser)
-                    return
-                }
-
-                const existingJoinedAt = existingUser.user.joinedAt || 0
-                const nextJoinedAt = nextUser.user.joinedAt || 0
-
-                if (nextJoinedAt > existingJoinedAt || (nextJoinedAt === existingJoinedAt && nextUser.clientId > existingUser.clientId)) {
-                    usersByIdentity.set(identityKey, nextUser)
-                }
+                })
             }
         })
 
-        otherUsers.value = Array.from(usersByIdentity.values())
+        otherUsers.value = users
     }
 
     /**

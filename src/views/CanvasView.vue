@@ -220,7 +220,7 @@ const currentUsers = computed(() => {
     // 加上远程用户 - 使用正确的属性路径
     remoteCursors.value.forEach(cursor => {
         users.push({
-            id: cursor.user?.id || String(cursor.clientId),
+            id: String(cursor.clientId),
             name: cursor.user?.name || t('common.anonymous'),
             isMe: false
         })
@@ -311,7 +311,6 @@ const yjs = useYjs({
 // Awareness 用户感知
 const awareness = useAwareness({
     provider: yjs.provider,
-    userId: localStorage.getItem('user_id') || undefined,
     userName: getUserName()
 })
 
@@ -700,6 +699,15 @@ async function handleAssetDelete(assetId) {
 function handleAssetInsert(asset) {
     console.log('[Canvas] Insert asset:', asset)
     
+    // 将绝对 URL 标准化为 constella:// 协议存入 Yjs，确保每个客户端都能用自己的
+    // baseUrl 解析图片地址，避免 localhost 等本地地址对其他用户不可用。
+    const baseUrl = apiService.getBaseUrl()
+    let nodeUrl = asset.url
+    if (nodeUrl.startsWith(baseUrl + '/')) {
+        // 'http://host:port/uploads/...' → 'constella://uploads/...'
+        nodeUrl = 'constella:/' + nodeUrl.slice(baseUrl.length)
+    }
+    
     // 创建图片节点
     const nodeId = `node-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     
@@ -713,7 +721,7 @@ function handleAssetInsert(asset) {
         stroke: '#e0e0e0',
         content: { 
             kind: 'image', 
-            data: asset.url,
+            data: nodeUrl,
             metadata: {
                 assetId: asset.id,
                 name: asset.name,
