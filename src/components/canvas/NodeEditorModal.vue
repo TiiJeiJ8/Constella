@@ -148,7 +148,7 @@ import DOMPurify from 'dompurify'
 import katex from 'katex'
 import hljs from 'highlight.js'
 import mermaid from 'mermaid'
-import type { UserState } from '@/composables/useAwareness'
+import type { UserState } from '../../composables/useAwareness'
 
 const { t } = useI18n()
 
