@@ -5,9 +5,9 @@ import type { PluginMeta } from '../index'
 
 export const manifest: PluginMeta = {
     kind: 'hyperlink',
-    label: '超链接',
+    label: 'Hyperlink',
     icon: '🌍',
-    description: '超链接节点',
+    description: 'Hyperlink node',
     editable: true,
     supportsCardMode: true
 }

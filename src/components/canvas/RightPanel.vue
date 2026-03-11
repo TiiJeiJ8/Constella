@@ -137,7 +137,7 @@
 
                         <!-- 显示模式切换（自动检测插件是否支持卡片模式） -->
                         <div v-if="currentNodeMeta?.supportsCardMode" class="property-group">
-                            <label class="property-label">显示模式</label>
+                            <label class="property-label">{{ t('canvas.properties.displayMode') }}</label>
                             <div class="display-mode-selector">
                                 <button
                                     class="mode-btn"
@@ -145,7 +145,7 @@
                                     @click="$emit('node-display-mode-change', selectedNodes[0].id, 'full')"
                                 >
                                     <span>📄</span>
-                                    <span>完整</span>
+                                    <span>{{ t('canvas.properties.full') }}</span>
                                 </button>
                                 <button
                                     class="mode-btn"
@@ -153,7 +153,7 @@
                                     @click="$emit('node-display-mode-change', selectedNodes[0].id, 'card')"
                                 >
                                     <span>🃏</span>
-                                    <span>卡片</span>
+                                    <span>{{ t('canvas.properties.card') }}</span>
                                 </button>
                             </div>
                         </div>

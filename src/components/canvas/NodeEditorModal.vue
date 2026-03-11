@@ -15,7 +15,7 @@
                         <div class="editor-header">
                             <div class="header-left">
                                 <span class="type-icon">{{ pluginMeta?.icon || '📝' }}</span>
-                                <span class="type-label">{{ pluginMeta ? t(`canvas.nodeTypes.${pluginMeta.kind}`) : t('canvas.editor.edit') }}</span>
+                                <span class="type-label">{{ pluginMeta ? (te(`canvas.nodeTypes.${pluginMeta.kind}`) ? t(`canvas.nodeTypes.${pluginMeta.kind}`) : pluginMeta.label) : t('canvas.editor.edit') }}</span>
                                 <!-- 在线协作用户指示器 -->
                                 <div v-if="editingUsers.length > 0" class="collab-users">
                                     <div
@@ -150,7 +150,7 @@ import hljs from 'highlight.js'
 import mermaid from 'mermaid'
 import type { UserState } from '../../composables/useAwareness'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 
 // 获取当前主题（unused removed to satisfy TS strict checks）
 

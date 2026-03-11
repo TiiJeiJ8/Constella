@@ -245,6 +245,9 @@
             "width": "宽",
             "height": "高",
             "position": "位置",
+            "displayMode": "显示模式",
+            "full": "完整",
+            "card": "卡片",
             "multiSelect": "已选择 {count} 个节点"
         },
         "layers": {
@@ -300,24 +303,8 @@
             "defaultContent": "新节点\n\n选择节点类型",
             "emptyContent": "[空内容]双击编辑"
         },
-        "nodeTypes": {
-            "blank": "空白",
-            "text": "文本",
-            "markdown": "Markdown",
-            "image": "图片",
-            "link-preview": "链接",
-            "embed": "嵌入",
-            "hyperlink": "超链接"
-        },
-        "nodeTypeDesc": {
-            "blank": "空白占位节点",
-            "text": "纴文本内容",
-            "markdown": "Markdown 富文本",
-            "image": "图片内容",
-            "link-preview": "链接预览卡片",
-            "embed": "嵌入内容",
-            "hyperlink": "超链接节点"
-        },
+        "nodeTypes": {},
+        "nodeTypeDesc": {},
         "edgeTypes": {
             "straight": "直线",
             "bezier": "曲线",

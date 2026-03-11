@@ -35,13 +35,14 @@
         <!-- 无 URL 时的占位 -->
         <div v-if="!url" class="empty-state">
             <span class="empty-icon">🔗</span>
-            <span class="empty-hint">双击编辑链接</span>
+            <span class="empty-hint">{{ t('plugins.hyperlink.renderer.emptyHint') }}</span>
         </div>
     </div>
 </template>
 
 <script setup>
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     content: { type: Object, required: true },
@@ -49,6 +50,8 @@ const props = defineProps({
     height:  { type: Number, default: 120 },
     displayMode: { type: String, default: 'full' }
 })
+
+const { t } = useI18n()
 
 const url = computed(() => props.content?.data || '')
 const title = computed(() => props.content?.metadata?.title || '')
@@ -64,7 +67,7 @@ const domain = computed(() => {
 })
 
 // 显示标题：优先用户设置的，否则用域名
-const displayTitle = computed(() => title.value || domain.value || '超链接')
+const displayTitle = computed(() => title.value || domain.value || t('plugins.hyperlink.renderer.defaultTitle'))
 
 // Favicon：Google Favicon Service（需要网络）
 const faviconSrc = ref('')

@@ -15,6 +15,12 @@ export type ContentKind = string
 export type DisplayMode = 'full' | 'card'
 
 /**
+ * 插件自带的 i18n 消息
+ * key 为 locale，例如 zh-CN / en-US
+ */
+export type PluginI18nMessages = Record<string, Record<string, any>>
+
+/**
  * 节点内容结构
  */
 export interface NodeContent {

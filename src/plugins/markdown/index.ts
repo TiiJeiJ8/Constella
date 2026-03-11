@@ -1,9 +1,32 @@
 /**
  * Markdown 节点插件
  */
-import type { NodePlugin } from '../index'
+import type { NodePlugin, PluginI18nMessages } from '../index'
 import MarkdownRenderer from './MarkdownRenderer.vue'
 import { manifest } from './manifest'
+
+export const pluginI18n: PluginI18nMessages = {
+    'zh-CN': {
+        canvas: {
+            nodeTypes: {
+                markdown: 'Markdown'
+            },
+            nodeTypeDesc: {
+                markdown: 'Markdown 富文本'
+            }
+        }
+    },
+    'en-US': {
+        canvas: {
+            nodeTypes: {
+                markdown: 'Markdown'
+            },
+            nodeTypeDesc: {
+                markdown: 'Markdown rich text'
+            }
+        }
+    }
+}
 
 export const pluginPlugin: NodePlugin = {
     meta: manifest,

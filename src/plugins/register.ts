@@ -8,9 +8,23 @@
  * 3. 自动注册到插件注册表
  * 4. 设置 'blank' 插件为回退选项
  */
-import { pluginRegistry } from './index'
+import { i18n } from '@/locales'
+import { pluginRegistry, type PluginI18nMessages } from './index'
+
+let hasRegistered = false
+
+function registerPluginI18n(messages?: PluginI18nMessages) {
+    if (!messages) return
+
+    for (const [locale, localeMessages] of Object.entries(messages)) {
+        i18n.global.mergeLocaleMessage(locale, localeMessages)
+    }
+}
 
 export async function registerPlugins() {
+    if (hasRegistered) return
+    hasRegistered = true
+
     console.log('[Plugins] Starting auto-discovery...')
 
     // 动态导入所有插件，使用 eager: true 在同步函数中加载
@@ -20,6 +34,7 @@ export async function registerPlugins() {
     for (const [path, module] of Object.entries(pluginModules)) {
         // 查找 pluginPlugin 导出
         if (module.pluginPlugin) {
+            registerPluginI18n(module.pluginI18n)
             pluginRegistry.register(module.pluginPlugin)
         } else if (path.includes('plugins/index.ts')) {
             // 跳过插件系统的主 index.ts

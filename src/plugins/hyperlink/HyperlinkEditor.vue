@@ -7,31 +7,31 @@
             <div class="hyperlink-dialog">
                 <div class="dialog-header">
                     <span class="dialog-icon">🌍</span>
-                    <span class="dialog-title">超链接</span>
+                    <span class="dialog-title">{{ t('plugins.hyperlink.editor.title') }}</span>
                     <button class="close-btn" @click="$emit('close')">✕</button>
                 </div>
 
                 <div class="dialog-body">
                     <div class="field-group">
-                        <label class="field-label">链接地址 <span class="required">*</span></label>
+                        <label class="field-label">{{ t('plugins.hyperlink.editor.urlLabel') }} <span class="required">*</span></label>
                         <input
                             ref="urlInputRef"
                             v-model="url"
                             type="url"
                             class="field-input"
-                            placeholder="https://example.com"
+                            :placeholder="t('plugins.hyperlink.editor.urlPlaceholder')"
                             @keydown.enter="handleSave"
                             @keydown.esc.stop="$emit('close')"
                         />
-                        <span v-if="urlError" class="field-error">{{ urlError }}</span>
+                        <span v-if="urlErrorMessage" class="field-error">{{ urlErrorMessage }}</span>
                     </div>
                     <div class="field-group">
-                        <label class="field-label">显示标题（可选）</label>
+                        <label class="field-label">{{ t('plugins.hyperlink.editor.titleLabel') }}</label>
                         <input
                             v-model="title"
                             type="text"
                             class="field-input"
-                            placeholder="留空则自动使用域名"
+                            :placeholder="t('plugins.hyperlink.editor.titlePlaceholder')"
                             @keydown.enter="handleSave"
                             @keydown.esc.stop="$emit('close')"
                         />
@@ -39,12 +39,12 @@
                 </div>
 
                 <div class="dialog-footer">
-                    <button class="btn btn-open" @click="handleOpen" :disabled="!url.trim()" title="在浏览器中打开">
-                        ↗ 打开链接
+                    <button class="btn btn-open" @click="handleOpen" :disabled="!url.trim()" :title="t('plugins.hyperlink.editor.openTitle')">
+                        ↗ {{ t('plugins.hyperlink.editor.open') }}
                     </button>
                     <div class="footer-right">
-                        <button class="btn btn-cancel" @click="$emit('close')">取消</button>
-                        <button class="btn btn-save" @click="handleSave" :disabled="!url.trim()">保存</button>
+                        <button class="btn btn-cancel" @click="$emit('close')">{{ t('plugins.hyperlink.editor.cancel') }}</button>
+                        <button class="btn btn-save" @click="handleSave" :disabled="!url.trim()">{{ t('plugins.hyperlink.editor.save') }}</button>
                     </div>
                 </div>
             </div>
@@ -54,6 +54,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     nodeId: { type: String, required: true },
@@ -61,11 +62,13 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update', 'close'])
+const { t } = useI18n()
 
 const urlInputRef = ref(null)
 const url = ref(props.content.data || '')
 const title = ref(props.content?.metadata?.title || '')
-const urlError = ref('')
+const urlErrorKey = ref('')
+const urlErrorMessage = computed(() => (urlErrorKey.value ? t(urlErrorKey.value) : ''))
 
 onMounted(() => {
     urlInputRef.value?.focus()
@@ -79,14 +82,14 @@ function handleSave() {
 
     try {
         new URL(normalized)  // 验证 URL 格式
-        urlError.value = ''
+        urlErrorKey.value = ''
         emit('update', props.nodeId, {
             ...props.content,
             data: normalized,
             metadata: { ...(props.content.metadata || {}), title: title.value.trim() }
         })
     } catch {
-        urlError.value = '请输入有效的网址'
+        urlErrorKey.value = 'plugins.hyperlink.editor.invalidUrl'
     }
 }
 

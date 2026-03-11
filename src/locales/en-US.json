@@ -245,6 +245,9 @@
             "width": "Width",
             "height": "Height",
             "position": "Position",
+            "displayMode": "Display Mode",
+            "full": "Full",
+            "card": "Card",
             "multiSelect": "{count} nodes selected"
         },
         "layers": {
@@ -300,24 +303,8 @@
             "defaultContent": "New Node\n\nChoose node type",
             "emptyContent": "[Empty]Double click to edit"
         },
-        "nodeTypes": {
-            "blank": "Blank",
-            "text": "Text",
-            "markdown": "Markdown",
-            "image": "Image",
-            "link-preview": "Link",
-            "embed": "Embed",
-            "hyperlink": "Hyperlink"
-        },
-        "nodeTypeDesc": {
-            "blank": "Blank placeholder node",
-            "text": "Plain text content",
-            "markdown": "Markdown rich text",
-            "image": "Image content",
-            "link-preview": "Link preview card",
-            "embed": "Embedded content",
-            "hyperlink": "Hyperlink node"
-        },
+        "nodeTypes": {},
+        "nodeTypeDesc": {},
         "edgeTypes": {
             "straight": "Straight",
             "bezier": "Curve",

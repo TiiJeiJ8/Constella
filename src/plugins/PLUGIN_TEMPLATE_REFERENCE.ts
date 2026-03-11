@@ -7,8 +7,9 @@
  * ║  使用说明：                                                           ║
  * ║  1. 复制此文件夹到 src/plugins/                                      ║
  * ║  2. 修改 manifest.ts 中的 kind、label、description 等               ║
- * ║  3. 实现 TemplateRenderer.vue                                        ║
- * ║  4. 重启开发服务器，插件自动注册！                                   ║
+ * ║  3. 在 index.ts 中可选导出 pluginI18n，自带多语言文案                ║
+ * ║  4. 实现 TemplateRenderer.vue                                        ║
+ * ║  5. 重启开发服务器，插件自动注册！                                   ║
  * ║                                                                      ║
  * ╚══════════════════════════════════════════════════════════════════════╝
  */
@@ -36,6 +37,39 @@ export const manifest = {
 import type { NodePlugin } from '../index'
 import TemplateRenderer from './TemplateRenderer.vue'
 import { manifest } from './manifest'
+
+export const pluginI18n = {
+  'zh-CN': {
+    canvas: {
+      nodeTypes: {
+        template: '模板'
+      },
+      nodeTypeDesc: {
+        template: '模板节点'
+      }
+    },
+    plugins: {
+      template: {
+        title: '模板插件'
+      }
+    }
+  },
+  'en-US': {
+    canvas: {
+      nodeTypes: {
+        template: 'Template'
+      },
+      nodeTypeDesc: {
+        template: 'Template node'
+      }
+    },
+    plugins: {
+      template: {
+        title: 'Template plugin'
+      }
+    }
+  }
+}
 
 // ✨ 必须导出这个确切名称 - 自动发现系统会寻找它
 export const pluginPlugin: NodePlugin = {
