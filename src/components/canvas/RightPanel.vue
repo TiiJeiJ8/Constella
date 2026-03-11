@@ -56,11 +56,11 @@
                                         :key="kind.kind"
                                         class="type-btn"
                                         :class="{ active: selectedNodes[0].content?.kind === kind.kind }"
-                                        :title="t(`canvas.nodeTypeDesc.${kind.kind}`)"
+                                        :title="te('canvas.nodeTypeDesc.' + kind.kind) ? t('canvas.nodeTypeDesc.' + kind.kind) : kind.description"
                                         @click="$emit('node-kind-change', selectedNodes[0].id, kind.kind)"
                                     >
                                         <span class="type-icon">{{ kind.icon }}</span>
-                                        <span class="type-name">{{ t(`canvas.nodeTypes.${kind.kind}`) }}</span>
+                                        <span class="type-name">{{ te('canvas.nodeTypes.' + kind.kind) ? t('canvas.nodeTypes.' + kind.kind) : kind.label }}</span>
                                     </button>
                                 </div>
                             </div>
@@ -132,6 +132,29 @@
                                         @input="$emit('node-property-change', selectedNodes[0].id, 'y', Number($event.target.value))"
                                     />
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- 显示模式切换（自动检测插件是否支持卡片模式） -->
+                        <div v-if="currentNodeMeta?.supportsCardMode" class="property-group">
+                            <label class="property-label">显示模式</label>
+                            <div class="display-mode-selector">
+                                <button
+                                    class="mode-btn"
+                                    :class="{ active: selectedNodes[0].content?.displayMode !== 'card' }"
+                                    @click="$emit('node-display-mode-change', selectedNodes[0].id, 'full')"
+                                >
+                                    <span>📄</span>
+                                    <span>完整</span>
+                                </button>
+                                <button
+                                    class="mode-btn"
+                                    :class="{ active: selectedNodes[0].content?.displayMode === 'card' }"
+                                    @click="$emit('node-display-mode-change', selectedNodes[0].id, 'card')"
+                                >
+                                    <span>🃏</span>
+                                    <span>卡片</span>
+                                </button>
                             </div>
                         </div>
                     </template>
@@ -354,7 +377,7 @@ import { getPluginsMeta } from '@/plugins'
 import AssetsPanel from './AssetsPanel.vue'
 import HistoryPanel from './HistoryPanel.vue'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 
 const props = defineProps({
     activePanel: {
@@ -430,9 +453,14 @@ const edgeTypes = computed(() => [
     { id: 'step', icon: '📐', label: t('canvas.edgeTypes.step') }
 ])
 
-// 可用的节点类型（包含图片类型）
-const availableKinds = computed(() => {
-    return getPluginsMeta().filter(k => ['blank', 'text', 'markdown', 'image'].includes(k.kind))
+// 可用的节点类型（自动获取所有已注册插件，无需白名单）
+const availableKinds = computed(() => getPluginsMeta())
+
+// 当前选中节点的插件元信息（用于显示模式切换等动态功能）
+const currentNodeMeta = computed(() => {
+    if (props.selectedNodes?.length !== 1) return null
+    const kind = props.selectedNodes[0].content?.kind
+    return kind ? getPluginsMeta().find(m => m.kind === kind) || null : null
 })
 
 // 按 zIndex 排序的节点列表（从高到低）

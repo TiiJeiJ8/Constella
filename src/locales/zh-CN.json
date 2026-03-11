@@ -306,15 +306,17 @@
             "markdown": "Markdown",
             "image": "图片",
             "link-preview": "链接",
-            "embed": "嵌入"
+            "embed": "嵌入",
+            "hyperlink": "超链接"
         },
         "nodeTypeDesc": {
             "blank": "空白占位节点",
-            "text": "纯文本内容",
+            "text": "纴文本内容",
             "markdown": "Markdown 富文本",
             "image": "图片内容",
             "link-preview": "链接预览卡片",
-            "embed": "嵌入内容"
+            "embed": "嵌入内容",
+            "hyperlink": "超链接节点"
         },
         "edgeTypes": {
             "straight": "直线",

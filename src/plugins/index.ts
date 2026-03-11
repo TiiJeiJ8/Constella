@@ -63,6 +63,7 @@ export interface NodePlugin {
     meta: PluginMeta
     renderer: Component<RendererProps>       // 画布渲染组件
     editor?: Component<EditorProps>          // 编辑器组件（可选）
+    onDblClick?: (content: NodeContent) => boolean  // 自定义双击处理，返回 true 时不再打开编辑器
 }
 
 /**

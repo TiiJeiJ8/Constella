@@ -84,6 +84,16 @@
             @close="handleCloseEditor"
         />
 
+        <!-- 自定义插件编辑器（按插件自动路由到对应 editor 组件） -->
+        <component
+            v-if="editingCustomNode && editingCustomPlugin?.editor"
+            :is="editingCustomPlugin.editor"
+            :node-id="editingCustomNode.id"
+            :content="editingCustomNode.content"
+            @update="handleCustomEditorUpdate"
+            @close="editingCustomNodeId = null"
+        />
+
         <!-- 成员面板 -->
         <MembersPanel
             v-model="isMembersPanelOpen"
@@ -247,6 +257,17 @@ const roomAssets = ref([])
 
 // 房间快照（暂存本地，后续对接 API）
 const roomSnapshots = ref([])
+
+// 自定义插件编辑器（通用化，后续新插件无需改此文件）
+const editingCustomNodeId = ref(null)
+const editingCustomNode = computed(() => {
+    if (!editingCustomNodeId.value) return null
+    return yjsNodes.nodes.value.find(n => n.id === editingCustomNodeId.value)
+})
+const editingCustomPlugin = computed(() => {
+    if (!editingCustomNode.value) return null
+    return pluginRegistry.get(editingCustomNode.value.content?.kind)
+})
 
 // 获取存储的 token
 const getStoredToken = () => {
@@ -1082,19 +1103,28 @@ function handleNodeDblClick(nodeId) {
     if (!node) return
 
     const kind = node.content?.kind || 'blank'
-    
-    // blank 类型不支持双击编辑
-    if (kind === 'blank') {
-        console.log('[Canvas] Blank node, select type in properties panel first')
-        return
-    }
-    
-    // 检查插件是否支持编辑
-    const meta = pluginRegistry.getMeta(kind)
-    if (meta?.editable) {
+    if (kind === 'blank') return
+
+    const plugin = pluginRegistry.get(kind)
+    if (!plugin?.meta?.editable) return
+
+    // 让插件自己处理双击（如 hyperlink 直接打开网址）
+    if (plugin.onDblClick?.(node.content)) return
+
+    // 有自定义 editor 组件 → 打开自定义编辑器
+    if (plugin.editor) {
+        editingCustomNodeId.value = nodeId
+    } else {
+        // 无自定义 editor → 通用文本编辑器
         editingNodeId.value = nodeId
         console.log('[Canvas] Opened editor for:', nodeId)
     }
+}
+
+// 自定义插件编辑器保存（通用，适配所有有 editor 的插件）
+function handleCustomEditorUpdate(nodeId, contentPatch) {
+    yjsNodes.updateNode(nodeId, { content: contentPatch })
+    editingCustomNodeId.value = null
 }
 
 // 关闭编辑器

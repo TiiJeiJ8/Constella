@@ -306,7 +306,8 @@
             "markdown": "Markdown",
             "image": "Image",
             "link-preview": "Link",
-            "embed": "Embed"
+            "embed": "Embed",
+            "hyperlink": "Hyperlink"
         },
         "nodeTypeDesc": {
             "blank": "Blank placeholder node",
@@ -314,7 +315,8 @@
             "markdown": "Markdown rich text",
             "image": "Image content",
             "link-preview": "Link preview card",
-            "embed": "Embedded content"
+            "embed": "Embedded content",
+            "hyperlink": "Hyperlink node"
         },
         "edgeTypes": {
             "straight": "Straight",

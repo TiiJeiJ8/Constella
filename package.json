@@ -36,7 +36,6 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
-    "@types/dompurify": "^3.0.5",
     "@types/katex": "^0.16.8",
     "@types/markdown-it": "^14.1.2",
     "dompurify": "^3.3.1",
@@ -56,6 +55,7 @@
     "yjs": "^13.6.29"
   },
   "devDependencies": {
+    "@types/dompurify": "^3.0.5",
     "@types/node": "^24.10.4",
     "@vitejs/plugin-vue": "^6.0.3",
     "@vue/tsconfig": "^0.8.1",
