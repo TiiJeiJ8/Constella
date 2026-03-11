@@ -93,7 +93,7 @@
                                 <div class="size-input-group">
                                     <label>{{ t('canvas.properties.width') }}</label>
                                     <input 
-                                        type="number" 
+                                        type="number"
                                         :value="selectedNodes[0].width"
                                         @input="$emit('node-property-change', selectedNodes[0].id, 'width', Number($event.target.value))"
                                         min="50"
@@ -103,7 +103,7 @@
                                 <div class="size-input-group">
                                     <label>{{ t('canvas.properties.height') }}</label>
                                     <input 
-                                        type="number" 
+                                        type="number"
                                         :value="selectedNodes[0].height"
                                         @input="$emit('node-property-change', selectedNodes[0].id, 'height', Number($event.target.value))"
                                         min="50"
@@ -119,7 +119,7 @@
                                 <div class="position-input-row">
                                     <label>X</label>
                                     <input 
-                                        type="number" 
+                                        type="number"
                                         :value="Math.round(selectedNodes[0].x)"
                                         @input="$emit('node-property-change', selectedNodes[0].id, 'x', Number($event.target.value))"
                                     />
@@ -127,7 +127,7 @@
                                 <div class="position-input-row">
                                     <label>Y</label>
                                     <input 
-                                        type="number" 
+                                        type="number"
                                         :value="Math.round(selectedNodes[0].y)"
                                         @input="$emit('node-property-change', selectedNodes[0].id, 'y', Number($event.target.value))"
                                     />
