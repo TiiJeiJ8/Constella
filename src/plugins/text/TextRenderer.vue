@@ -1,7 +1,10 @@
 <template>
-    <div class="text-card" :style="cardStyle">
-        <div class="card-title" :style="textStyle">{{ cardTitle }}</div>
-        <div v-if="hasMoreContent" class="card-preview" :style="previewStyle">{{ cardPreview }}</div>
+    <div class="text-renderer" :class="displayMode">
+        <div v-if="displayMode === 'card'" class="text-card" :style="cardStyle">
+            <div class="card-title" :style="textStyle">{{ cardTitle }}</div>
+            <div v-if="hasMoreContent" class="card-preview" :style="previewStyle">{{ cardPreview }}</div>
+        </div>
+        <div v-else class="text-full" :style="fullStyle">{{ fullText }}</div>
     </div>
 </template>
 
@@ -20,6 +23,9 @@ const props = defineProps<{
     scale?: number
 }>()
 
+const displayMode = computed(() => props.displayMode || 'full')
+const normalizedText = computed(() => props.content.data || '')
+
 // 基于节点尺寸计算字体大小
 const baseFontSize = computed(() => {
     const minDim = Math.min(props.width, props.height)
@@ -37,6 +43,11 @@ const textStyle = computed(() => ({
 
 const previewStyle = computed(() => ({
     fontSize: `${baseFontSize.value * 0.75}px`
+}))
+
+const fullStyle = computed(() => ({
+    padding: `${Math.max(8, props.height * 0.08)}px`,
+    fontSize: `${Math.max(11, Math.min(18, Math.min(props.width, props.height) * 0.07))}px`
 }))
 
 // 提取标题（第一行）
@@ -63,9 +74,23 @@ const cardPreview = computed(() => {
     }
     return preview
 })
+
+const fullText = computed(() => {
+    if (!normalizedText.value.trim()) {
+        return t('canvas.node.emptyContent')
+    }
+    return normalizedText.value
+})
 </script>
 
 <style scoped>
+.text-renderer {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
 .text-card {
     width: 100%;
     height: 100%;
@@ -100,5 +125,17 @@ const cardPreview = computed(() => {
     line-clamp: 2;
     -webkit-box-orient: vertical;
     word-break: break-word;
+}
+
+.text-full {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-align: left;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: white;
 }
 </style>
