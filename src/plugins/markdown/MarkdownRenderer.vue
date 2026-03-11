@@ -47,11 +47,19 @@ const md = new MarkdownIt({
 const normalizedText = computed(() => props.content.data || '')
 const displayMode = computed(() => props.displayMode || 'full')
 
-const minDimension = computed(() => Math.min(props.width, props.height))
-const baseFontSize = computed(() => Math.max(10, Math.min(24, minDimension.value * 0.12)))
-const bodyFontSize = computed(() => Math.max(11, Math.min(18, minDimension.value * 0.07)))
-const codeFontSize = computed(() => Math.max(10, Math.min(15, minDimension.value * 0.06)))
-const panelPadding = computed(() => Math.max(8, props.height * 0.08))
+const fontSizeFromMetadata = computed(() => {
+    const raw = (props.content?.metadata as any)?.fontSize
+    const n = Number(raw)
+    if (!Number.isFinite(n)) return null
+    return Math.max(10, Math.min(48, n))
+})
+
+const baseFontSize = computed(() => {
+    return fontSizeFromMetadata.value ?? 14
+})
+const bodyFontSize = computed(() => fontSizeFromMetadata.value ?? 14)
+const codeFontSize = computed(() => Math.max(10, Math.min(20, bodyFontSize.value * 0.9)))
+const panelPadding = computed(() => Math.max(6, Math.min(14, Math.round(bodyFontSize.value * 0.6))))
 
 const cardStyle = computed(() => ({
     padding: `${panelPadding.value}px`

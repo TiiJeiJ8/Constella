@@ -157,6 +157,21 @@
                                 </button>
                             </div>
                         </div>
+
+                        <!-- 显示字号（插件可配置） -->
+                        <div v-if="currentNodeMeta?.supportsFontSizeControl" class="property-group">
+                            <label class="property-label">{{ t('canvas.properties.displayFontSize') }}</label>
+                            <div class="size-input-group">
+                                <label>{{ t('canvas.properties.fontSizeUnit') }}</label>
+                                <input
+                                    type="number"
+                                    :value="selectedNodes[0].content?.metadata?.fontSize || 14"
+                                    min="10"
+                                    max="48"
+                                    @input="$emit('node-content-metadata-change', selectedNodes[0].id, 'fontSize', Number($event.target.value))"
+                                />
+                            </div>
+                        </div>
                     </template>
                     
                     <!-- 多选节点 -->
@@ -424,6 +439,7 @@ defineEmits([
     'node-kind-change',
     'node-property-change',
     'node-display-mode-change',
+    'node-content-metadata-change',
     'node-select',
     'node-zindex-change',
     'edge-property-change',

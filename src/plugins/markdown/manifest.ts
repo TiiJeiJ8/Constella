@@ -9,5 +9,6 @@ export const manifest: PluginMeta = {
     icon: '📄',
     description: 'Markdown 富文本',
     editable: true,
-    supportsCardMode: true
+    supportsCardMode: true,
+    supportsFontSizeControl: true
 }

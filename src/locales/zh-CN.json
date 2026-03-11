@@ -246,6 +246,8 @@
             "height": "高",
             "position": "位置",
             "displayMode": "显示模式",
+            "displayFontSize": "显示字号",
+            "fontSizeUnit": "字号",
             "full": "完整",
             "card": "卡片",
             "multiSelect": "已选择 {count} 个节点"

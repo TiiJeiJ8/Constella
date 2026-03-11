@@ -40,6 +40,7 @@ export interface PluginMeta {
     description: string
     editable: boolean           // 是否支持编辑
     supportsCardMode: boolean   // 是否支持卡片模式
+    supportsFontSizeControl?: boolean // 是否支持在属性面板调整显示字号
 }
 
 /**

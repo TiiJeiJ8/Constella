@@ -9,5 +9,6 @@ export const manifest: PluginMeta = {
     icon: '📝',
     description: '纯文本内容',
     editable: true,
-    supportsCardMode: true
+    supportsCardMode: true,
+    supportsFontSizeControl: true
 }

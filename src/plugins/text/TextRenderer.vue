@@ -26,15 +26,27 @@ const props = defineProps<{
 const displayMode = computed(() => props.displayMode || 'full')
 const normalizedText = computed(() => props.content.data || '')
 
-// 基于节点尺寸计算字体大小
+const fontSizeFromMetadata = computed(() => {
+    const raw = (props.content?.metadata as any)?.fontSize
+    const n = Number(raw)
+    if (!Number.isFinite(n)) return null
+    return Math.max(10, Math.min(48, n))
+})
+
 const baseFontSize = computed(() => {
-    const minDim = Math.min(props.width, props.height)
-    // 字体大小为最小维度的一定比例，限制在合理范围内
-    return Math.max(10, Math.min(24, minDim * 0.12))
+    return fontSizeFromMetadata.value ?? 14
+})
+
+const previewFontSize = computed(() => {
+    return Math.max(10, Math.round(baseFontSize.value * 0.8))
+})
+
+const panelPadding = computed(() => {
+    return Math.max(6, Math.min(14, Math.round(baseFontSize.value * 0.6)))
 })
 
 const cardStyle = computed(() => ({
-    padding: `${Math.max(8, props.height * 0.08)}px`
+    padding: `${panelPadding.value}px`
 }))
 
 const textStyle = computed(() => ({
@@ -42,12 +54,12 @@ const textStyle = computed(() => ({
 }))
 
 const previewStyle = computed(() => ({
-    fontSize: `${baseFontSize.value * 0.75}px`
+    fontSize: `${previewFontSize.value}px`
 }))
 
 const fullStyle = computed(() => ({
-    padding: `${Math.max(8, props.height * 0.08)}px`,
-    fontSize: `${Math.max(11, Math.min(18, Math.min(props.width, props.height) * 0.07))}px`
+    padding: `${panelPadding.value}px`,
+    fontSize: `${baseFontSize.value}px`
 }))
 
 // 提取标题（第一行）

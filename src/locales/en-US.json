@@ -246,6 +246,8 @@
             "height": "Height",
             "position": "Position",
             "displayMode": "Display Mode",
+            "displayFontSize": "Display Font Size",
+            "fontSizeUnit": "Font Size",
             "full": "Full",
             "card": "Card",
             "multiSelect": "{count} nodes selected"

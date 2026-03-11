@@ -126,6 +126,7 @@
             @node-kind-change="handleNodeKindChange"
             @node-property-change="handleNodePropertyChange"
             @node-display-mode-change="handleNodeDisplayModeChange"
+            @node-content-metadata-change="handleNodeContentMetadataChange"
             @node-select="handleNodeSelectFromPanel"
             @node-zindex-change="handleNodeZIndexChange"
             @edge-property-change="handleEdgePropertyChange"
@@ -1148,6 +1149,27 @@ function handleNodePropertyChange(nodeId, property, value) {
 function handleNodeDisplayModeChange(nodeId, displayMode) {
     yjsNodes.updateNodeDisplayMode(nodeId, displayMode)
     console.log('[Canvas] Node display mode changed:', nodeId, '->', displayMode)
+}
+
+// 节点内容 metadata 变更（例如显示字号）
+function handleNodeContentMetadataChange(nodeId, key, value) {
+    const node = canvasNodes.value.find(n => n.id === nodeId)
+    if (!node?.content) return
+
+    const nextValue = key === 'fontSize'
+        ? Math.max(10, Math.min(48, Number(value) || 14))
+        : value
+
+    yjsNodes.updateNode(nodeId, {
+        content: {
+            ...node.content,
+            metadata: {
+                ...(node.content.metadata || {}),
+                [key]: nextValue
+            }
+        }
+    })
+    console.log('[Canvas] Node content metadata changed:', nodeId, key, '->', nextValue)
 }
 
 // 从图层面板选择节点
