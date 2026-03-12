@@ -212,6 +212,16 @@
             "offline": "离线",
             "connecting": "连接中"
         },
+        "performance": {
+            "title": "性能面板",
+            "nodes": "总节点",
+            "visibleNodes": "可见节点",
+            "visibleEdges": "可见连线",
+            "syncPerSecond": "同步/秒",
+            "frameCost": "帧耗时",
+            "fps": "帧率",
+            "longFrames": "长帧(>{threshold}ms)"
+        },
         "chat": {
             "title": "聊天",
             "expand": "展开聊天",
@@ -509,7 +519,10 @@
             "title": "外观设置",
             "theme": "主题",
             "fontSize": "字体大小",
-            "fontFamily": "字体"
+            "fontFamily": "字体",
+            "performancePanel": "显示性能面板（开发模式）",
+            "markdownLodThreshold": "Markdown LOD 阈值",
+            "markdownLodThresholdHint": "缩放比例低于该值时，Markdown 使用纯文本预览以减少渲染开销。"
         },
         "editor": {
             "title": "编辑器设置",

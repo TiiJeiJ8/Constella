@@ -212,6 +212,16 @@
             "offline": "Offline",
             "connecting": "Connecting"
         },
+        "performance": {
+            "title": "Performance",
+            "nodes": "Total Nodes",
+            "visibleNodes": "Visible Nodes",
+            "visibleEdges": "Visible Edges",
+            "syncPerSecond": "Sync/s",
+            "frameCost": "Frame Cost",
+            "fps": "FPS",
+            "longFrames": "Long Frames (>{threshold}ms)"
+        },
         "chat": {
             "title": "Chat",
             "expand": "Expand chat",
@@ -509,7 +519,10 @@
             "title": "Appearance Settings",
             "theme": "Theme",
             "fontSize": "Font Size",
-            "fontFamily": "Font Family"
+            "fontFamily": "Font Family",
+            "performancePanel": "Show performance panel (dev mode)",
+            "markdownLodThreshold": "Markdown LOD Threshold",
+            "markdownLodThresholdHint": "When zoom scale is below this value, Markdown falls back to plain text preview to reduce rendering cost."
         },
         "editor": {
             "title": "Editor Settings",

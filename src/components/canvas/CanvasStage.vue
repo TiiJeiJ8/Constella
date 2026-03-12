@@ -212,7 +212,7 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['zoom-change', 'position-change', 'node-select', 'node-update', 'node-delete', 'node-create', 'node-dblclick', 'cursor-move', 'cursor-leave', 'undo', 'redo', 'stage-transform', 'edge-select', 'edge-create', 'edge-delete', 'edge-dblclick'])
+const emit = defineEmits(['zoom-change', 'position-change', 'node-select', 'node-update', 'node-delete', 'node-create', 'node-dblclick', 'cursor-move', 'cursor-leave', 'undo', 'redo', 'stage-transform', 'edge-select', 'edge-create', 'edge-delete', 'edge-dblclick', 'render-stats'])
 
 // Refs
 const containerRef = ref(null)
@@ -257,16 +257,234 @@ const selectionRect = ref({
 const selectionStart = ref({ x: 0, y: 0 })
 
 // 使用传入的 Yjs 节点数据，按 zIndex 排序（低的先渲染，在下面）
-const displayNodes = computed(() => {
-    const nodes = props.yjsNodes || []
-    return [...nodes].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
+const VIEWPORT_CULLING_BUFFER = 300
+
+const viewportRect = computed(() => {
+    const stage = stageConfig.value
+    const scale = Math.max(0.01, stage.scaleX || 1)
+    const buffer = VIEWPORT_CULLING_BUFFER / scale
+
+    const left = -stage.x / scale - buffer
+    const top = -stage.y / scale - buffer
+    const right = (-stage.x + stage.width) / scale + buffer
+    const bottom = (-stage.y + stage.height) / scale + buffer
+
+    return { left, top, right, bottom }
 })
 
-// 连线数据（按 zIndex 排序）
+function isRectInViewport(x, y, width, height, viewport) {
+    const right = x + width
+    const bottom = y + height
+
+    return (
+        right >= viewport.left &&
+        x <= viewport.right &&
+        bottom >= viewport.top &&
+        y <= viewport.bottom
+    )
+}
+
+function isNodeInViewport(node, viewport) {
+    return isRectInViewport(node.x, node.y, node.width, node.height, viewport)
+}
+
+const nodeRectMap = computed(() => {
+    const map = new Map()
+    ;(props.yjsNodes || []).forEach(node => {
+        map.set(node.id, {
+            x: node.x,
+            y: node.y,
+            width: node.width,
+            height: node.height
+        })
+    })
+    return map
+})
+
+// 获取节点矩形信息（用于连线计算）
+function getNodeRect(nodeId) {
+    return nodeRectMap.value.get(nodeId) || null
+}
+
+const displayNodes = computed(() => {
+    const nodes = props.yjsNodes || []
+    const viewport = viewportRect.value
+    return nodes
+        .filter(node => isNodeInViewport(node, viewport))
+        .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
+})
+
+function getAnchorPoint(node, anchor, otherNode) {
+    const cx = node.x + node.width / 2
+    const cy = node.y + node.height / 2
+
+    switch (anchor) {
+        case 'top':
+            return { x: cx, y: node.y }
+        case 'right':
+            return { x: node.x + node.width, y: cy }
+        case 'bottom':
+            return { x: cx, y: node.y + node.height }
+        case 'left':
+            return { x: node.x, y: cy }
+    }
+
+    if (!otherNode) {
+        return { x: cx, y: cy }
+    }
+
+    const otherCx = otherNode.x + otherNode.width / 2
+    const otherCy = otherNode.y + otherNode.height / 2
+    const dx = otherCx - cx
+    const dy = otherCy - cy
+    const halfWidth = node.width / 2
+    const halfHeight = node.height / 2
+
+    if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) {
+        return { x: cx, y: cy }
+    }
+
+    let tX = Infinity
+    let tY = Infinity
+    if (dx !== 0) tX = halfWidth / Math.abs(dx)
+    if (dy !== 0) tY = halfHeight / Math.abs(dy)
+
+    const t = Math.min(tX, tY)
+    return {
+        x: cx + dx * t,
+        y: cy + dy * t
+    }
+}
+
+function getBezierControlPoints(edge, sourcePoint, targetPoint) {
+    const sx = sourcePoint.x
+    const sy = sourcePoint.y
+    const tx = targetPoint.x
+    const ty = targetPoint.y
+    const dx = tx - sx
+    const dy = ty - sy
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    const offset = Math.min(dist * 0.3, 100)
+
+    let c1x = sx
+    let c1y = sy
+    let c2x = tx
+    let c2y = ty
+
+    const sourceAnchor = edge.sourceAnchor || 'center'
+    const targetAnchor = edge.targetAnchor || 'center'
+
+    switch (sourceAnchor) {
+        case 'top':
+            c1y = sy - offset
+            break
+        case 'bottom':
+            c1y = sy + offset
+            break
+        case 'left':
+            c1x = sx - offset
+            break
+        case 'right':
+            c1x = sx + offset
+            break
+        default:
+            c1x = sx + offset
+            break
+    }
+
+    switch (targetAnchor) {
+        case 'top':
+            c2y = ty - offset
+            break
+        case 'bottom':
+            c2y = ty + offset
+            break
+        case 'left':
+            c2x = tx - offset
+            break
+        case 'right':
+            c2x = tx + offset
+            break
+        default:
+            c2x = tx - offset
+            break
+    }
+
+    return {
+        c1: { x: c1x, y: c1y },
+        c2: { x: c2x, y: c2y }
+    }
+}
+
+function getEdgePointsForCulling(edge) {
+    const sourceNode = getNodeRect(edge.sourceId)
+    const targetNode = getNodeRect(edge.targetId)
+    if (!sourceNode || !targetNode) return null
+
+    const sourcePoint = getAnchorPoint(sourceNode, edge.sourceAnchor || 'auto', targetNode)
+    const targetPoint = getAnchorPoint(targetNode, edge.targetAnchor || 'auto', sourceNode)
+
+    if (edge.type === 'step') {
+        const midX = (sourcePoint.x + targetPoint.x) / 2
+        return [
+            sourcePoint,
+            { x: midX, y: sourcePoint.y },
+            { x: midX, y: targetPoint.y },
+            targetPoint
+        ]
+    }
+
+    if (edge.type === 'bezier') {
+        const controls = getBezierControlPoints(edge, sourcePoint, targetPoint)
+        return [sourcePoint, controls.c1, controls.c2, targetPoint]
+    }
+
+    return [sourcePoint, targetPoint]
+}
+
+function isEdgeInViewport(edge, viewport) {
+    const points = getEdgePointsForCulling(edge)
+    if (!points || points.length === 0) return false
+
+    let minX = Infinity
+    let minY = Infinity
+    let maxX = -Infinity
+    let maxY = -Infinity
+
+    points.forEach(point => {
+        minX = Math.min(minX, point.x)
+        minY = Math.min(minY, point.y)
+        maxX = Math.max(maxX, point.x)
+        maxY = Math.max(maxY, point.y)
+    })
+
+    const padding = Math.max(20, (edge.strokeWidth || 2) * 6)
+
+    return isRectInViewport(
+        minX - padding,
+        minY - padding,
+        maxX - minX + padding * 2,
+        maxY - minY + padding * 2,
+        viewport
+    )
+}
+
+// 连线数据（按线段包围盒进行视口裁剪）
 const displayEdges = computed(() => {
     const edges = props.yjsEdges || []
-    return [...edges].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
+    const viewport = viewportRect.value
+
+    return edges
+        .filter(edge => isEdgeInViewport(edge, viewport))
+        .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
 })
+
+function emitRenderStats() {
+    emit('render-stats', {
+        visibleNodes: displayNodes.value.length,
+        visibleEdges: displayEdges.value.length
+    })
+}
 
 // 连线创建状态
 const edgeCreation = ref({
@@ -277,18 +495,6 @@ const edgeCreation = ref({
     currentX: 0,
     currentY: 0
 })
-
-// 获取节点矩形信息（用于连线计算）
-function getNodeRect(nodeId) {
-    const node = props.yjsNodes?.find(n => n.id === nodeId)
-    if (!node) return null
-    return {
-        x: node.x,
-        y: node.y,
-        width: node.width,
-        height: node.height
-    }
-}
 
 // 光标插帧管理器
 const cursorManager = new CursorInterpolationManager()
@@ -451,8 +657,7 @@ function handleWheel(e) {
     stageConfig.value.y = newPos.y
     
     emitZoomChange()
-    emitPositionChange()
-    emitStageTransform()
+    scheduleStageTransformEmit()
 }
 
 // 鼠标按下
@@ -522,8 +727,7 @@ function handleMouseMove(e) {
         stageConfig.value.y += dy
         
         lastPointerPosition.value = pointer
-        emitPositionChange()
-        emitStageTransform()
+        scheduleStageTransformEmit()
         return
     }
     
@@ -897,6 +1101,18 @@ function emitZoomChange() {
     emit('zoom-change', zoom)
 }
 
+let stageTransformRafId = null
+
+function scheduleStageTransformEmit() {
+    if (stageTransformRafId !== null) return
+
+    stageTransformRafId = requestAnimationFrame(() => {
+        stageTransformRafId = null
+        emitPositionChange()
+        emitStageTransform()
+    })
+}
+
 // 发送位置变化事件
 function emitPositionChange() {
     const position = {
@@ -977,6 +1193,14 @@ watch(() => props.activeTool, (newTool) => {
         stage.container().style.cursor = getCursor()
     }
 })
+
+watch(
+    () => [displayNodes.value.length, displayEdges.value.length],
+    () => {
+        emitRenderStats()
+    },
+    { immediate: true }
+)
 
 // 监听空格键
 function handleKeyDown(e) {
@@ -1062,6 +1286,7 @@ onMounted(() => {
     emitZoomChange()
     emitPositionChange()
     emitStageTransform()
+    emitRenderStats()
     
     console.log('[CanvasStage] Mounted with', displayNodes.value.length, 'nodes')
 })
@@ -1070,6 +1295,11 @@ onUnmounted(() => {
     window.removeEventListener('resize', resizeStage)
     window.removeEventListener('keydown', handleKeyDown)
     window.removeEventListener('keyup', handleKeyUp)
+
+    if (stageTransformRafId !== null) {
+        cancelAnimationFrame(stageTransformRafId)
+        stageTransformRafId = null
+    }
     
     // 销毁光标插帧管理器
     cursorManager.destroy()

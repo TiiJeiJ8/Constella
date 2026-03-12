@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import * as Y from 'yjs'
 import type { ContentKind, NodeContent, DisplayMode } from '../plugins'
 
@@ -74,11 +74,32 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
     // Undo/Redo 状态
     const canUndo = ref(false)
     const canRedo = ref(false)
+    const syncTick = ref(0)
 
     // 缓存的 doc 和 nodesMap
     let doc: Y.Doc | null = null
     let nodesMap: Y.Map<any> | null = null
     let undoManager: Y.UndoManager | null = null
+    let observer: ((events: any[]) => void) | null = null
+    let syncRafId: number | null = null
+    let isSyncScheduled = false
+
+    function scheduleSyncFromYjs() {
+        if (isSyncScheduled) return
+        isSyncScheduled = true
+
+        const run = () => {
+            isSyncScheduled = false
+            syncRafId = null
+            syncFromYjs()
+        }
+
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            syncRafId = window.requestAnimationFrame(run)
+        } else {
+            Promise.resolve().then(run)
+        }
+    }
 
     /**
      * 将 CanvasNode 转换为 RenderNode
@@ -181,7 +202,7 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
         })
 
         nodes.value = newNodes
-        console.log('[useYjsNodes] Synced from Yjs:', newNodes.length, 'nodes')
+        syncTick.value += 1
 
         if (onNodesChange) {
             onNodesChange(newNodes)
@@ -194,10 +215,11 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
     function observeYjs() {
         if (!nodesMap) return
 
-        nodesMap.observeDeep((events) => {
-            console.log('[useYjsNodes] Y.Map changed:', events.length, 'events')
-            syncFromYjs()
-        })
+        observer = () => {
+            scheduleSyncFromYjs()
+        }
+
+        nodesMap.observeDeep(observer)
     }
 
     /**
@@ -243,8 +265,10 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
 
         // 如果 Y.Map 为空，不自动创建示例节点，仅同步（保持空白房间）
         if (nodesMap.size === 0) {
-            console.log('[useYjsNodes] Initialized with empty node list (no sample nodes)')
-            // 保持 nodes.value 为空，外部组件可根据需要创建节点
+            nodes.value = []
+            if (onNodesChange) {
+                onNodesChange([])
+            }
         } else {
             // 从 Yjs 同步现有节点
             syncFromYjs()
@@ -285,7 +309,6 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
                 yNode.set('x', x)
                 yNode.set('y', y)
             })
-            console.log('[useYjsNodes] Updated position:', nodeId, { x, y })
         }
     }
 
@@ -299,12 +322,11 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
         if (yNode && yNode instanceof Y.Map) {
             doc.transact(() => {
                 Object.entries(updates).forEach(([key, value]) => {
-                    if (key !== 'id' && value !== undefined) {
+                    if (key !== 'id' && !key.startsWith('_') && value !== undefined) {
                         yNode.set(key, value)
                     }
                 })
             })
-            console.log('[useYjsNodes] Updated node:', nodeId, updates)
         }
     }
 
@@ -316,7 +338,6 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
 
         if (nodesMap.has(nodeId)) {
             nodesMap.delete(nodeId)
-            console.log('[useYjsNodes] Deleted node:', nodeId)
         }
     }
 
@@ -333,7 +354,6 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
                 }
             })
         })
-        console.log('[useYjsNodes] Deleted nodes:', nodeIds)
     }
 
     /**
@@ -355,7 +375,6 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
             doc.transact(() => {
                 yNode.set('content', { ...content, data })
             })
-            console.log('[useYjsNodes] Updated content:', nodeId)
         }
     }
 
@@ -371,7 +390,6 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
             doc.transact(() => {
                 yNode.set('content', { ...content, kind })
             })
-            console.log('[useYjsNodes] Updated kind:', nodeId, '->', kind)
         }
     }
 
@@ -387,7 +405,6 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
             doc.transact(() => {
                 yNode.set('content', { ...content, displayMode })
             })
-            console.log('[useYjsNodes] Updated displayMode:', nodeId, '->', displayMode)
         }
     }
 
@@ -407,7 +424,6 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
     function undo() {
         if (undoManager && canUndo.value) {
             undoManager.undo()
-            console.log('[useYjsNodes] Undo')
         }
     }
 
@@ -417,9 +433,29 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
     function redo() {
         if (undoManager && canRedo.value) {
             undoManager.redo()
-            console.log('[useYjsNodes] Redo')
         }
     }
+
+    function destroy() {
+        if (nodesMap && observer) {
+            nodesMap.unobserveDeep(observer)
+        }
+
+        if (syncRafId !== null && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+            window.cancelAnimationFrame(syncRafId)
+        }
+
+        observer = null
+        syncRafId = null
+        isSyncScheduled = false
+        undoManager = null
+        nodesMap = null
+        doc = null
+    }
+
+    onUnmounted(() => {
+        destroy()
+    })
 
     return {
         nodes,
@@ -427,6 +463,7 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
         isInitialized,
         canUndo,
         canRedo,
+        syncTick,
         initialize,
         createNode,
         updateNodePosition,
@@ -438,6 +475,7 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
         deleteNodes,
         getNode,
         syncFromYjs,
+        destroy,
         undo,
         redo
     }

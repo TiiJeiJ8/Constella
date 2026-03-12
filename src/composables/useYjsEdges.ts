@@ -53,9 +53,29 @@ export function useYjsEdges(options: UseYjsEdgesOptions) {
     const { getDoc, onEdgesChange } = options
 
     const edges = ref<RenderEdge[]>([])
+    const syncTick = ref(0)
     let edgesMap: Y.Map<Y.Map<any>> | null = null
     let observer: ((event: any) => void) | null = null
     let doc: Y.Doc | null = null
+    let syncRafId: number | null = null
+    let isSyncScheduled = false
+
+    function scheduleSyncFromYjs() {
+        if (isSyncScheduled) return
+        isSyncScheduled = true
+
+        const run = () => {
+            isSyncScheduled = false
+            syncRafId = null
+            syncFromYjs()
+        }
+
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            syncRafId = window.requestAnimationFrame(run)
+        } else {
+            Promise.resolve().then(run)
+        }
+    }
 
     /**
      * 初始化
@@ -76,13 +96,13 @@ export function useYjsEdges(options: UseYjsEdgesOptions) {
         edgesMap = doc.getMap('edges')
 
         // 监听变化
-        observer = () => syncFromYjs()
+        observer = () => scheduleSyncFromYjs()
         edgesMap.observeDeep(observer)
 
         // 初始同步
         syncFromYjs()
 
-        console.log('[useYjsEdges] Initialized with', edges.value.length, 'edges')
+
     }
 
     /**
@@ -121,6 +141,7 @@ export function useYjsEdges(options: UseYjsEdgesOptions) {
         })
 
         edges.value = newEdges
+        syncTick.value += 1
 
         if (onEdgesChange) {
             onEdgesChange(newEdges)
@@ -156,8 +177,6 @@ export function useYjsEdges(options: UseYjsEdgesOptions) {
 
             edgesMap!.set(edgeId, yEdge)
         })
-
-        console.log('[useYjsEdges] Created edge:', edgeId)
         return edgeId
     }
 
@@ -176,7 +195,6 @@ export function useYjsEdges(options: UseYjsEdgesOptions) {
                     }
                 })
             })
-            console.log('[useYjsEdges] Updated edge:', edgeId, updates)
         }
     }
 
@@ -188,7 +206,6 @@ export function useYjsEdges(options: UseYjsEdgesOptions) {
 
         if (edgesMap.has(edgeId)) {
             edgesMap.delete(edgeId)
-            console.log('[useYjsEdges] Deleted edge:', edgeId)
         }
     }
 
@@ -205,7 +222,6 @@ export function useYjsEdges(options: UseYjsEdgesOptions) {
                 }
             })
         })
-        console.log('[useYjsEdges] Deleted edges:', edgeIds)
     }
 
     /**
@@ -250,8 +266,15 @@ export function useYjsEdges(options: UseYjsEdgesOptions) {
         if (edgesMap && observer) {
             edgesMap.unobserveDeep(observer)
         }
+
+        if (syncRafId !== null && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+            window.cancelAnimationFrame(syncRafId)
+        }
+
         edgesMap = null
         observer = null
+        syncRafId = null
+        isSyncScheduled = false
         doc = null
         edges.value = []
     }
@@ -262,6 +285,7 @@ export function useYjsEdges(options: UseYjsEdgesOptions) {
 
     return {
         edges,
+        syncTick,
         edgesMap: () => edgesMap,
         initialize,
         createEdge,

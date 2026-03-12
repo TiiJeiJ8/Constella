@@ -11,6 +11,7 @@
             :height="scaledHeight"
             :display-mode="content.displayMode || 'full'"
             :scale="props.stageScale"
+            v-bind="rendererExtraProps"
         />
     </div>
 </template>
@@ -30,6 +31,7 @@ const props = defineProps<{
     zIndex: number
     stageScale: number
     stagePosition: { x: number; y: number }
+    markdownLodScaleThreshold: number
 }>()
 
 // 内边距
@@ -60,6 +62,17 @@ const overlayStyle = computed(() => {
 const rendererComponent = computed(() => {
     const kind = props.content?.kind || 'blank'
     return pluginRegistry.getRenderer(kind as ContentKind)
+})
+
+const rendererExtraProps = computed(() => {
+    const kind = props.content?.kind || 'blank'
+    if (kind === 'markdown') {
+        return {
+            lodScaleThreshold: props.markdownLodScaleThreshold
+        }
+    }
+
+    return {}
 })
 </script>
 

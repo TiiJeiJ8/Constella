@@ -134,7 +134,27 @@
                                     <option value="dark">{{ t('theme.dark') }}</option>
                                 </select>
                             </div>
-                            <!-- 仅保留主题设置；字体相关设置已移除 -->
+
+                            <div class="setting-item">
+                                <label class="setting-label">{{ t('settings.appearance.performancePanel') }}</label>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" v-model="settingsData.performance.showCanvasPerformancePanel" />
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+
+                            <div class="setting-item setting-item-column">
+                                <label class="setting-label">{{ t('settings.appearance.markdownLodThreshold') }}</label>
+                                <input
+                                    v-model.number="settingsData.performance.markdownLodScaleThreshold"
+                                    type="number"
+                                    class="setting-input"
+                                    min="0.1"
+                                    max="3"
+                                    step="0.05"
+                                />
+                                <p class="setting-hint">{{ t('settings.appearance.markdownLodThresholdHint') }}</p>
+                            </div>
                         </div>
 
                         <!-- 编辑器设置 -->
@@ -276,6 +296,24 @@ const categories = [
     { key: 'shortcuts', icon: SettingIcon }
 ]
 
+const defaultShortcuts = {
+    select: 'v',
+    pan: 'p',
+    node: 'n',
+    edge: 'e'
+}
+
+const defaultPerformanceSettings = {
+    showCanvasPerformancePanel: true,
+    markdownLodScaleThreshold: 0.6
+}
+
+function normalizeMarkdownLodScaleThreshold(value) {
+    const n = Number(value)
+    if (!Number.isFinite(n)) return defaultPerformanceSettings.markdownLodScaleThreshold
+    return Math.max(0.1, Math.min(3, n))
+}
+
 // 设置数据（仅保留必要项）
 const settingsData = reactive({
     // 账户信息
@@ -287,7 +325,11 @@ const settingsData = reactive({
     // 通用设置
     language: 'zh-CN',
     // 外观设置（仅保留主题）
-    theme: 'light'
+    theme: 'light',
+    // 快捷键
+    shortcuts: { ...defaultShortcuts },
+    // 性能相关
+    performance: { ...defaultPerformanceSettings }
 })
 
 // 验证错误
@@ -309,10 +351,30 @@ watch(isOpen, (newVal) => {
 
 // 加载保存的设置
 const loadSettings = () => {
+    let parsed = {}
     const saved = localStorage.getItem('settings')
     if (saved) {
-        Object.assign(settingsData, JSON.parse(saved))
+        try {
+            parsed = JSON.parse(saved)
+            Object.assign(settingsData, parsed)
+        } catch (error) {
+            console.warn('Failed to parse saved settings, fallback to defaults', error)
+        }
     }
+
+    settingsData.shortcuts = {
+        ...defaultShortcuts,
+        ...(parsed.shortcuts || {})
+    }
+
+    settingsData.performance = {
+        ...defaultPerformanceSettings,
+        ...(parsed.performance || {})
+    }
+    settingsData.performance.markdownLodScaleThreshold = normalizeMarkdownLodScaleThreshold(
+        settingsData.performance.markdownLodScaleThreshold
+    )
+
     // 优先使用 localStorage 中的 theme 和 locale 值
     const savedTheme = localStorage.getItem('theme')
     if (savedTheme) {
@@ -348,6 +410,11 @@ const initializeAccount = () => {
 
 // 保存设置
 const saveSettings = () => {
+    settingsData.performance.markdownLodScaleThreshold = normalizeMarkdownLodScaleThreshold(
+        settingsData.performance.markdownLodScaleThreshold
+    )
+    settingsData.performance.showCanvasPerformancePanel = settingsData.performance.showCanvasPerformancePanel !== false
+
     const payload = JSON.stringify(settingsData)
     localStorage.setItem('settings', payload)
     try {
@@ -397,18 +464,6 @@ const clearCache = () => {
         localStorage.clear()
         alert(locale.value === 'zh-CN' ? '缓存已清除，请重启应用' : 'Cache cleared, please restart the app')
     }
-}
-
-// 快捷键相关
-const defaultShortcuts = {
-    select: 'v',
-    pan: 'p',
-    node: 'n',
-    edge: 'e'
-}
-
-if (!settingsData.shortcuts) {
-    settingsData.shortcuts = { ...defaultShortcuts }
 }
 
 const resetShortcuts = () => {
@@ -634,6 +689,22 @@ applySettings()
 .setting-item.avatar-item {
     flex-direction: column;
     align-items: flex-start;
+}
+
+.setting-item.setting-item-column {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.setting-item.setting-item-column .setting-input {
+    width: 220px;
+}
+
+.setting-hint {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    margin: 0;
 }
 
 .setting-item:last-child {

@@ -30,7 +30,7 @@
         />
 
         <!-- 中央画布区 -->
-        <div class="canvas-area">
+        <div class="canvas-area" ref="canvasAreaRef">
             <CanvasStage
                 ref="canvasStageRef"
                 :active-tool="activeTool"
@@ -57,11 +57,12 @@
                 @undo="handleUndo"
                 @redo="handleRedo"
                 @stage-transform="handleStageTransform"
+                @render-stats="handleRenderStats"
             />
             
             <!-- 节点内容叠加层 -->
             <NodeContentOverlay
-                v-for="node in canvasNodes"
+                v-for="node in visibleOverlayNodes"
                 :key="`content-${node.id}`"
                 :node-id="node.id"
                 :content="node.content"
@@ -72,6 +73,19 @@
                 :z-index="node.zIndex || 0"
                 :stage-scale="stageScale"
                 :stage-position="stagePosition"
+                :markdown-lod-scale-threshold="markdownLodScaleThreshold"
+            />
+
+            <PerformancePanel
+                v-if="isDevPerformancePanelVisible"
+                :total-nodes="canvasNodes.length"
+                :visible-nodes="visibleNodeCount"
+                :visible-edges="visibleEdgeCount"
+                :syncs-per-second="syncsPerSecond"
+                :frame-cost-ms="frameCostMs"
+                :fps="fps"
+                :long-frame-count="longFrameCount"
+                :long-frame-threshold-ms="LONG_FRAME_THRESHOLD_MS"
             />
         </div>
 
@@ -185,6 +199,7 @@ import RightPanel from '@/components/canvas/RightPanel.vue'
 import StatusBar from '@/components/canvas/StatusBar.vue'
 import CanvasStage from '@/components/canvas/CanvasStage.vue'
 import NodeContentOverlay from '@/components/canvas/NodeContentOverlay.vue'
+import PerformancePanel from '@/components/canvas/PerformancePanel.vue'
 import NodeEditorModal from '@/components/canvas/NodeEditorModal.vue'
 import MembersPanel from '@/components/canvas/MembersPanel.vue'
 import InputDialog from '@/components/base/InputDialog.vue'
@@ -198,6 +213,34 @@ registerPlugins().catch(err => {
 
 const { t } = useI18n()
 const toast = useToast()
+
+const DEFAULT_MARKDOWN_LOD_SCALE_THRESHOLD = 0.6
+const MIN_MARKDOWN_LOD_SCALE_THRESHOLD = 0.1
+const MAX_MARKDOWN_LOD_SCALE_THRESHOLD = 3
+const LONG_FRAME_THRESHOLD_MS = 32
+
+function normalizeMarkdownLodScaleThreshold(value) {
+    const n = Number(value)
+    if (!Number.isFinite(n)) return DEFAULT_MARKDOWN_LOD_SCALE_THRESHOLD
+    return Math.max(MIN_MARKDOWN_LOD_SCALE_THRESHOLD, Math.min(MAX_MARKDOWN_LOD_SCALE_THRESHOLD, n))
+}
+
+function getPerformanceSettings() {
+    try {
+        const settings = JSON.parse(localStorage.getItem('settings') || '{}')
+        const performance = settings.performance || {}
+
+        return {
+            showCanvasPerformancePanel: performance.showCanvasPerformancePanel !== false,
+            markdownLodScaleThreshold: normalizeMarkdownLodScaleThreshold(performance.markdownLodScaleThreshold)
+        }
+    } catch (error) {
+        return {
+            showCanvasPerformancePanel: true,
+            markdownLodScaleThreshold: DEFAULT_MARKDOWN_LOD_SCALE_THRESHOLD
+        }
+    }
+}
 
 const props = defineProps({
     roomId: {
@@ -251,7 +294,27 @@ const editingEdgeLabel = ref('')
 // Stage 变换状态（用于内容叠加层定位）
 const stageScale = ref(1)
 const stagePosition = ref({ x: 0, y: 0 })
+const canvasAreaRef = ref(null)
+const canvasAreaSize = ref({ width: 0, height: 0 })
+let canvasAreaResizeObserver = null
 const editingNodeId = ref(null)
+const performanceSettings = getPerformanceSettings()
+const showCanvasPerformancePanel = ref(performanceSettings.showCanvasPerformancePanel)
+const markdownLodScaleThreshold = ref(performanceSettings.markdownLodScaleThreshold)
+const isDevPerformancePanelVisible = computed(() => import.meta.env.DEV && showCanvasPerformancePanel.value)
+const visibleNodeCount = ref(0)
+const visibleEdgeCount = ref(0)
+const syncsPerSecond = ref(0)
+const frameCostMs = ref(0)
+const fps = ref(0)
+const longFrameCount = ref(0)
+let performanceSyncTimer = null
+let performanceRafId = null
+let lastSyncTick = 0
+let lastFrameTimestamp = 0
+let frameDurationSum = 0
+let frameSampleCount = 0
+let frameWindowStart = 0
 
 // 房间资源（暂存本地，后续对接 API）
 const roomAssets = ref([])
@@ -373,6 +436,44 @@ const unreadCount = computed(() => yjsChat.unreadCount.value)
 // 渲染用的节点数据（从 Yjs 同步）
 const canvasNodes = computed(() => yjsNodes.nodes.value)
 
+const OVERLAY_VIEWPORT_BUFFER = 240
+
+const overlayViewportRect = computed(() => {
+    const width = canvasAreaSize.value.width
+    const height = canvasAreaSize.value.height
+    const scale = Math.max(0.01, stageScale.value || 1)
+    const buffer = OVERLAY_VIEWPORT_BUFFER / scale
+
+    const left = -stagePosition.value.x / scale - buffer
+    const top = -stagePosition.value.y / scale - buffer
+    const right = (-stagePosition.value.x + width) / scale + buffer
+    const bottom = (-stagePosition.value.y + height) / scale + buffer
+
+    return { left, top, right, bottom }
+})
+
+function isNodeInOverlayViewport(node, viewport) {
+    const nodeRight = node.x + node.width
+    const nodeBottom = node.y + node.height
+
+    return (
+        nodeRight >= viewport.left &&
+        node.x <= viewport.right &&
+        nodeBottom >= viewport.top &&
+        node.y <= viewport.bottom
+    )
+}
+
+const visibleOverlayNodes = computed(() => {
+    const nodes = canvasNodes.value
+    if (!canvasAreaSize.value.width || !canvasAreaSize.value.height) {
+        return nodes
+    }
+
+    const viewport = overlayViewportRect.value
+    return nodes.filter(node => isNodeInOverlayViewport(node, viewport))
+})
+
 // 渲染用的边数据（从 Yjs 同步）
 const canvasEdges = computed(() => yjsEdges.edges.value)
 
@@ -408,8 +509,16 @@ function handleSettingsUpdated(e) {
     try {
         const settings = e.detail || {}
         userShortcuts.value = settings.shortcuts || getShortcutMap()
+
+        const performance = settings.performance || {}
+        showCanvasPerformancePanel.value = performance.showCanvasPerformancePanel !== false
+        markdownLodScaleThreshold.value = normalizeMarkdownLodScaleThreshold(performance.markdownLodScaleThreshold)
     } catch (err) {
         userShortcuts.value = getShortcutMap()
+
+        const fallback = getPerformanceSettings()
+        showCanvasPerformancePanel.value = fallback.showCanvasPerformancePanel
+        markdownLodScaleThreshold.value = fallback.markdownLodScaleThreshold
     }
 }
 
@@ -512,7 +621,14 @@ function handleNodeSelect(selectedNodeIds) {
 
 // 节点更新（同步到 Yjs）
 function handleNodeUpdate(updateData) {
-    console.log('[Canvas] Node update:', updateData)
+    if (!updateData?.id) return
+
+    // 拖拽中的实时同步仅更新坐标，减少写入字段与无效事件。
+    if (updateData._realtime) {
+        yjsNodes.updateNodePosition(updateData.id, updateData.x, updateData.y)
+        return
+    }
+
     yjsNodes.updateNode(updateData.id, updateData)
 }
 
@@ -1087,6 +1203,11 @@ function handleStageTransform(transform) {
     stagePosition.value = { x: transform.x, y: transform.y }
 }
 
+function handleRenderStats(stats) {
+    visibleNodeCount.value = Number(stats?.visibleNodes) || 0
+    visibleEdgeCount.value = Number(stats?.visibleEdges) || 0
+}
+
 // 节点内容更新
 function handleContentUpdate(nodeId, data) {
     yjsNodes.updateNodeContent(nodeId, data)
@@ -1241,19 +1362,123 @@ function togglePanel() {
     isPanelCollapsed.value = !isPanelCollapsed.value
 }
 
+function updateCanvasAreaSize() {
+    if (!canvasAreaRef.value) return
+
+    canvasAreaSize.value = {
+        width: canvasAreaRef.value.clientWidth || 0,
+        height: canvasAreaRef.value.clientHeight || 0
+    }
+}
+
+function startPerformanceMonitor() {
+    if (!isDevPerformancePanelVisible.value) return
+
+    stopPerformanceMonitor()
+
+    visibleNodeCount.value = visibleOverlayNodes.value.length
+    visibleEdgeCount.value = 0
+    longFrameCount.value = 0
+
+    const getCurrentSyncTick = () => {
+        return (yjsNodes.syncTick?.value || 0) + (yjsEdges.syncTick?.value || 0)
+    }
+
+    lastSyncTick = getCurrentSyncTick()
+    performanceSyncTimer = setInterval(() => {
+        const current = getCurrentSyncTick()
+        const delta = current - lastSyncTick
+        syncsPerSecond.value = delta >= 0 ? delta : current
+        lastSyncTick = current
+    }, 1000)
+
+    const updateFrameStats = (timestamp) => {
+        if (!lastFrameTimestamp) {
+            lastFrameTimestamp = timestamp
+            frameWindowStart = timestamp
+        }
+
+        const frameCost = timestamp - lastFrameTimestamp
+        lastFrameTimestamp = timestamp
+
+        if (frameCost > 0 && frameCost < 1000) {
+            frameDurationSum += frameCost
+            frameSampleCount += 1
+
+            if (frameCost > LONG_FRAME_THRESHOLD_MS) {
+                longFrameCount.value += 1
+            }
+        }
+
+        if (timestamp - frameWindowStart >= 1000) {
+            const avgCost = frameSampleCount > 0 ? frameDurationSum / frameSampleCount : 0
+            frameCostMs.value = Number(avgCost.toFixed(1))
+            fps.value = avgCost > 0 ? Math.round(1000 / avgCost) : 0
+
+            frameDurationSum = 0
+            frameSampleCount = 0
+            frameWindowStart = timestamp
+        }
+
+        performanceRafId = requestAnimationFrame(updateFrameStats)
+    }
+
+    performanceRafId = requestAnimationFrame(updateFrameStats)
+}
+
+function stopPerformanceMonitor() {
+    if (performanceSyncTimer) {
+        clearInterval(performanceSyncTimer)
+        performanceSyncTimer = null
+    }
+
+    if (performanceRafId !== null) {
+        cancelAnimationFrame(performanceRafId)
+        performanceRafId = null
+    }
+
+    lastFrameTimestamp = 0
+    frameDurationSum = 0
+    frameSampleCount = 0
+    frameWindowStart = 0
+}
+
+watch(
+    isDevPerformancePanelVisible,
+    (visible) => {
+        if (visible) {
+            startPerformanceMonitor()
+        } else {
+            stopPerformanceMonitor()
+        }
+    },
+    { immediate: true }
+)
+
 // 加载房间数据
 async function loadRoomData() {
     try {
         console.log('[Canvas] Loading room data for:', props.roomId)
-        // TODO: 从 API 加载房间数据
-        // const roomData = await apiService.getRoomById(props.roomId)
-        // roomName.value = roomData.name
-        
-        // 临时模拟数据
-        roomName.value = `Room ${props.roomId.slice(0, 8)}`
+        const fallbackName = `Room ${props.roomId.slice(0, 8)}`
+        const response = await apiService.getRoomById(props.roomId)
+
+        if (response.success) {
+            const apiRoomName = response.data?.room?.name || response.data?.name
+
+            if (typeof apiRoomName === 'string' && apiRoomName.trim()) {
+                roomName.value = apiRoomName.trim()
+                return
+            }
+
+            console.warn('[Canvas] Room name missing in API response, using fallback name')
+        } else {
+            console.warn('[Canvas] Failed to load room from API, using fallback name:', response.message)
+        }
+
+        roomName.value = fallbackName
     } catch (error) {
         console.error('[Canvas] Failed to load room:', error)
-        roomName.value = t('canvas.loadError')
+        roomName.value = `Room ${props.roomId.slice(0, 8)}`
     }
 }
 
@@ -1307,6 +1532,7 @@ onMounted(() => {
     updateTheme()
     loadRoomData()
     loadRoomAssets()
+    updateCanvasAreaSize()
     
     // 记录访问历史
     recordVisit(props.roomId)
@@ -1314,6 +1540,15 @@ onMounted(() => {
     // 连接 Yjs
     console.log('[Canvas] Connecting to Yjs room:', props.roomId)
     yjs.connect()
+
+    if (typeof ResizeObserver !== 'undefined' && canvasAreaRef.value) {
+        canvasAreaResizeObserver = new ResizeObserver(() => {
+            updateCanvasAreaSize()
+        })
+        canvasAreaResizeObserver.observe(canvasAreaRef.value)
+    } else {
+        window.addEventListener('resize', updateCanvasAreaSize)
+    }
     
     // 监听主题变化
     const observer = new MutationObserver(updateTheme)
@@ -1351,6 +1586,15 @@ function recordVisit(roomId) {
 
 // 组件卸载
 onUnmounted(() => {
+    if (canvasAreaResizeObserver) {
+        canvasAreaResizeObserver.disconnect()
+        canvasAreaResizeObserver = null
+    } else {
+        window.removeEventListener('resize', updateCanvasAreaSize)
+    }
+
+    stopPerformanceMonitor()
+
     console.log('[Canvas] CanvasView unmounted')
 })
 </script>

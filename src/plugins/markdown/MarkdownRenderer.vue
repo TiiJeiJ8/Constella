@@ -4,6 +4,7 @@
             <div class="card-title" :style="textStyle">{{ cardTitle }}</div>
             <div v-if="hasMoreContent" class="card-preview" :style="previewStyle">{{ cardPreview }}</div>
         </div>
+        <div v-else-if="usePlainTextLod" class="markdown-full markdown-full-plain" :style="fullStyle">{{ plainTextPreview }}</div>
         <div v-else class="markdown-full" :style="fullStyle" v-html="renderedHtml" />
     </div>
 </template>
@@ -24,28 +25,53 @@ const props = defineProps<{
     height: number
     displayMode?: DisplayMode
     scale?: number
+    lodScaleThreshold?: number
 }>()
 
-const markdownUtils = new MarkdownIt().utils
+const DEFAULT_MARKDOWN_LOD_SCALE_THRESHOLD = 0.6
 
-const md = new MarkdownIt({
-    html: false,
-    breaks: true,
-    linkify: true,
-    typographer: true,
-    highlight: function (str: string, lang: string): string {
-        if (lang && hljs.getLanguage(lang)) {
-            try {
-                return `<pre class="hljs"><code class="language-${lang}">${hljs.highlight(str, { language: lang, ignoreIllegals: true }).value}</code></pre>`
-            } catch (__) {}
+let markdownParser: MarkdownIt | null = null
+
+function getMarkdownParser() {
+    if (markdownParser) return markdownParser
+
+    const markdownUtils = new MarkdownIt().utils
+    markdownParser = new MarkdownIt({
+        html: false,
+        breaks: true,
+        linkify: true,
+        typographer: true,
+        highlight: function (str: string, lang: string): string {
+            if (lang && hljs.getLanguage(lang)) {
+                try {
+                    return `<pre class="hljs"><code class="language-${lang}">${hljs.highlight(str, { language: lang, ignoreIllegals: true }).value}</code></pre>`
+                } catch (__) {}
+            }
+
+            return `<pre class="hljs"><code>${markdownUtils.escapeHtml(str)}</code></pre>`
         }
+    })
 
-        return `<pre class="hljs"><code>${markdownUtils.escapeHtml(str)}</code></pre>`
-    }
-})
+    return markdownParser
+}
 
 const normalizedText = computed(() => props.content.data || '')
 const displayMode = computed(() => props.displayMode || 'full')
+const renderScale = computed(() => {
+    const n = Number(props.scale)
+    if (!Number.isFinite(n)) return 1
+    return Math.max(0.01, n)
+})
+
+const lodScaleThreshold = computed(() => {
+    const n = Number(props.lodScaleThreshold)
+    if (!Number.isFinite(n)) return DEFAULT_MARKDOWN_LOD_SCALE_THRESHOLD
+    return Math.max(0.1, Math.min(3, n))
+})
+
+const usePlainTextLod = computed(() => {
+    return displayMode.value === 'full' && renderScale.value <= lodScaleThreshold.value
+})
 
 const fontSizeFromMetadata = computed(() => {
     const raw = (props.content?.metadata as any)?.fontSize
@@ -156,12 +182,38 @@ const cardPreview = computed(() => {
     return preview
 })
 
+const plainTextPreview = computed(() => {
+    if (!normalizedText.value.trim()) {
+        return t('canvas.node.emptyContent')
+    }
+
+    const plain = normalizedText.value
+        .split('\n')
+        .map(line => stripMarkdownSyntax(line))
+        .filter(Boolean)
+        .join('\n')
+
+    if (!plain) {
+        return t('canvas.node.emptyContent')
+    }
+
+    if (plain.length > 600) {
+        return plain.substring(0, 600) + '...'
+    }
+
+    return plain
+})
+
 const renderedHtml = computed(() => {
+    if (usePlainTextLod.value) {
+        return ''
+    }
+
     if (!normalizedText.value.trim()) {
         return `<p class="placeholder">${t('canvas.node.emptyContent')}</p>`
     }
 
-    return DOMPurify.sanitize(md.render(normalizedText.value), {
+    return DOMPurify.sanitize(getMarkdownParser().render(normalizedText.value), {
         ADD_ATTR: ['class']
     })
 })
@@ -218,6 +270,11 @@ const renderedHtml = computed(() => {
     overflow: hidden;
     text-align: left;
     line-height: 1.6;
+}
+
+.markdown-full-plain {
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .markdown-full :deep(p) {
