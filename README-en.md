@@ -158,7 +158,7 @@ docs/               # Documentation (usage / development / plugins)
 * 📘 [EDITOR_GUIDE.md](docs/EDITOR_GUIDE.md)
   Editor usage and configuration guide: canvas operations, toolbars, shortcuts, and import/export workflows.
 
-* 🧩 [PLUGIN_DEVELOPMENT.md](docs/PLUGIN_DEVELOPMENT.md)
+* 🧩 [PLUGIN_DEVELOPMENT_ARCHITECTURE_3.0.md](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_3.0.md)
   Plugin development guide: architecture, interfaces, examples, and extension patterns.
 
 ---

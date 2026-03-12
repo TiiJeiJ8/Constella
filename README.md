@@ -159,7 +159,7 @@ docs/               # 项目文档（使用 / 开发 / 插件）
 * 📘 [EDITOR_GUIDE.md](docs/EDITOR_GUIDE.md)
   编辑器使用与配置指南：画布操作、工具栏、快捷键、导入 / 导出流程。
 
-* 🧩 [PLUGIN_DEVELOPMENT.md](docs/PLUGIN_DEVELOPMENT.md)
+* 🧩 [PLUGIN_DEVELOPMENT_ARCHITECTURE_3.0.md](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_3.0.md)
   插件开发指南：插件架构、接口约定、示例与扩展方式。
 
 ---
