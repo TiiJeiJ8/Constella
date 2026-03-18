@@ -74,6 +74,28 @@
 
 </details>
 
+<details>
+<summary> Dark & Light Mode </summary>
+
+![Dark&Light](IMG/dark_theme.jpg)
+![Dark&Light](IMG/light_theme.jpg)
+
+</details>
+
+<details>
+<summary> Room Page </summary>
+
+![Room Page](IMG/roompage.jpg)
+
+</details>
+
+<details>
+<summary> Create Room </summary>
+
+![Create Room](IMG/createroom.jpg)
+
+</details>
+
 ## 📦️ Distribution
 
 ### Run from Source
