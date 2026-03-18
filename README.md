@@ -1,190 +1,140 @@
-# Constella
+<div align="center">
+<h2>Constella</h2>
+<p>面向知识结构化与协作式思维外化的实时协作无限画布前端</p>
 
-[CN](/README.md) | [EN](./README-en.md)
+[中文](./README.md) | [English](./README-en.md) | [后端核心服务](https://github.com/TiiJeiJ8/Constella_CORE) | [编辑器指南](docs/EDITOR_GUIDE.md) | [插件开发](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_3.0.md)
 
-> 一款面向**知识结构化与协作式思维外化**的可自部署实时协作无限画布应用。
+<br />
 
-Constella 致力于解决一个核心问题：
+[![Stars](https://img.shields.io/github/stars/TiiJeiJ8/constella?style=flat)](https://github.com/TiiJeiJ8/constella/stargazers)
+[![Issues](https://img.shields.io/github/issues/TiiJeiJ8/constella)](https://github.com/TiiJeiJ8/constella/issues)
+[![License](https://img.shields.io/github/license/TiiJeiJ8/constella)](./LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/TiiJeiJ8/constella)](https://github.com/TiiJeiJ8/constella/commits)
 
-**当思考不再是线性的文本，而是不断生长、分叉、连接的结构时，我们该如何记录、组织并与他人协作？**
-
-本仓库为 **Constella 前端代码库**，后端核心服务位于：
-👉 [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE)
-
-项目基于 **Vue 3 + TypeScript + Vite** 构建，支持 **Web 浏览器** 与 **Electron 桌面端**，强调：
-
-* 数据可控（自部署）
-* 结构优先（无限画布 + 节点连接）
-* 协作原生（实时同步，而非事后合并）
-
----
+</div>
 
 ![DEMO](IMG/demo.gif)
 
----
+## 说明
 
-## ✨ 为什么是 Constella
+> [!IMPORTANT]
+>
+> ### 项目定位
+>
+> - 本仓库是 Constella 的前端工程（Web + Electron），后端请使用 [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE)
+> - Constella 关注“结构化思维表达”，而不是线性文档编辑
+> - 当前项目仍在持续迭代，欢迎通过 Issue 和 PR 参与改进
 
-市面上已经有很多优秀的工具，但它们往往在以下维度存在取舍：
+- 技术栈：Vue 3 + TypeScript + Vite + Electron + Yjs
+- 运行形态：Web 浏览器与 Electron 桌面端
+- 协作能力：基于 CRDT（Yjs + y-websocket）实现多人实时同步
+- 配置方式：首次启动后在首页输入后端地址，地址将持久化到本地
 
-* 本地工具 → 协作能力弱
-* 协作工具 → 数据与部署不可控
-* 白板工具 → 结构表达能力有限
-* 知识工具 → 思维结构化支持不足
+## 🧑‍💻 开发
 
-Constella 的目标不是替代它们，而是探索一个不同方向：
+### 快速开始
 
-> **以“结构化思维”为核心的一体化、可扩展、可协作无限画布系统。**
+1. 确保 Node.js 版本建议 >= 20
+2. 安装依赖：`npm install`
+3. 启动 Web 开发环境：`npm run dev`
+4. 启动 Electron 开发模式：`npm run dev:electron`
+5. 构建 Web 产物：`npm run build`
 
----
+### 构建桌面端
 
-## ✨ 核心特性
+- 执行 `npm run build:electron`
+- 构建输出目录在 `dist-electron/`
 
-* 🧭 **无限画布（Infinite Canvas）**
-  节点 / 连线 / 自由拖拽 / 缩放，用空间表达复杂结构，而非线性文档。
+### 协作地址配置
 
-* 🤝 **实时协作（Real-time Collaboration）**
-  基于 **Yjs + y-websocket**，支持多人实时同步编辑（当前以局域网/自部署场景为主）。
+- 默认根据首页输入的后端地址自动推导 WebSocket 地址
+- 如需手动指定，可在 `.env.development` 中配置：`VITE_WS_URL=localhost:3000`
 
-* 🧩 **插件化节点系统**
-  节点类型并非写死，支持 Markdown、图片、文本等内容插件，便于持续扩展。
+## 👀 Demo
 
-* 🔐 **房间与权限模型**
-  支持公开 / 私有房间，为协作与分享提供基础控制能力。
+- 录屏演示：见上方 `IMG/demo.gif`
+- 本地体验：运行 `npm run dev` 后访问终端输出地址
 
-* 🌍 **国际化与主题系统**
-  中 / 英双语，暗色 / 亮色主题切换。
+## 🎉 功能
 
-* 💾 **本地持久化与断线重连**
-  IndexedDB / Electron Store，短暂断线不影响编辑状态。
+- 🧭 无限画布：节点、连线、拖拽、缩放
+- 🤝 实时协作：多人同步编辑与状态共享
+- 🧩 插件化节点系统：Text / Markdown / Image / Hyperlink 等
+- 🔐 房间机制：公开 / 私有房间基础能力
+- 🌍 国际化与主题：中英文切换、亮色 / 暗色
+- 💾 数据持久化：IndexedDB（Web）+ electron-store（桌面端）
 
----
+## 🖼️ 界面展示
 
-## 🧱 技术栈
+<details>
+<summary> 协作画布演示 </summary>
 
-* **框架**：Vue 3 + Composition API
-* **语言**：TypeScript
-* **构建工具**：Vite
-* **协作引擎**：Yjs
-* **通信**：WebSocket（y-websocket）
-* **桌面端**：Electron
+![DEMO](IMG/demo.gif)
 
-该项目并非 Demo 级练习，而是围绕 **状态同步、数据一致性、插件扩展与跨端复用** 等问题进行的完整工程实践。
+</details>
 
----
+## 📦️ 获取
 
-## 🖥️ 运行环境与兼容性
-
-* **浏览器**：Chromium 内核 / Firefox（现代浏览器）
-* **桌面端**：Electron（Windows / macOS / Linux）
-
----
-
-## 🚀 快速开始
-
-将前端和后端放置于同一目录下（建议分别命名为 `web` 和 `backend`）
-
-### 1. 安装依赖
+### 源码运行
 
 ```bash
+git clone https://github.com/TiiJeiJ8/constella.git
 cd web
 npm install
-```
-
-### 2. 启动 Web 开发环境
-
-```bash
 npm run dev
 ```
 
-### 3. 启动 Electron 开发模式
+### 打包构建
 
-```bash
-npm run dev:electron
-```
+- Web 产物：`npm run build`，输出至 `dist/`
+- Electron 客户端：`npm run build:electron`
 
----
+### 部署建议
 
-## 📁 核心目录结构
+- 前端可作为静态站点部署（Nginx / Caddy / 任意静态托管）
+- 后端服务请参考 [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE)
+
+## 📁 项目结构
 
 ```text
 src/
 ├─ components/      # 通用 UI 组件
-├─ plugins/         # 内容插件（Markdown / Image / Text 等）
-├─ services/        # API、鉴权、Yjs 协作相关服务
-├─ composables/     # 组合式逻辑（Hooks）
-├─ locales/         # i18n 国际化资源
-├─ views/           # 页面级视图
+├─ plugins/         # 节点插件
+├─ composables/     # 组合式逻辑
+├─ services/        # API 与协作服务
+├─ locales/         # 国际化资源
+├─ views/           # 页面视图
 └─ assets/          # 静态资源
 
-public/             # 公共静态资源
-docs/               # 项目文档（使用 / 开发 / 插件）
+electron/           # Electron 主进程与 preload
+public/             # 公共资源
+docs/               # 使用与开发文档
 ```
 
----
+## 🤝 贡献
 
-## ⚙️ 配置要点
+欢迎参与贡献：
 
-### 后端地址
+- 提交 Issue 报告问题或提出建议
+- 提交 PR 改进功能、文档或测试
+- Star / Fork 支持项目长期迭代
 
-* 通过环境变量配置，或在 `src/services/api.ts` 中设置 `baseUrl`
+<a href="https://github.com/TiiJeiJ8/constella/graphs/contributors" target="_blank" rel="noopener">
+  <img src="https://contrib.rocks/image?repo=TiiJeiJ8/constella&max=30&anon=1&v=1"
+    alt="Constella contributors"
+    width="650"
+    loading="lazy"
+  />
+</a>
 
-### 本地存储
+## 📢 免责声明
 
-* Web：`localStorage`（access / refresh token、用户信息）
-* Electron：`electron-store`
+本项目处于持续开发阶段，部分功能和接口可能发生调整。请在生产环境使用前完成充分测试与风险评估。
 
-### 国际化（i18n）
+## 📜 开源许可
 
-* 翻译文件位于 `src/locales/`
-* 当前支持中英文切换
+本项目采用 [MIT License](./LICENSE)。
 
----
+## ⭐ Star History
 
-## 🔍 常见场景说明
-
-* **Token 自动刷新**
-  前端内置 refresh token 机制：请求返回 401 时，会尝试刷新并自动重试。
-
-* **私有房间访问**
-  需要登录并携带 Authorization Header；部署时请确保代理（如 Nginx）不会剥离该 Header。
-
-* **协作稳定性**
-  支持断线重连与本地持久化，短时网络异常不会导致数据丢失。
-
----
-
-## 📚 文档与资源
-
-* 📘 [EDITOR_GUIDE.md](docs/EDITOR_GUIDE.md)
-  编辑器使用与配置指南：画布操作、工具栏、快捷键、导入 / 导出流程。
-
-* 🧩 [PLUGIN_DEVELOPMENT_ARCHITECTURE_3.0.md](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_3.0.md)
-  插件开发指南：插件架构、接口约定、示例与扩展方式。
-
----
-
-## 🤝 关于项目状态与贡献
-
-Constella 由学生个人发起并持续开发，目前**尚未达到完全成熟产品级别**，在以下方面仍存在不足：
-
-* 功能覆盖仍在扩展中
-* 协作与权限模型仍有优化空间
-* 部分设计受限于当前个人技术能力
-
-但也正因如此：
-
-> **如果你对协作系统、知识工具、编辑器架构或 Yjs 感兴趣，非常欢迎参与共建。**
-
-你可以：
-
-* ⭐ Star 项目表示支持
-* 🛠 Fork 并进行实验或二次开发
-* 🧩 提交 PR，改进现有实现或新增插件
-* 💬 提出 Issue，讨论设计与方向
-
----
-
-## 📄 License
-
-MIT
+[![Star History Chart](https://api.star-history.com/svg?repos=TiiJeiJ8/constella&type=Date)](https://star-history.com/#TiiJeiJ8/constella&Date)

@@ -1,189 +1,140 @@
-# Constella
+<div align="center">
+<h2>Constella Web</h2>
+<p>A real-time collaborative infinite canvas frontend for structured knowledge and externalized thinking</p>
 
-[CN](/README.md) | [EN](./README-en.md)
+[中文](./README.md) | [English](./README-en.md) | [Backend Core](https://github.com/TiiJeiJ8/Constella_CORE) | [Editor Guide](docs/EDITOR_GUIDE.md) | [Plugin Development](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_3.0.md)
 
-> A self-hostable, real-time collaborative infinite canvas designed for **knowledge structuring and externalized thinking**.
+<br />
 
-Constella explores a core question:
+[![Stars](https://img.shields.io/github/stars/TiiJeiJ8/constella?style=flat)](https://github.com/TiiJeiJ8/constella/stargazers)
+[![Issues](https://img.shields.io/github/issues/TiiJeiJ8/constella)](https://github.com/TiiJeiJ8/constella/issues)
+[![License](https://img.shields.io/github/license/TiiJeiJ8/constella)](./LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/TiiJeiJ8/constella)](https://github.com/TiiJeiJ8/constella/commits)
 
-**When thinking is no longer linear text, but a growing structure of nodes, branches, and connections, how should we capture, organize, and collaborate on it?**
-
-This repository contains the **frontend codebase** of Constella. The backend core service is available at:
-👉 [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE)
-
-Built with **Vue 3 + TypeScript + Vite**, Constella runs on both **Web browsers** and **Electron desktop**, with a strong emphasis on:
-
-* Data ownership through self-hosting
-* Structure-first expression via an infinite canvas
-* Collaboration as a first-class capability, not an afterthought
-
----
+</div>
 
 ![DEMO](IMG/demo.gif)
 
----
+## Overview
 
-## ✨ Why Constella
+> [!IMPORTANT]
+>
+> ### Project Scope
+>
+> - This repository is the frontend of Constella (Web + Electron). The backend is [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE)
+> - Constella focuses on structure-first knowledge expression instead of linear documents
+> - The project is actively evolving; contributions via Issues and PRs are welcome
 
-Many existing tools (Notion, Obsidian, traditional whiteboards) make trade-offs:
+- Stack: Vue 3 + TypeScript + Vite + Electron + Yjs
+- Runtime: modern browsers and Electron desktop
+- Collaboration: CRDT-based real-time sync via Yjs + y-websocket
+- Setup: backend URL is entered on the home page and persisted locally
 
-* Local-first tools → weak real-time collaboration
-* Collaborative platforms → limited data ownership or deployment control
-* Whiteboard tools → poor support for structured knowledge
+## 🧑‍💻 Development
 
-Constella does not aim to replace them. Instead, it explores a different direction:
+### Quick Start
 
-> **A structure-centric, extensible, and collaborative infinite canvas system.**
+1. Ensure Node.js (recommended >= 20)
+2. Install dependencies: `npm install`
+3. Start Web dev server: `npm run dev`
+4. Start Electron dev mode: `npm run dev:electron`
+5. Build Web assets: `npm run build`
 
----
+### Build Desktop Package
 
-## ✨ Core Features
+- Run `npm run build:electron`
+- Build artifacts are generated in `dist-electron/`
 
-* 🧭 **Infinite Canvas**
-  Nodes, edges, free dragging, and zooming — expressing complex structures spatially rather than as linear documents.
+### Collaboration Address Configuration
 
-* 🤝 **Real-Time Collaboration**
-  Powered by **Yjs + y-websocket**, enabling multi-user synchronous editing (currently focused on LAN / self-hosted scenarios).
+- WebSocket URL is derived automatically from your backend URL
+- You can override it in `.env.development` with `VITE_WS_URL=localhost:3000`
 
-* 🧩 **Plugin-Based Node System**
-  Node types are not hard-coded. Markdown, images, text, and more are implemented as extensible plugins.
+## 👀 Demo
 
-* 🔐 **Rooms & Permission Model**
-  Supports public and private rooms, providing a foundation for controlled collaboration and sharing.
+- Recorded demo: `IMG/demo.gif`
+- Local preview: run `npm run dev` and open the URL shown in terminal
 
-* 🌍 **Internationalization & Theming**
-  Built-in i18n (Chinese / English) with dark and light themes.
+## 🎉 Features
 
-* 💾 **Local Persistence & Reconnection**
-  IndexedDB and Electron Store ensure data durability and resilience against short network interruptions.
+- 🧭 Infinite canvas: nodes, edges, free dragging, zooming
+- 🤝 Real-time collaboration: multi-user synchronous editing
+- 🧩 Plugin-based node system: Text / Markdown / Image / Hyperlink and more
+- 🔐 Room model: public/private rooms foundation
+- 🌍 i18n and theming: Chinese/English + light/dark
+- 💾 Persistence: IndexedDB (Web) + electron-store (desktop)
 
----
+## 🖼️ Screenshots
 
-## 🧱 Tech Stack
+<details>
+<summary> Canvas Collaboration Demo </summary>
 
-* **Framework**: Vue 3 + Composition API
-* **Language**: TypeScript
-* **Build Tooling**: Vite
-* **Collaboration Engine**: Yjs
-* **Transport**: WebSocket (y-websocket)
-* **Desktop Runtime**: Electron
+![DEMO](IMG/demo.gif)
 
-This is not a demo-scale project, but a holistic engineering practice centered around **state synchronization, consistency, extensibility, and cross-platform reuse**.
+</details>
 
----
+## 📦️ Distribution
 
-## 🖥️ Runtime & Compatibility
-
-* **Browsers**: Modern Chromium-based browsers and Firefox
-* **Desktop**: Electron (Windows / macOS / Linux)
-
----
-
-## 🚀 Getting Started
-
-Place the frontend and backend in the same directory (recommended to name them `web` and `backend` respectively).
-
-### 1. Install dependencies
+### Run from Source
 
 ```bash
+git clone https://github.com/TiiJeiJ8/constella.git
 cd web
 npm install
-```
-
-### 2. Start Web development server
-
-```bash
 npm run dev
 ```
 
-### 3. Start Electron development mode
+### Build Artifacts
 
-```bash
-npm run dev:electron
-```
+- Web build: `npm run build` outputs to `dist/`
+- Electron package: `npm run build:electron`
 
----
+### Deployment Notes
+
+- Frontend can be deployed as static assets (Nginx/Caddy/any static hosting)
+- For backend setup, refer to [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE)
 
 ## 📁 Project Structure
 
 ```text
 src/
 ├─ components/      # Shared UI components
-├─ plugins/         # Content plugins (Markdown / Image / Text, etc.)
-├─ services/        # API, authentication, Yjs collaboration services
-├─ composables/     # Reusable composition logic (hooks)
+├─ plugins/         # Node plugins
+├─ composables/     # Reusable composition logic
+├─ services/        # API and collaboration services
 ├─ locales/         # i18n resources
 ├─ views/           # Page-level views
 └─ assets/          # Static assets
 
-public/             # Public static files
-docs/               # Documentation (usage / development / plugins)
+electron/           # Electron main/preload process
+public/             # Public assets
+docs/               # Usage and development docs
 ```
 
----
+## 🤝 Contributing
 
-## ⚙️ Configuration Notes
+Contributions are welcome:
 
-### Backend Endpoint
+- Open Issues for bugs, discussions, and proposals
+- Submit PRs for features, fixes, docs, and tests
+- Support long-term iteration via Stars and Forks
 
-* Configurable via environment variables or directly in `src/services/api.ts`
+<a href="https://github.com/TiiJeiJ8/constella/graphs/contributors" target="_blank" rel="noopener">
+  <img src="https://contrib.rocks/image?repo=TiiJeiJ8/constella&max=30&anon=1&v=1"
+    alt="Constella contributors"
+    width="650"
+    loading="lazy"
+  />
+</a>
 
-### Local Storage
+## 📢 Disclaimer
 
-* Web: `localStorage` (access token, refresh token, user metadata)
-* Electron: `electron-store`
+This project is under active development. Some features and interfaces may change. Please evaluate and test thoroughly before production use.
 
-### Internationalization (i18n)
+## 📜 License
 
-* Translation files are located in `src/locales/`
-* Currently supports Chinese and English
+This project is licensed under [MIT License](./LICENSE).
 
----
+## ⭐ Star History
 
-## 🔍 Common Scenarios
-
-* **Automatic Token Refresh**
-  The frontend implements a refresh-token mechanism. When a request returns 401, it attempts to refresh and retry automatically.
-
-* **Private Room Access**
-  Authentication is required with an Authorization header. Ensure your proxy (e.g., Nginx) does not strip this header.
-
-* **Collaboration Stability**
-  Supports reconnection and local persistence; brief network interruptions do not cause data loss.
-
----
-
-## 📚 Documentation
-
-* 📘 [EDITOR_GUIDE.md](docs/EDITOR_GUIDE.md)
-  Editor usage and configuration guide: canvas operations, toolbars, shortcuts, and import/export workflows.
-
-* 🧩 [PLUGIN_DEVELOPMENT_ARCHITECTURE_3.0.md](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_3.0.md)
-  Plugin development guide: architecture, interfaces, examples, and extension patterns.
-
----
-
-## 🤝 Project Status & Contributions
-
-Constella is an actively developed project initiated by a student developer. It is **not yet a fully mature, production-grade system**, and there are known limitations:
-
-* Feature coverage is still expanding
-* Collaboration and permission models can be improved
-* Some design decisions are constrained by current experience and resources
-
-That said:
-
-> **If you are interested in collaborative systems, knowledge tools, editor architecture, or Yjs-based synchronization, contributions are highly welcome.**
-
-You are encouraged to:
-
-* ⭐ Star the project to show support
-* 🛠 Fork it for experiments or derivative work
-* 🧩 Submit pull requests to improve or extend functionality
-* 💬 Open issues to discuss ideas, designs, or problems
-
----
-
-## 📄 License
-
-MIT
+[![Star History Chart](https://api.star-history.com/svg?repos=TiiJeiJ8/constella&type=Date)](https://star-history.com/#TiiJeiJ8/constella&Date)
