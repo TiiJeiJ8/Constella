@@ -1,5 +1,6 @@
 <div align="center">
-<h2>Constella</h2>
+<img alt="logo" height="100" width="100" src="public/icon/favicon.png" />
+<h1>Constella</h1>
 <p>面向知识结构化与协作式思维外化的实时协作无限画布前端</p>
 
 [中文](./README.md) | [English](./README-en.md) | [后端核心服务](https://github.com/TiiJeiJ8/Constella_CORE) | [编辑器指南](docs/EDITOR_GUIDE.md) | [插件开发](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_3.0.md)

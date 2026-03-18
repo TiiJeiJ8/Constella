@@ -1,5 +1,6 @@
 <div align="center">
-<h2>Constella Web</h2>
+<img alt="logo" height="100" width="100" src="public/icon/favicon.png" />
+<h1>Constella</h1>
 <p>A real-time collaborative infinite canvas frontend for structured knowledge and externalized thinking</p>
 
 [中文](./README.md) | [English](./README-en.md) | [Backend Core](https://github.com/TiiJeiJ8/Constella_CORE) | [Editor Guide](docs/EDITOR_GUIDE.md) | [Plugin Development](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_3.0.md)
