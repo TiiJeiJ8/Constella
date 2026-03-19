@@ -167,4 +167,10 @@ docs/               # 使用与开发文档
 
 ## ⭐ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=TiiJeiJ8/constella&type=Date)](https://star-history.com/#TiiJeiJ8/constella&Date)
+<a href="https://www.star-history.com/?repos=TiiJeiJ8%2Fconstella&type=timeline&legend=bottom-right">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=TiiJeiJ8/constella&type=timeline&theme=dark&legend=bottom-right" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=TiiJeiJ8/constella&type=timeline&legend=bottom-right" />
+   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=TiiJeiJ8/constella&type=timeline&legend=bottom-right" />
+ </picture>
+</a>
