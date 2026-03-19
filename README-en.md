@@ -96,6 +96,13 @@
 
 </details>
 
+<details>
+<summary> Editor Demo </summary>
+
+![Editor Demo](IMG/editorwindow.jpg)
+
+</details>
+
 ## 📦️ Distribution
 
 ### Run from Source

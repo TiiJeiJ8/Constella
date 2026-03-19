@@ -96,6 +96,13 @@
 
 </details>
 
+<details>
+<summary> 编辑器演示 </summary>
+
+![Editor Demo](IMG/editorwindow.jpg)
+
+</details>
+
 ## 📦️ 获取
 
 ### 源码运行
