@@ -24,12 +24,22 @@
       "dist/**",
       "dist-electron/**",
       "electron/**",
-      "../server/dist/**"
+      "../server/build/**"
     ],
     "extraResources": [
       {
-        "from": "../server/dist",
-        "to": "server"
+        "from": "../server/build",
+        "to": "server",
+        "filter": [
+          "!node_modules"
+        ]
+      },
+      {
+        "from": "../server/build/node_modules",
+        "to": "server/node_modules",
+        "filter": [
+          "!.bin"
+        ]
       }
     ],
     "win": {

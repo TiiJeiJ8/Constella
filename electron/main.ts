@@ -81,33 +81,50 @@ function startBackendServer() {
     const logStream = fs.createWriteStream(logFile, { flags: 'a' })
 
     let serverPath: string
+    let command: string
+    let args: string[]
+    let serverCwd: string
+
     if (isDev) {
         // 开发环境：直接运行后端项目（需要 npm run build:server）
         const parentDir = path.resolve(__dirname, '../../server')
         serverPath = path.join(parentDir, 'dist', 'server.js')
+        command = 'node'
+        args = [serverPath]
+        serverCwd = parentDir
     } else {
-        // 生产环境：从打包的资源目录运行
-        // electron-builder extraResources 将 server/dist 内容复制到 resources/server，不包含 dist 子文件夹
-        serverPath = path.join(process.resourcesPath, 'server', 'server.js')
+        // 生产环境：先检查是否有 pkg 打包的 .exe，否则用 node 运行 .js
+        const serverExePath = path.join(process.resourcesPath, 'server', 'constella-server.exe')
+        const serverJsPath = path.join(process.resourcesPath, 'server', 'server.js')
+        serverCwd = path.join(process.resourcesPath, 'server')
+
+        if (fs.existsSync(serverExePath)) {
+            // 使用 pkg 打包的可执行文件
+            serverPath = serverExePath
+            command = serverExePath
+            args = []
+        } else if (fs.existsSync(serverJsPath)) {
+            // 降级：使用 Node.js 运行 JavaScript
+            serverPath = serverJsPath
+            command = 'node'
+            args = [serverJsPath]
+        } else {
+            console.error('[Electron] Backend executable not found at:', serverExePath)
+            console.error('[Electron] Backend script not found at:', serverJsPath)
+            return
+        }
     }
 
     console.log('[Electron] ========== Backend Server Starting ==========')
     console.log('[Electron] Environment:', isDev ? 'development' : 'production')
     console.log('[Electron] Server Path:', serverPath)
+    console.log('[Electron] Server Command:', command)
     console.log('[Electron] App Resources Path:', process.resourcesPath)
-
-    let serverCwd: string
-    if (isDev) {
-        serverCwd = path.resolve(__dirname, '../../server')
-    } else {
-        serverCwd = path.join(process.resourcesPath, 'server')
-    }
-
     console.log('[Electron] Server Working Directory:', serverCwd)
 
     try {
-        serverProcess = spawn('node', [serverPath], {
-            stdio: isDev ? ['ignore', 'pipe', 'pipe'] : ['ignore', 'pipe', logFile],
+        serverProcess = spawn(command, args, {
+            stdio: ['ignore', 'pipe', 'pipe'],
             detached: false,
             cwd: serverCwd,
             env: {
@@ -125,10 +142,12 @@ function startBackendServer() {
 
         serverProcess.stdout?.on('data', (data) => {
             console.log(`[Backend] ${data}`)
+            if (!isDev) logStream.write(`[Backend] ${data}\n`)
         })
 
         serverProcess.stderr?.on('data', (data) => {
             console.error(`[Backend Error] ${data}`)
+            if (!isDev) logStream.write(`[Backend Error] ${data}\n`)
         })
 
         serverProcess.on('error', (error) => {
