@@ -47,21 +47,21 @@
                     <div class="server-card">
                         <label class="input-label">{{ t('home.serverInput.label') }}</label>
                         <div class="input-group">
-                            <input 
-                                v-model="serverUrl" 
-                                type="text" 
+                            <input
+                                v-model="serverUrl"
+                                type="text"
                                 class="server-input"
-                                :class="{ 
-                                    'error': connectionError, 
+                                :class="{
+                                    'error': connectionError,
                                     'success': connectionSuccess,
-                                    'disabled': isConnecting 
+                                    'disabled': isConnecting
                                 }"
-                                :placeholder="t('home.serverInput.placeholder')" 
+                                :placeholder="t('home.serverInput.placeholder')"
                                 :disabled="isConnecting"
-                                @keyup.enter="connectToServer" 
+                                @keyup.enter="connectToServer"
                             />
                             <button 
-                                class="connect-btn" 
+                                class="connect-btn"
                                 :class="{ 'connecting': isConnecting, 'success': connectionSuccess }"
                                 @click="isConnecting ? cancelConnection() : connectToServer()"
                                 :disabled="connectionSuccess"
