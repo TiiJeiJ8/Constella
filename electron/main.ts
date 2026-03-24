@@ -165,13 +165,18 @@ function startBackendServer() {
 }
 
 app.whenReady().then(() => {
-    // 启动后端服务器
-    startBackendServer()
+    // 只在未设置 SKIP_BACKEND 时启动后端服务器
+    if (process.env.SKIP_BACKEND !== 'true') {
+        startBackendServer()
+    } else {
+        console.log('[Electron] Backend startup skipped (SKIP_BACKEND=true)')
+    }
 
-    // 等待后端启动后再创建窗口
+    // 等待后端启动后再创建窗口（如果启动了后端则延迟，否则立即创建）
+    const delay = process.env.SKIP_BACKEND === 'true' ? 0 : 1000
     setTimeout(() => {
         createWindow()
-    }, 1000)
+    }, delay)
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
