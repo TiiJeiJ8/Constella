@@ -1,19 +1,21 @@
 <template>
     <div class="home-view">
-        <!-- 窗口控制组件 -->
         <WindowControls />
 
-        <!-- 功能按钮组 -->
-        <div class="control-buttons" :class="{ 'no-electron': !isElectron, 'show': !showIntro }">
+        <div class="control-buttons" :class="{ 'no-electron': !isElectron, show: !showIntro }">
             <button class="ctrl-btn github-btn" @click="openGithub" :title="t('home.footer.github')">
                 <LogoGithubIcon />
             </button>
-            <button class="ctrl-btn theme-btn" @click="toggleTheme" :title="isDark ? t('theme.light') : t('theme.dark')">
+            <button
+                class="ctrl-btn theme-btn"
+                @click="toggleTheme"
+                :title="isDark ? t('theme.light') : t('theme.dark')"
+            >
                 <SunnyIcon v-if="!isDark" />
                 <MoonIcon v-else />
             </button>
             <button class="ctrl-btn lang-btn" @click="toggleLanguage" :title="t('language.switch')">
-                <span class="lang-text">{{ currentLocale === 'zh-CN' ? '中' : 'EN' }}</span>
+                <span class="lang-text">{{ currentLocale === 'zh-CN' ? '中文' : 'EN' }}</span>
             </button>
             <button class="ctrl-btn info-btn" @click="showInfo" :title="t('home.footer.info')">
                 <HelpCircleIcon />
@@ -23,79 +25,145 @@
             </button>
         </div>
 
-        <!-- 入场动画容器 -->
         <div class="intro-animation" :class="{ 'fade-out': !showIntro }" style="user-select: none;">
             <div class="logo-text">
-                <span v-for="(char, index) in logoChars" :key="index" class="char"
-                    :style="{ animationDelay: `${index * 0.1}s` }">
+                <span
+                    v-for="(char, index) in logoChars"
+                    :key="index"
+                    class="char"
+                    :style="{ animationDelay: `${index * 0.1}s` }"
+                >
                     {{ char }}
                 </span>
             </div>
         </div>
 
-        <!-- 主内容 -->
-        <main class="main-content" :class="{ 'show': !showIntro }">
+        <main class="main-content" :class="{ show: !showIntro }">
             <Transition name="lang-fade" mode="out-in">
                 <div :key="currentLocale" class="content-wrapper">
-                    <!-- 标题区 -->
                     <div class="header-section">
                         <h1 class="title" style="user-select: none;">{{ t('home.title') }}</h1>
                         <p class="subtitle" style="user-select: none;">{{ t('home.subtitle') }}</p>
                     </div>
 
-                    <!-- 服务器连接卡片 -->
-                    <div class="server-card">
-                        <label class="input-label">{{ t('home.serverInput.label') }}</label>
-                        <div class="input-group">
-                            <input
-                                v-model="serverUrl"
-                                type="text"
-                                class="server-input"
-                                :class="{
-                                    'error': connectionError,
-                                    'success': connectionSuccess,
-                                    'disabled': isConnecting
-                                }"
-                                :placeholder="t('home.serverInput.placeholder')"
-                                :disabled="isConnecting"
-                                @keyup.enter="connectToServer"
-                            />
-                            <button 
-                                class="connect-btn"
-                                :class="{ 'connecting': isConnecting, 'success': connectionSuccess }"
-                                @click="isConnecting ? cancelConnection() : connectToServer()"
-                                :disabled="connectionSuccess"
-                            >
-                                <span v-if="isConnecting" class="loading-spinner"></span>
-                                {{ isConnecting ? t('home.serverInput.cancel') : connectionSuccess ? t('home.serverInput.success') : t('home.serverInput.connect') }}
-                            </button>
+                    <div ref="serverShellRef" class="server-shell">
+                        <div class="server-card">
+                            <label class="input-label">{{ t('home.serverInput.label') }}</label>
+                            <div class="input-group">
+                                <input
+                                    v-model="serverUrl"
+                                    type="text"
+                                    class="server-input"
+                                    :class="{
+                                        error: Boolean(connectionError),
+                                        success: connectionSuccess,
+                                        disabled: isConnecting
+                                    }"
+                                    :placeholder="t('home.serverInput.placeholder')"
+                                    :disabled="isConnecting"
+                                    @keyup.enter="connectToServer()"
+                                />
+                                <button
+                                    class="connect-btn"
+                                    :class="{ connecting: isConnecting, success: connectionSuccess }"
+                                    @click="isConnecting ? cancelConnection() : connectToServer()"
+                                    :disabled="connectionSuccess"
+                                >
+                                    <span v-if="isConnecting" class="loading-spinner"></span>
+                                    {{
+                                        isConnecting
+                                            ? t('home.serverInput.cancel')
+                                            : connectionSuccess
+                                              ? t('home.serverInput.success')
+                                              : t('home.serverInput.connect')
+                                    }}
+                                </button>
+                            </div>
+
+                            <Transition name="fade">
+                                <div v-if="connectionError" class="error-message">
+                                    {{ connectionError }}
+                                </div>
+                            </Transition>
+
+                            <Transition name="fade">
+                                <div v-if="connectionSuccess" class="success-message">
+                                    {{ t('home.serverInput.success') }}
+                                </div>
+                            </Transition>
                         </div>
-                        
-                        <!-- 错误提示 -->
-                        <Transition name="fade">
-                            <div v-if="connectionError" class="error-message">
-                                {{ connectionError }}
+
+                        <div class="discovery-ribbon" @click="clearDiscoverySelection">
+                            <div class="discovery-ribbon-header">
+                                <div class="discovery-ribbon-title">
+                                    <span class="discovery-label">{{ discoveryText.label }}</span>
+                                    <span class="discovery-summary">{{ discoveryCountText }}</span>
+                                </div>
+                                <button
+                                    v-if="supportsLanDiscovery"
+                                    class="refresh-btn compact"
+                                    :disabled="isDiscovering || isConnecting"
+                                    @click.stop="refreshDiscoveredServers"
+                                >
+                                    <span v-if="isDiscovering" class="loading-spinner small"></span>
+                                    {{ discoveryText.refresh }}
+                                </button>
                             </div>
-                        </Transition>
-                        
-                        <!-- 成功提示 -->
-                        <Transition name="fade">
-                            <div v-if="connectionSuccess" class="success-message">
-                                {{ t('home.serverInput.success') }}
+
+                            <Transition name="fade">
+                                <div v-if="discoveryError" class="error-message compact-message">
+                                    {{ discoveryError }}
+                                </div>
+                            </Transition>
+
+                            <div v-if="supportsLanDiscovery && discoveredServers.length > 0" class="discovery-lane" @click.stop>
+                                <button
+                                    v-for="server in discoveredServers"
+                                    :key="server.id"
+                                    class="discovery-pill"
+                                    :class="{ active: selectedDiscoveryId === server.id || normalizedInputUrl === server.url }"
+                                    :disabled="isConnecting"
+                                    @click.stop="selectDiscoveredServer(server)"
+                                    @dblclick.stop="connectDiscoveredServer(server)"
+                                >
+                                    <span class="discovery-pill-name">{{ server.name }}</span>
+                                    <span v-if="server.version" class="discovery-pill-version">{{ server.version }}</span>
+                                </button>
                             </div>
-                        </Transition>
+
+                            <Transition name="fade">
+                                <div v-if="selectedServer" class="selected-server-card" @click.stop>
+                                    <div class="selected-server-title-row">
+                                        <span class="selected-server-name">{{ selectedServer.name }}</span>
+                                        <span v-if="selectedServer.version" class="discovery-badge">{{ selectedServer.version }}</span>
+                                    </div>
+                                    <div class="selected-server-url">{{ selectedServer.url }}</div>
+                                    <div class="selected-server-meta">
+                                        <span>{{ selectedServer.host }}:{{ selectedServer.port }}</span>
+                                        <span>{{ selectedServer.instanceId }}</span>
+                                    </div>
+                                </div>
+                            </Transition>
+
+                            <div v-if="supportsLanDiscovery && discoveredServers.length > 0" class="discovery-lane-hint">
+                                {{ discoveryText.hint }}
+                            </div>
+
+                            <div v-else class="discovery-empty">
+                                {{ discoveryEmptyText }}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </Transition>
         </main>
 
-        <!-- 设置面板 -->
         <SettingsPanel v-model="showSettings" />
     </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
     SettingIcon,
@@ -104,42 +172,145 @@ import {
     HelpCircleIcon,
     LogoGithubIcon
 } from 'tdesign-icons-vue-next'
-import SettingsPanel from '@/components/base/SettingsPanel.vue'
-import WindowControls from '@/components/base/WindowControls.vue'
-import { apiService } from '@/services/api'
-import { handleApiError } from '@/utils/errorHandler'
+import SettingsPanel from '../components/base/SettingsPanel.vue'
+import WindowControls from '../components/base/WindowControls.vue'
+import { apiService } from '../services/api'
+import { handleApiError } from '../utils/errorHandler'
+
+interface DiscoveredServer {
+    id: string
+    name: string
+    url: string
+    host: string
+    port: number
+    apiPrefix: string
+    websocketPath: string
+    instanceId: string
+    version: string
+    addresses: string[]
+    discoveredAt: string
+}
+
+interface DiscoveryText {
+    refresh: string
+    searching: string
+    empty: string
+    desktopOnly: string
+    quickConnect: string
+    failed: string
+    label: string
+    countSuffix: string
+    hint: string
+}
+
+interface ElectronApi {
+    minimize: () => void
+    toggleMaximize: () => void
+    close: () => void
+    openExternal: (url: string) => void
+    discoverLanServers: (timeoutMs?: number) => Promise<DiscoveredServer[]>
+}
+
+const DISCOVERY_TIMEOUT_MS = 1800
+
+const ZH_DISCOVERY_TEXT: DiscoveryText = {
+    refresh: '刷新',
+    searching: '正在搜索附近服务器...',
+    empty: '暂未在当前局域网中发现可用的 Constella 服务器。',
+    desktopOnly: '局域网自动发现仅在桌面端可用，你仍然可以手动输入服务器地址连接。',
+    quickConnect: '快速连接',
+    failed: '扫描局域网失败，请稍后重试。',
+    label: '局域网发现',
+    countSuffix: '台服务器',
+    hint: '单击查看，双击直连'
+}
+
+const EN_DISCOVERY_TEXT: DiscoveryText = {
+    refresh: 'Refresh',
+    searching: 'Searching nearby servers...',
+    empty: 'No Constella servers were found on this local network yet.',
+    desktopOnly: 'LAN auto-discovery is available in the desktop app. You can still connect manually here.',
+    quickConnect: 'Quick Connect',
+    failed: 'Failed to scan the local network. Please try again.',
+    label: 'LAN Discovery',
+    countSuffix: 'servers',
+    hint: 'Click to preview, double-click to connect'
+}
 
 const { t, locale } = useI18n()
-const emit = defineEmits(['navigate'])
+const emit = defineEmits<{
+    (event: 'navigate', view: string): void
+}>()
 
 const showIntro = ref(true)
 const serverUrl = ref('')
 const logoChars = 'Constella'.split('')
 const isDark = ref(false)
 const showSettings = ref(false)
-const isElectron = ref(!!window.electron)
-
-// 连接状态
 const isConnecting = ref(false)
 const connectionError = ref('')
 const connectionSuccess = ref(false)
+const discoveredServers = ref<DiscoveredServer[]>([])
+const isDiscovering = ref(false)
+const discoveryError = ref('')
+const selectedDiscoveryId = ref('')
+
+const electronApi = (window as Window & { electron?: ElectronApi }).electron
 
 const currentLocale = computed(() => locale.value)
+const isElectron = computed(() => Boolean(electronApi))
+const supportsLanDiscovery = computed(() => Boolean(electronApi?.discoverLanServers))
+const normalizedInputUrl = computed(() => serverUrl.value.trim().replace(/\/$/, ''))
+const discoveryText = computed<DiscoveryText>(() =>
+    locale.value === 'zh-CN' ? ZH_DISCOVERY_TEXT : EN_DISCOVERY_TEXT
+)
+const discoveryEmptyText = computed(() => {
+    if (!supportsLanDiscovery.value) {
+        return discoveryText.value.desktopOnly
+    }
+
+    if (isDiscovering.value) {
+        return discoveryText.value.searching
+    }
+
+    return discoveryText.value.empty
+})
+const discoveryCountText = computed(() => {
+    if (!supportsLanDiscovery.value) {
+        return discoveryText.value.desktopOnly
+    }
+
+    if (isDiscovering.value) {
+        return discoveryText.value.searching
+    }
+
+    if (discoveredServers.value.length === 0) {
+        return discoveryText.value.empty
+    }
+
+    return locale.value === 'zh-CN'
+        ? `已发现 ${discoveredServers.value.length} ${discoveryText.value.countSuffix}`
+        : `${discoveredServers.value.length} ${discoveryText.value.countSuffix} found`
+})
+const selectedServer = computed(() => {
+    return discoveredServers.value.find((server) => server.id === selectedDiscoveryId.value) || null
+})
 
 onMounted(() => {
-    // 入场动画持续 2 秒后淡出
     setTimeout(() => {
         showIntro.value = false
     }, 2000)
-    
-    // 读取主题设置状态
+
     const savedTheme = localStorage.getItem('theme') || 'light'
     isDark.value = savedTheme === 'dark'
-    
-    // 加载保存的服务器地址
+
     const savedServerUrl = localStorage.getItem('serverUrl')
     if (savedServerUrl) {
         serverUrl.value = savedServerUrl
+    }
+
+    if (supportsLanDiscovery.value) {
+        void refreshDiscoveredServers()
     }
 })
 
@@ -158,8 +329,7 @@ function toggleTheme() {
     const theme = isDark.value ? 'dark' : 'light'
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
-    
-    // 同步更新 settings 中的主题设置
+
     const settings = JSON.parse(localStorage.getItem('settings') || '{}')
     settings.theme = theme
     localStorage.setItem('settings', JSON.stringify(settings))
@@ -167,79 +337,122 @@ function toggleTheme() {
 
 function openGithub() {
     const url = 'https://github.com/TiiJeiJ8/constella'
-    if (window.electron?.openExternal) {
-        window.electron.openExternal(url)
-    } else {
-        window.open(url, '_blank')
+
+    if (electronApi?.openExternal) {
+        electronApi.openExternal(url)
+        return
+    }
+
+    window.open(url, '_blank')
+}
+
+async function refreshDiscoveredServers() {
+    if (!electronApi?.discoverLanServers) {
+        return
+    }
+
+    discoveryError.value = ''
+    isDiscovering.value = true
+
+    try {
+        discoveredServers.value = await electronApi.discoverLanServers(DISCOVERY_TIMEOUT_MS)
+        if (
+            selectedDiscoveryId.value &&
+            !discoveredServers.value.some((server) => server.id === selectedDiscoveryId.value)
+        ) {
+            selectedDiscoveryId.value = ''
+        }
+    } catch (error) {
+        console.error('Failed to discover LAN servers:', error)
+        discoveryError.value = discoveryText.value.failed
+        discoveredServers.value = []
+    } finally {
+        isDiscovering.value = false
     }
 }
 
-async function connectToServer() {
-    // 验证输入
-    if (!serverUrl.value.trim()) {
+function selectDiscoveredServer(server: DiscoveredServer) {
+    if (selectedDiscoveryId.value === server.id) {
+        // 再次点击同一胶囊，取消选择
+        selectedDiscoveryId.value = ''
+        serverUrl.value = ''
+    } else {
+        // 点击不同胶囊，显示该服务器
+        selectedDiscoveryId.value = server.id
+        serverUrl.value = server.url
+    }
+}
+
+function clearDiscoverySelection() {
+    selectedDiscoveryId.value = ''
+}
+
+async function connectDiscoveredServer(server: DiscoveredServer) {
+    selectDiscoveredServer(server)
+    await connectToServer(server.url)
+}
+
+async function connectToServer(targetUrl?: string) {
+    const rawInput = (targetUrl ?? serverUrl.value).trim()
+
+    if (!rawInput) {
         connectionError.value = t('home.serverInput.errors.empty')
         return
     }
 
-    // 重置状态
     connectionError.value = ''
     connectionSuccess.value = false
     isConnecting.value = true
 
     try {
-        // 规范化 URL
-        let normalizedUrl = serverUrl.value.trim()
-        
-        // 如果没有协议，使用当前页面协议
-        if (!normalizedUrl.match(/^[a-zA-Z][a-zA-Z0-9+.\-]*:\/\//)) {
-            const proto = (typeof window !== 'undefined' && window.location?.protocol) ? window.location.protocol : 'http:'
-            normalizedUrl = proto + '//' + normalizedUrl.replace(/^\/+/, '')
+        let normalizedUrl = rawInput
+
+        if (!normalizedUrl.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//)) {
+            const protocol = window.location?.protocol || 'http:'
+            normalizedUrl = `${protocol}//${normalizedUrl.replace(/^\/+/, '')}`
         }
 
-        // 验证 URL 格式
         try {
-            new URL(normalizedUrl)
+            normalizedUrl = new URL(normalizedUrl).origin
         } catch {
             connectionError.value = t('home.serverInput.errors.invalid')
-            isConnecting.value = false
             return
         }
 
-        // 调用健康检查 API
         const result = await apiService.healthCheck(normalizedUrl)
 
         if (result.success) {
-            // 连接成功
             connectionSuccess.value = true
+            serverUrl.value = normalizedUrl
             apiService.setBaseUrl(normalizedUrl)
-            
-            // 保存服务器地址
             localStorage.setItem('serverUrl', normalizedUrl)
-            
-            // 显示成功提示
+
             setTimeout(() => {
                 connectionSuccess.value = false
-                // 跳转到登录页
                 emit('navigate', 'login')
             }, 1500)
+            return
+        }
+
+        if (result.errorCode) {
+            connectionError.value = handleApiError(result)
+        } else if (result.message?.includes('timeout') || result.message?.includes('Timeout')) {
+            connectionError.value = t('home.serverInput.errors.timeout')
+        } else if (
+            result.message?.includes('reach') ||
+            result.message?.includes('fetch') ||
+            result.message?.includes('NetworkError')
+        ) {
+            connectionError.value = t('home.serverInput.errors.unreachable')
+        } else if (result.message?.includes('cancelled')) {
+            connectionError.value = t('home.serverInput.errors.cancelled')
         } else {
-            // 连接失败，使用错误处理工具获取本地化的错误消息
-            if (result.errorCode) {
-                // 如果有错误码，使用错误处理工具
-                connectionError.value = handleApiError(result)
-            } else if (result.message?.includes('timeout') || result.message?.includes('Timeout')) {
-                connectionError.value = t('home.serverInput.errors.timeout')
-            } else if (result.message?.includes('reach') || result.message?.includes('fetch') || result.message?.includes('NetworkError')) {
-                connectionError.value = t('home.serverInput.errors.unreachable')
-            } else if (result.message?.includes('cancelled')) {
-                connectionError.value = t('home.serverInput.errors.cancelled')
-            } else {
-                connectionError.value = result.message || t('home.serverInput.errors.unknown')
-            }
+            connectionError.value = result.message || t('home.serverInput.errors.unknown')
         }
     } catch (error) {
         console.error('Connection error:', error)
-        connectionError.value = error.message || t('home.serverInput.errors.unknown')
+        connectionError.value =
+            error instanceof Error ? error.message : t('home.serverInput.errors.unknown')
     } finally {
         isConnecting.value = false
     }
@@ -265,7 +478,6 @@ function showInfo() {
     border-radius: 12px;
 }
 
-/* ==================== 功能按钮区 ==================== */
 .control-buttons {
     position: fixed;
     top: 40px;
@@ -323,13 +535,9 @@ function showInfo() {
     color: #fff;
 }
 
-/* ==================== 入场动画 ==================== */
 .intro-animation {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -368,7 +576,6 @@ function showInfo() {
     }
 }
 
-/* ==================== 主内容 ==================== */
 .main-content {
     width: 100%;
     height: 100%;
@@ -392,7 +599,6 @@ function showInfo() {
     width: 100%;
 }
 
-/* ==================== 语言切换动画 ==================== */
 .lang-fade-enter-active,
 .lang-fade-leave-active {
     transition: all 0.3s ease;
@@ -427,11 +633,10 @@ function showInfo() {
     font-weight: 400;
 }
 
-/* ==================== 服务器连接卡片 ==================== */
 .server-card {
     width: 100%;
-    max-width: 480px;
-    padding: 32px;
+    max-width: 520px;
+    padding: 28px;
     background: var(--bg-secondary);
     border: 1px solid var(--border-light);
     border-radius: 16px;
@@ -439,9 +644,219 @@ function showInfo() {
     transition: all 0.3s ease;
 }
 
+.server-shell {
+    width: 100%;
+    max-width: 520px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
 .server-card:hover {
     box-shadow: var(--shadow-lg);
     transform: translateY(-2px);
+}
+
+.discovery-section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.discovery-ribbon {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.discovery-ribbon-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.discovery-ribbon-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.discovery-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+.discovery-summary {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.refresh-btn {
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border-radius: 999px;
+    padding: 10px 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.refresh-btn:hover:not(:disabled) {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.refresh-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.refresh-btn.compact {
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+}
+
+.discovery-lane {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 2px 2px 6px;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+}
+
+.discovery-lane::-webkit-scrollbar {
+    display: none;
+}
+
+.discovery-pill {
+    flex: 0 0 auto;
+    border: 1px solid var(--border-color);
+    background: color-mix(in srgb, var(--bg-secondary) 74%, white 26%);
+    color: var(--text-primary);
+    border-radius: 999px;
+    padding: 10px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+    transition: all 0.2s ease;
+}
+
+.discovery-pill:hover:not(:disabled),
+.discovery-pill.active {
+    border-color: var(--accent-primary);
+    background: color-mix(in srgb, var(--accent-primary) 12%, var(--bg-secondary) 88%);
+    box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.08);
+    transform: translateY(-1px);
+}
+
+.discovery-pill:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.discovery-pill-name {
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.discovery-pill-version {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.discovery-badge {
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(64, 158, 255, 0.12);
+    color: var(--accent-primary);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.discovery-empty {
+    padding: 14px;
+    border-radius: 14px;
+    background: var(--bg-primary);
+    border: 1px dashed var(--border-color);
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+    line-height: 1.5;
+}
+
+.discovery-lane-hint {
+    padding: 0 2px;
+    color: var(--text-secondary);
+    font-size: 0.74rem;
+    text-align: center;
+}
+
+.selected-server-card {
+    padding: 14px;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--bg-secondary) 82%, white 18%);
+    border: 1px solid var(--border-light);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+}
+
+.selected-server-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.selected-server-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    margin-bottom: 10px;
+}
+
+.selected-server-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.selected-server-url {
+    margin-top: 10px;
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.selected-server-meta {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
 }
 
 .input-label {
@@ -540,7 +955,6 @@ function showInfo() {
     cursor: not-allowed;
 }
 
-/* 加载动画 */
 .loading-spinner {
     width: 16px;
     height: 16px;
@@ -550,13 +964,20 @@ function showInfo() {
     animation: spin 0.8s linear infinite;
 }
 
+.loading-spinner.small {
+    width: 14px;
+    height: 14px;
+    border-width: 2px;
+    border-color: rgba(64, 158, 255, 0.25);
+    border-top-color: var(--accent-primary);
+}
+
 @keyframes spin {
     to {
         transform: rotate(360deg);
     }
 }
 
-/* 错误和成功消息 */
 .error-message,
 .success-message {
     margin-top: 12px;
@@ -564,6 +985,10 @@ function showInfo() {
     border-radius: 8px;
     font-size: 0.875rem;
     font-weight: 500;
+}
+
+.compact-message {
+    margin-top: 0;
 }
 
 .error-message {
@@ -578,7 +1003,6 @@ function showInfo() {
     border: 1px solid rgba(67, 160, 71, 0.3);
 }
 
-/* 淡入淡出动画 */
 .fade-enter-active,
 .fade-leave-active {
     transition: all 0.3s ease;
@@ -590,7 +1014,6 @@ function showInfo() {
     transform: translateY(-5px);
 }
 
-/* ==================== 响应式设计 ==================== */
 @media (max-width: 768px) {
     .title {
         font-size: 2.5rem;
@@ -606,12 +1029,21 @@ function showInfo() {
         border-radius: 12px;
     }
 
+    .server-shell {
+        max-width: 100%;
+    }
+
     .input-group {
         flex-direction: column;
     }
 
     .connect-btn {
         width: 100%;
+    }
+
+    .discovery-ribbon-header {
+        flex-direction: column;
+        align-items: stretch;
     }
 
     .char {
@@ -628,12 +1060,12 @@ function showInfo() {
         width: 36px;
         height: 36px;
     }
-    
+
     .ctrl-btn svg {
         width: 18px;
         height: 18px;
     }
-    
+
     .ctrl-btn .lang-text {
         font-size: 12px;
     }

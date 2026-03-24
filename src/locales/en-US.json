@@ -19,6 +19,19 @@
                 "unknown": "Connection failed, please try again later"
             }
         },
+        "discovery": {
+            "title": "LAN Discovery",
+            "subtitle": "Automatically find nearby Constella servers and connect in one click.",
+            "refresh": "Refresh",
+            "searching": "Searching nearby servers...",
+            "empty": "No Constella servers were found on this local network yet.",
+            "desktopOnly": "LAN auto-discovery is available in the desktop app. You can still connect manually here.",
+            "quickConnect": "Quick Connect",
+            "manualDivider": "Manual Address",
+            "errors": {
+                "failed": "Failed to scan the local network. Please try again."
+            }
+        },
         "footer": {
             "github": "GitHub",
             "info": "About"

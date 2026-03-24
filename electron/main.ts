@@ -4,9 +4,28 @@ import fs from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 import { spawn, ChildProcess } from 'child_process'
+import Bonjour, { Service } from 'bonjour-service'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+
+const DISCOVERY_SERVICE_TYPE = 'constella'
+const DISCOVERY_SERVICE_PROTOCOL = 'tcp'
+const DISCOVERY_SCAN_TIMEOUT_MS = 1800
+
+interface LanServerDescriptor {
+    id: string
+    name: string
+    url: string
+    host: string
+    port: number
+    apiPrefix: string
+    websocketPath: string
+    instanceId: string
+    version: string
+    addresses: string[]
+    discoveredAt: string
+}
 
 let mainWindow: BrowserWindow | null = null
 let serverProcess: ChildProcess | null = null
@@ -15,10 +34,10 @@ function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1280,
         height: 800,
-        frame: false, // 隐藏默认边框
+        frame: false,
         transparent: false,
         backgroundColor: '#ffffff',
-        roundedCorners: true, // 启用圆角
+        roundedCorners: true,
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -28,7 +47,6 @@ function createWindow() {
         }
     })
 
-    // 开发环境加载 Vite 服务器，生产环境加载打包文件
     if (process.env.VITE_DEV_SERVER_URL) {
         mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
         mainWindow.webContents.openDevTools()
@@ -41,7 +59,110 @@ function createWindow() {
     })
 }
 
-// 窗口控制 IPC 处理
+function isIPv4Address(value: string): boolean {
+    return /^(\d{1,3}\.){3}\d{1,3}$/.test(value)
+}
+
+function isUsableAddress(value: string): boolean {
+    if (!value) {
+        return false
+    }
+
+    if (isIPv4Address(value)) {
+        return value !== '0.0.0.0' && !value.startsWith('127.') && !value.startsWith('169.254.')
+    }
+
+    return true
+}
+
+function normalizeTxtValue(value: unknown, fallback = ''): string {
+    if (typeof value === 'string') {
+        return value
+    }
+
+    if (Buffer.isBuffer(value)) {
+        return value.toString('utf8')
+    }
+
+    if (value == null) {
+        return fallback
+    }
+
+    return String(value)
+}
+
+function pickServiceAddresses(service: Service): string[] {
+    const addresses = [...(service.addresses || [])]
+
+    if (service.referer?.address) {
+        addresses.push(service.referer.address)
+    }
+
+    return Array.from(new Set(addresses.filter(isUsableAddress)))
+}
+
+function buildServiceUrl(address: string, port: number): string {
+    const host = address.includes(':') && !address.startsWith('[') ? `[${address}]` : address
+    return `http://${host}:${port}`
+}
+
+function mapDiscoveredService(service: Service): LanServerDescriptor | null {
+    const addresses = pickServiceAddresses(service)
+    const primaryAddress = addresses[0]
+
+    if (!primaryAddress || !service.port) {
+        return null
+    }
+
+    const txt = (service.txt || {}) as Record<string, unknown>
+    const instanceId = normalizeTxtValue(txt.instanceId, `${service.name}-${primaryAddress}-${service.port}`)
+    const apiPrefix = normalizeTxtValue(txt.apiPrefix, '/api/v1')
+    const websocketPath = normalizeTxtValue(txt.websocketPath, '/ws')
+    const version = normalizeTxtValue(txt.version, '')
+
+    return {
+        id: instanceId,
+        name: normalizeTxtValue(txt.serverName, service.name),
+        url: buildServiceUrl(primaryAddress, service.port),
+        host: primaryAddress,
+        port: service.port,
+        apiPrefix,
+        websocketPath,
+        instanceId,
+        version,
+        addresses,
+        discoveredAt: new Date().toISOString()
+    }
+}
+
+async function discoverLanServers(timeoutMs = DISCOVERY_SCAN_TIMEOUT_MS): Promise<LanServerDescriptor[]> {
+    const bonjour = new Bonjour()
+    const discovered = new Map<string, LanServerDescriptor>()
+
+    const browser = bonjour.find(
+        {
+            type: DISCOVERY_SERVICE_TYPE,
+            protocol: DISCOVERY_SERVICE_PROTOCOL
+        },
+        (service) => {
+            const mapped = mapDiscoveredService(service)
+
+            if (mapped) {
+                discovered.set(mapped.id, mapped)
+            }
+        }
+    )
+
+    await new Promise((resolve) => {
+        setTimeout(resolve, timeoutMs)
+    })
+
+    browser.stop()
+    bonjour.destroy()
+
+    return Array.from(discovered.values()).sort((left, right) => left.name.localeCompare(right.name))
+}
+
 ipcMain.on('window-minimize', () => {
     if (mainWindow) {
         mainWindow.minimize()
@@ -64,15 +185,25 @@ ipcMain.on('window-close', () => {
     }
 })
 
-// 打开外部链接
-ipcMain.on('open-external', (event, url) => {
+ipcMain.on('open-external', (_event, url) => {
     shell.openExternal(url)
 })
 
-// 启动后端服务器
+ipcMain.handle('discover-lan-servers', async (_event, timeoutMs?: number) => {
+    try {
+        const safeTimeout =
+            typeof timeoutMs === 'number' && Number.isFinite(timeoutMs)
+                ? Math.min(Math.max(timeoutMs, 500), 5000)
+                : DISCOVERY_SCAN_TIMEOUT_MS
+
+        return await discoverLanServers(safeTimeout)
+    } catch (error) {
+        console.error('[Electron] Failed to discover LAN servers:', error)
+        return []
+    }
+})
+
 function startBackendServer() {
-    // 生产环境下，后端可执行文件在 resources/server 目录
-    // 开发环境下，需要从 ../server 目录启动
     const isDev = process.env.VITE_DEV_SERVER_URL !== undefined
 
     const logDir = path.join(app.getPath('userData'), 'logs')
@@ -86,25 +217,21 @@ function startBackendServer() {
     let serverCwd: string
 
     if (isDev) {
-        // 开发环境：直接运行后端项目（需要 npm run build:server）
         const parentDir = path.resolve(__dirname, '../../server')
         serverPath = path.join(parentDir, 'dist', 'server.js')
         command = 'node'
         args = [serverPath]
         serverCwd = parentDir
     } else {
-        // 生产环境：先检查是否有 pkg 打包的 .exe，否则用 node 运行 .js
         const serverExePath = path.join(process.resourcesPath, 'server', 'constella-server.exe')
         const serverJsPath = path.join(process.resourcesPath, 'server', 'server.js')
         serverCwd = path.join(process.resourcesPath, 'server')
 
         if (fs.existsSync(serverExePath)) {
-            // 使用 pkg 打包的可执行文件
             serverPath = serverExePath
             command = serverExePath
             args = []
         } else if (fs.existsSync(serverJsPath)) {
-            // 降级：使用 Node.js 运行 JavaScript
             serverPath = serverJsPath
             command = 'node'
             args = [serverJsPath]
@@ -165,14 +292,12 @@ function startBackendServer() {
 }
 
 app.whenReady().then(() => {
-    // 只在未设置 SKIP_BACKEND 时启动后端服务器
     if (process.env.SKIP_BACKEND !== 'true') {
         startBackendServer()
     } else {
         console.log('[Electron] Backend startup skipped (SKIP_BACKEND=true)')
     }
 
-    // 等待后端启动后再创建窗口（如果启动了后端则延迟，否则立即创建）
     const delay = process.env.SKIP_BACKEND === 'true' ? 0 : 1000
     setTimeout(() => {
         createWindow()
@@ -186,7 +311,6 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
-    // 关闭窗口时，结束后端进程
     if (serverProcess && !serverProcess.killed) {
         serverProcess.kill()
     }
@@ -196,7 +320,6 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
-    // 确保后端进程被正确终止
     if (serverProcess && !serverProcess.killed) {
         serverProcess.kill()
     }

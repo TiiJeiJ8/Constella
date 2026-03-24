@@ -1,14 +1,28 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
-// 暴露安全的 API 到渲染进程
+interface LanServerDescriptor {
+    id: string
+    name: string
+    url: string
+    host: string
+    port: number
+    apiPrefix: string
+    websocketPath: string
+    instanceId: string
+    version: string
+    addresses: string[]
+    discoveredAt: string
+}
+
 contextBridge.exposeInMainWorld('electron', {
     minimize: () => ipcRenderer.send('window-minimize'),
     toggleMaximize: () => ipcRenderer.send('window-maximize'),
     close: () => ipcRenderer.send('window-close'),
-    openExternal: (url: string) => ipcRenderer.send('open-external', url)
+    openExternal: (url: string) => ipcRenderer.send('open-external', url),
+    discoverLanServers: (timeoutMs?: number): Promise<LanServerDescriptor[]> =>
+        ipcRenderer.invoke('discover-lan-servers', timeoutMs)
 })
 
-// TypeScript 类型声明
 declare global {
     interface Window {
         electron: {
@@ -16,6 +30,7 @@ declare global {
             toggleMaximize: () => void
             close: () => void
             openExternal: (url: string) => void
+            discoverLanServers: (timeoutMs?: number) => Promise<LanServerDescriptor[]>
         }
     }
 }
