@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "dev:electron": "vite",
+    "dev:electron-no-backend": "cross-env SKIP_BACKEND=true vite",
     "build": "vue-tsc -b && vite build",
     "build:electron-main": "vite build",
     "build:electron": "npm run build && electron-builder",

@@ -108,19 +108,53 @@ export function useYjs(options: UseYjsOptions): UseYjsReturn {
 
             // 监听连接状态
             provider.value.on('status', ({ status }: { status: string }) => {
-                console.log('[useYjs] Status changed:', status)
+                console.log('[useYjs] 📡 Status changed:', status)
                 isConnected.value = status === 'connected'
 
-                if (status === 'connected' && onConnect) {
-                    onConnect()
+                if (status === 'connected') {
+                    console.log('[useYjs] ✅ WebSocket 已连接')
+
+                    if (onConnect) {
+                        onConnect()
+                    }
                 } else if (status === 'disconnected' && onDisconnect) {
+                    console.log('[useYjs] ❌ 已断开连接')
                     onDisconnect()
                 }
             })
 
             // 监听同步状态
             provider.value.on('sync', (synced: boolean) => {
-                console.log('[useYjs] Sync status:', synced)
+                console.log('[useYjs] 🔄 Sync status:', synced)
+
+                if (synced) {
+                    // 诊断：检查 Y.Doc 是否包含数据
+                    const nodesMap = doc.getMap('nodes')
+                    const edgesMap = doc.getMap('edges')
+                    const chatArray = doc.getArray('_chat_messages')
+
+                    console.log('[useYjs] 📊 Y.Doc 内容 (同步完成):')
+                    console.log('   - nodes size:', nodesMap.size)
+                    console.log('   - edges size:', edgesMap.size)
+                    console.log('   - chat messages length:', chatArray.length)
+
+                    // 展示每个节点的详细信息
+                    if (nodesMap.size > 0) {
+                        console.log('[useYjs] ✅ 恢复成功，节点详情：')
+                        const nodeIds: string[] = []
+                        nodesMap.forEach((node, key) => {
+                            nodeIds.push(key)
+                            const x = node instanceof Y.Map ? node.get('x') : (node as any).x
+                            const y = node instanceof Y.Map ? node.get('y') : (node as any).y
+                            console.log(`   [${key}] 位置: (${x}, ${y})`)
+                        })
+                    } else {
+                        console.log('[useYjs] 📭 Y.Doc 同步完成，但未找到任何节点数据（可能是新房间）')
+                    }
+                } else {
+                    console.log('[useYjs] ⏳ 同步中...')
+                }
+
                 isSynced.value = synced
                 if (onSync) {
                     onSync(synced)

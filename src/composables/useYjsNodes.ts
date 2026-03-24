@@ -151,6 +151,8 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
     function syncFromYjs() {
         if (!nodesMap) return
 
+        console.log('[useYjsNodes] 🔄 Syncing from Yjs, nodesMap size:', nodesMap.size)
+
         const newNodes: RenderNode[] = []
 
         nodesMap.forEach((yNode, nodeId) => {
@@ -198,9 +200,11 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
                     zIndex: yNode.get('zIndex') ?? 0
                 }
                 newNodes.push(toRenderNode(node))
+                console.log('[useYjsNodes] 📍 Loaded node:', nodeId, 'x:', node.x, 'y:', node.y)
             }
         })
 
+        console.log('[useYjsNodes] ✅ Synced', newNodes.length, 'nodes to UI')
         nodes.value = newNodes
         syncTick.value += 1
 
@@ -228,6 +232,7 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
     function initialize() {
         if (isInitialized.value) {
             // 已初始化,但仍需同步一次(防止初始化时数据未就绪)
+            console.log('[useYjsNodes] Already initialized, syncing again...')
             syncFromYjs()
             return
         }
@@ -239,7 +244,10 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
             return
         }
 
+        console.log('[useYjsNodes] 🔧 Initializing nodes from Yjs...')
         nodesMap = doc.getMap<Y.Map<any>>('nodes')
+        console.log('[useYjsNodes] 📍 Nodes map size:', nodesMap.size)
+
         isInitialized.value = true
 
         // 获取额外需要跟踪的 Y.Map
@@ -262,15 +270,18 @@ export function useYjsNodes(options: UseYjsNodesOptions) {
 
         // 监听 Yjs 变化
         observeYjs()
+        console.log('[useYjsNodes] 👁️ Observing Yjs changes...')
 
         // 如果 Y.Map 为空，不自动创建示例节点，仅同步（保持空白房间）
         if (nodesMap.size === 0) {
+            console.log('[useYjsNodes] ⚠️ No nodes in Y.Map, initializing with empty array')
             nodes.value = []
             if (onNodesChange) {
                 onNodesChange([])
             }
         } else {
             // 从 Yjs 同步现有节点
+            console.log('[useYjsNodes] ✅ Found', nodesMap.size, 'nodes in Y.Map, syncing...')
             syncFromYjs()
         }
     }
