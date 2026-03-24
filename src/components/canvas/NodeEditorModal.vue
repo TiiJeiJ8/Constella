@@ -264,7 +264,7 @@ const codePlaceholders = new Map<string, string>()
 function protectCode(text: string): string {
     codePlaceholders.clear()
 
-    text = text.replace(/(^|\n)(```[\s\S]*?```)(?=\n|$)/g, (match, prefix, block) => {
+    text = text.replace(/(^|\n)(```[\s\S]*?```)(?=\n|$)/g, (_, prefix, block) => {
         const id = `%%CODE_BLOCK_${placeholderCounter++}%%`
         codePlaceholders.set(id, block)
         return `${prefix}${id}`
