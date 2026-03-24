@@ -67,7 +67,7 @@
             
             <!-- 节点内容叠加层 -->
             <NodeContentOverlay
-                v-for="node in visibleOverlayNodes"
+                v-for="(node, overlayOrder) in visibleOverlayNodes"
                 :key="`content-${node.id}`"
                 :node-id="node.id"
                 :content="node.content"
@@ -76,6 +76,10 @@
                 :width="node.width"
                 :height="node.height"
                 :z-index="node.zIndex || 0"
+                :render-order="overlayOrder"
+                :fill="node.rectConfig.fill"
+                :stroke="node.rectConfig.stroke"
+                :corner-radius="node.rectConfig.cornerRadius"
                 :stage-scale="stageScale"
                 :stage-position="stagePosition"
                 :markdown-lod-scale-threshold="markdownLodScaleThreshold"
@@ -473,11 +477,13 @@ function isNodeInOverlayViewport(node, viewport) {
 const visibleOverlayNodes = computed(() => {
     const nodes = canvasNodes.value
     if (!canvasAreaSize.value.width || !canvasAreaSize.value.height) {
-        return nodes
+        return [...nodes].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
     }
 
     const viewport = overlayViewportRect.value
-    return nodes.filter(node => isNodeInOverlayViewport(node, viewport))
+    return nodes
+        .filter(node => isNodeInOverlayViewport(node, viewport))
+        .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
 })
 
 // 渲染用的边数据（从 Yjs 同步）

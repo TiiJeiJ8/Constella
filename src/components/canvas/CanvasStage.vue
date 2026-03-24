@@ -81,7 +81,16 @@
                         }"
                     />
                     <!-- 节点背景矩形 -->
-                    <v-rect :config="node.rectConfig" />
+                    <v-rect
+                        :config="{
+                            ...node.rectConfig,
+                            fill: 'transparent',
+                            stroke: 'transparent',
+                            shadowColor: 'transparent',
+                            shadowBlur: 0,
+                            shadowOffset: { x: 0, y: 0 }
+                        }"
+                    />
                     <!-- 内容由 NodeContentOverlay 在 HTML 层渲染 -->
                 </v-group>
                 
