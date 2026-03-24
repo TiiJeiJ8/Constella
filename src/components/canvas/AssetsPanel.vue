@@ -32,8 +32,10 @@
                 :key="asset.id"
                 class="asset-item"
                 :class="{ selected: selectedAssetId === asset.id }"
+                draggable="true"
                 @click="selectAsset(asset)"
                 @dblclick="insertAsset(asset)"
+                @dragstart="handleAssetDragStart(asset, $event)"
             >
                 <div class="asset-preview">
                     <img
@@ -92,6 +94,7 @@ import { useI18n } from 'vue-i18n'
 import ConfirmDialog from '@/components/base/ConfirmDialog.vue'
 
 const { t } = useI18n()
+const ASSET_DRAG_MIME = 'application/x-constella-asset'
 
 const props = defineProps({
     assets: {
@@ -249,6 +252,14 @@ function insertSelectedAsset() {
     if (selectedAsset.value) {
         emit('insert', selectedAsset.value)
     }
+}
+
+function handleAssetDragStart(asset, event) {
+    if (!event.dataTransfer) return
+
+    event.dataTransfer.effectAllowed = 'copy'
+    event.dataTransfer.setData(ASSET_DRAG_MIME, JSON.stringify(asset))
+    event.dataTransfer.setData('text/plain', asset.name || asset.id || 'asset')
 }
 
 // 显示删除确认弹窗

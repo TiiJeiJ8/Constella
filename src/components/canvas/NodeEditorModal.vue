@@ -259,9 +259,37 @@ function renderKaTeX(tex: string, displayMode: boolean): string {
 const mathPlaceholders = new Map<string, string>()
 let placeholderCounter = 0
 
+const codePlaceholders = new Map<string, string>()
+
+function protectCode(text: string): string {
+    codePlaceholders.clear()
+
+    text = text.replace(/(^|\n)(```[\s\S]*?```)(?=\n|$)/g, (match, prefix, block) => {
+        const id = `%%CODE_BLOCK_${placeholderCounter++}%%`
+        codePlaceholders.set(id, block)
+        return `${prefix}${id}`
+    })
+
+    text = text.replace(/`([^`\n]+)`/g, (match) => {
+        const id = `%%CODE_INLINE_${placeholderCounter++}%%`
+        codePlaceholders.set(id, match)
+        return id
+    })
+
+    return text
+}
+
+function restoreCode(text: string): string {
+    codePlaceholders.forEach((replacement, placeholder) => {
+        text = text.replace(placeholder, replacement)
+    })
+    return text
+}
+
 function protectMath(text: string): string {
     mathPlaceholders.clear()
     placeholderCounter = 0
+    text = protectCode(text)
     
     // 块级公式 $$...$$（先处理块级，避免被行内匹配）
     text = text.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
@@ -277,7 +305,7 @@ function protectMath(text: string): string {
         return id
     })
     
-    return text
+    return restoreCode(text)
 }
 
 function restoreMath(html: string): string {

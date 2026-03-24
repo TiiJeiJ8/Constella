@@ -30,7 +30,12 @@
         />
 
         <!-- 中央画布区 -->
-        <div class="canvas-area" ref="canvasAreaRef">
+        <div
+            class="canvas-area"
+            ref="canvasAreaRef"
+            @dragover.prevent="handleCanvasDragOver"
+            @drop.prevent="handleCanvasDrop"
+        >
             <CanvasStage
                 ref="canvasStageRef"
                 :active-tool="activeTool"
@@ -218,6 +223,7 @@ const DEFAULT_MARKDOWN_LOD_SCALE_THRESHOLD = 0.6
 const MIN_MARKDOWN_LOD_SCALE_THRESHOLD = 0.1
 const MAX_MARKDOWN_LOD_SCALE_THRESHOLD = 3
 const LONG_FRAME_THRESHOLD_MS = 32
+const ASSET_DRAG_MIME = 'application/x-constella-asset'
 
 function normalizeMarkdownLodScaleThreshold(value) {
     const n = Number(value)
@@ -833,9 +839,89 @@ async function handleAssetDelete(assetId) {
     }
 }
 
+function getCanvasPointFromClient(clientX, clientY) {
+    const canvasArea = canvasAreaRef.value
+    if (!canvasArea) {
+        return { x: 0, y: 0 }
+    }
+
+    const rect = canvasArea.getBoundingClientRect()
+    return {
+        x: (clientX - rect.left - stagePosition.value.x) / stageScale.value,
+        y: (clientY - rect.top - stagePosition.value.y) / stageScale.value
+    }
+}
+
+function getViewportCenterCanvasPoint() {
+    const canvasArea = canvasAreaRef.value
+    if (!canvasArea) {
+        return { x: 0, y: 0 }
+    }
+
+    const rect = canvasArea.getBoundingClientRect()
+    return getCanvasPointFromClient(
+        rect.left + rect.width / 2,
+        rect.top + rect.height / 2
+    )
+}
+
+function createAssetNode(asset, position) {
+    const baseUrl = apiService.getBaseUrl()
+    let nodeUrl = asset.url
+    if (nodeUrl.startsWith(baseUrl + '/')) {
+        nodeUrl = 'constella:/' + nodeUrl.slice(baseUrl.length)
+    }
+
+    const nodeId = `node-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const width = 200
+    const height = 150
+    const targetPosition = position || getViewportCenterCanvasPoint()
+
+    yjsNodes.createNode({
+        id: nodeId,
+        x: targetPosition.x - width / 2,
+        y: targetPosition.y - height / 2,
+        width,
+        height,
+        fill: '#ffffff',
+        stroke: '#e0e0e0',
+        content: {
+            kind: 'image',
+            data: nodeUrl,
+            metadata: {
+                assetId: asset.id,
+                name: asset.name,
+                type: asset.type
+            }
+        }
+    })
+
+    console.log('[Canvas] Image node created:', nodeId, targetPosition)
+}
+
+function handleCanvasDragOver(e) {
+    const hasAsset = Array.from(e.dataTransfer?.types || []).includes(ASSET_DRAG_MIME)
+    if (!hasAsset) return
+    e.dataTransfer.dropEffect = 'copy'
+}
+
+function handleCanvasDrop(e) {
+    const rawAsset = e.dataTransfer?.getData(ASSET_DRAG_MIME)
+    if (!rawAsset) return
+
+    try {
+        const asset = JSON.parse(rawAsset)
+        handleAssetInsert(asset, getCanvasPointFromClient(e.clientX, e.clientY))
+    } catch (error) {
+        console.error('[Canvas] Failed to parse dropped asset:', error)
+    }
+}
+
 // 资源插入到画布（创建图片节点）
 function handleAssetInsert(asset) {
     console.log('[Canvas] Insert asset:', asset)
+    createAssetNode(asset, arguments[1])
+    return
     
     // 将绝对 URL 标准化为 constella:// 协议存入 Yjs，确保每个客户端都能用自己的
     // baseUrl 解析图片地址，避免 localhost 等本地地址对其他用户不可用。
