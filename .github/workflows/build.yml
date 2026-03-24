@@ -24,8 +24,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: npm
-          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -33,40 +31,10 @@ jobs:
       - name: Build web app
         run: npm run build
 
-  package-electron:
-    name: Package Electron App
-    runs-on: windows-latest
-    needs: verify
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.19.0
-          cache: npm
-          cache-dependency-path: package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build Electron app
-        run: npm run build:electron
-
-      - name: Upload renderer build artifacts
+      - name: Upload web build artifacts
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: web-dist
+          name: web-dist-${{ matrix.node-version }}
           path: dist
-          retention-days: 5
-
-      - name: Upload Electron build artifacts
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-dist-electron
-          path: dist-electron
           retention-days: 5
