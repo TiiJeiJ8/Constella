@@ -17,6 +17,7 @@ interface LanServerDescriptor {
 interface ExportPdfPayload {
     html: string
     fileName: string
+    orientation?: 'portrait' | 'landscape'
 }
 
 interface ExportPdfResult {

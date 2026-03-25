@@ -3,6 +3,18 @@ import { buildPrintableDocumentHtml, deriveDocumentTitle, renderMarkdownToHtml, 
 export type ExportableDocumentKind = 'markdown' | 'text'
 export type DocumentExportFormat = 'md' | 'txt' | 'pdf'
 export type ExportTheme = 'light' | 'dark'
+export type ExportPanelThemeMode = 'current' | ExportTheme
+export type ExportPdfOrientation = 'portrait' | 'landscape'
+export type ExportTextMode = 'plain' | 'source'
+
+export interface ExportPanelSettings {
+    format: DocumentExportFormat
+    fileName: string
+    pdfTheme: ExportPanelThemeMode
+    pdfOrientation: ExportPdfOrientation
+    pdfIncludeTitle: boolean
+    txtMode: ExportTextMode
+}
 
 export interface ExportDocumentOptions {
     kind: ExportableDocumentKind
@@ -10,6 +22,9 @@ export interface ExportDocumentOptions {
     title?: string
     fileName?: string
     theme?: ExportTheme
+    includeTitle?: boolean
+    orientation?: ExportPdfOrientation
+    textMode?: ExportTextMode
 }
 
 export interface ExportDocumentResult {
@@ -46,27 +61,36 @@ async function exportAsPdf({
     content,
     title,
     fileName,
-    theme
+    theme,
+    includeTitle,
+    orientation
 }: {
     kind: ExportableDocumentKind
     content: string
     title: string
     fileName: string
     theme: ExportTheme
+    includeTitle: boolean
+    orientation: ExportPdfOrientation
 }): Promise<ExportDocumentResult> {
     const bodyHtml = kind === 'markdown'
-        ? await renderMarkdownToHtml(content, { consumeLeadingTitle: title, theme })
+        ? await renderMarkdownToHtml(content, { consumeLeadingTitle: includeTitle ? title : undefined, theme })
         : `<pre class="plain-text-document">${content
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')}</pre>`
 
-    const html = buildPrintableDocumentHtml(title, bodyHtml, theme)
+    const html = buildPrintableDocumentHtml(title, bodyHtml, {
+        theme,
+        includeTitle,
+        orientation
+    })
 
     if (window.electron?.exportDocumentPdf) {
         return window.electron.exportDocumentPdf({
             html,
-            fileName: buildFilename(fileName, 'pdf')
+            fileName: buildFilename(fileName, 'pdf'),
+            orientation
         })
     }
 
@@ -95,6 +119,9 @@ export async function exportDocument(format: DocumentExportFormat, options: Expo
     const title = options.title || deriveDocumentTitle(content, options.kind)
     const fileName = sanitizeFilename(options.fileName || title)
     const theme = options.theme === 'light' ? 'light' : 'dark'
+    const includeTitle = options.includeTitle ?? true
+    const orientation = options.orientation ?? 'portrait'
+    const textMode = options.textMode ?? 'plain'
 
     if (format === 'md') {
         if (options.kind !== 'markdown') {
@@ -112,7 +139,9 @@ export async function exportDocument(format: DocumentExportFormat, options: Expo
     }
 
     if (format === 'txt') {
-        const plainText = options.kind === 'markdown' ? stripMarkdownSyntax(content) : content
+        const plainText = options.kind === 'markdown'
+            ? (textMode === 'source' ? content : stripMarkdownSyntax(content))
+            : content
         downloadBlob(
             new Blob([normalizeLineEndings(plainText)], { type: 'text/plain;charset=utf-8' }),
             buildFilename(fileName, 'txt')
@@ -128,6 +157,8 @@ export async function exportDocument(format: DocumentExportFormat, options: Expo
         content,
         title,
         fileName,
-        theme
+        theme,
+        includeTitle,
+        orientation
     })
 }

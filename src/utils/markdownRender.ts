@@ -6,6 +6,7 @@ import mermaid from 'mermaid'
 import type { MermaidConfig } from 'mermaid'
 
 type MermaidThemeMode = 'light' | 'dark'
+type PdfOrientation = 'portrait' | 'landscape'
 
 const markdownUtils = new MarkdownIt().utils
 const mathPlaceholders = new Map<string, string>()
@@ -311,7 +312,18 @@ export function sanitizeFilename(name: string, fallback = 'document'): string {
     return normalized || fallback
 }
 
-export function buildPrintableDocumentHtml(title: string, bodyHtml: string, theme: MermaidThemeMode = 'light'): string {
+export function buildPrintableDocumentHtml(
+    title: string,
+    bodyHtml: string,
+    options: {
+        theme?: MermaidThemeMode
+        includeTitle?: boolean
+        orientation?: PdfOrientation
+    } = {}
+): string {
+    const theme = options.theme ?? 'light'
+    const includeTitle = options.includeTitle ?? true
+    const orientation = options.orientation ?? 'portrait'
     const isLight = theme === 'light'
 
     return `<!doctype html>
@@ -324,11 +336,14 @@ export function buildPrintableDocumentHtml(title: string, bodyHtml: string, them
   <style>
     :root {
       color-scheme: ${isLight ? 'light' : 'dark'};
-      --page-width: 860px;
+      --page-width: ${orientation === 'landscape' ? '1120px' : '860px'};
+      --page-pad-y: ${orientation === 'landscape' ? '12mm' : '14mm'};
+      --page-pad-x: ${orientation === 'landscape' ? '18mm' : '16mm'};
       --text: ${isLight ? '#172033' : '#e5eefc'};
       --muted: ${isLight ? '#5f6b7a' : '#94a3b8'};
       --line: ${isLight ? '#d9e1ec' : 'rgba(148, 163, 184, 0.24)'};
       --surface: ${isLight ? '#ffffff' : '#17181c'};
+      --page-surface: ${isLight ? '#eef3f8' : '#111318'};
       --surface-alt: ${isLight ? '#f5f7fb' : '#111827'};
       --code-bg: ${isLight ? '#f3f4f6' : '#0f172a'};
       --code-text: ${isLight ? '#24292f' : '#e5eefc'};
@@ -337,7 +352,7 @@ export function buildPrintableDocumentHtml(title: string, bodyHtml: string, them
       --shadow: ${isLight ? '0 20px 50px rgba(15, 23, 42, 0.08)' : '0 24px 60px rgba(0, 0, 0, 0.35)'};
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; background: ${isLight ? '#eef3f8' : '#0f1115'}; color: var(--text); font-family: Georgia, "Times New Roman", serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    html, body { margin: 0; padding: 0; background: var(--page-surface); color: var(--text); font-family: Georgia, "Times New Roman", serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     body { padding: 32px; }
     .document-shell { width: min(100%, var(--page-width)); margin: 0 auto; padding: 56px 64px; background: var(--surface); border-radius: 20px; box-shadow: var(--shadow); }
     .document-title { margin: 0 0 24px; font-size: 34px; line-height: 1.15; }
@@ -348,6 +363,7 @@ export function buildPrintableDocumentHtml(title: string, bodyHtml: string, them
     .document-body h2 { font-size: 1.55em; padding-bottom: 0.2em; border-bottom: 1px solid var(--line); }
     .document-body h3 { font-size: 1.25em; }
     .document-body p, .document-body ul, .document-body ol, .document-body blockquote, .document-body table, .document-body pre { margin: 1em 0; }
+    .document-body img { display: block; max-width: min(100%, 760px); max-height: 540px; width: auto; height: auto; margin: 1.15em auto; border-radius: 16px; background: var(--surface-alt); box-shadow: var(--shadow); object-fit: contain; page-break-inside: avoid; break-inside: avoid; }
     .document-body a { color: var(--accent); text-decoration: none; }
     .document-body a:hover { text-decoration: underline; }
     .document-body ul, .document-body ol { padding-left: 1.4em; }
@@ -355,7 +371,7 @@ export function buildPrintableDocumentHtml(title: string, bodyHtml: string, them
     .document-body blockquote { padding: 0.9em 1.1em; border-left: 4px solid ${isLight ? '#9bb2d1' : '#5f7ba6'}; background: var(--quote); color: ${isLight ? '#2f3b4c' : 'rgba(229, 238, 252, 0.84)'}; }
     .document-body hr { border: 0; border-top: 1px solid var(--line); margin: 2em 0; }
     .document-body code { padding: 0.14em 0.38em; border-radius: 0.35em; background: var(--surface-alt); font-family: "JetBrains Mono", "Fira Code", monospace; font-size: 0.92em; }
-    .code-block-shell { margin: 1.2em 0; border-radius: 16px; overflow: hidden; background: var(--code-bg); color: var(--code-text); border: ${isLight ? 'none' : '1px solid rgba(255, 255, 255, 0.06)'}; box-shadow: ${isLight ? 'none' : 'inset 0 1px 0 rgba(255, 255, 255, 0.03)'}; }
+    .code-block-shell { margin: 1.2em 0; border-radius: 16px; overflow: hidden; background: var(--code-bg); color: var(--code-text); border: ${isLight ? 'none' : '1px solid rgba(255, 255, 255, 0.06)'}; box-shadow: ${isLight ? 'none' : 'inset 0 1px 0 rgba(255, 255, 255, 0.03)'}; page-break-inside: avoid; break-inside: avoid; }
     .code-block-lang, .mermaid-block-lang { display: inline-flex; align-items: center; margin: 12px 12px 0; padding: 4px 10px; border-radius: 999px; font: 700 10px/1.2 "Segoe UI", system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
     .code-block-lang { background: ${isLight ? 'rgba(255, 255, 255, 0.72)' : 'rgba(191, 219, 254, 0.12)'}; color: ${isLight ? 'rgba(15, 23, 42, 0.52)' : '#bfdbfe'}; }
     .mermaid-block-lang { background: ${isLight ? 'rgba(255, 255, 255, 0.72)' : 'rgba(255, 255, 255, 0.08)'}; color: ${isLight ? 'rgba(15, 23, 42, 0.52)' : 'rgba(229, 238, 252, 0.68)'}; }
@@ -373,10 +389,11 @@ export function buildPrintableDocumentHtml(title: string, bodyHtml: string, them
     .document-body table { width: 100%; border-collapse: collapse; }
     .document-body th, .document-body td { padding: 10px 12px; border: 1px solid var(--line); vertical-align: top; }
     .document-body th { background: var(--surface-alt); font-family: "Segoe UI", system-ui, sans-serif; text-align: left; }
-    .katex-block { display: flex; justify-content: center; padding: 14px 16px; border-radius: 12px; background: var(--surface-alt); overflow-x: auto; }
+    .katex-block { display: flex; justify-content: center; padding: 14px 16px; border-radius: 12px; background: var(--surface-alt); overflow-x: auto; page-break-inside: avoid; break-inside: avoid; }
     .katex-error { color: #c2410c; }
-    .mermaid-wrapper { margin: 1.2em 0; padding: 16px 18px 18px; border-radius: 16px; background: var(--surface-alt); overflow-x: auto; }
-    .mermaid-wrapper svg { max-width: 100%; height: auto; display: block; margin-top: 12px; }
+    .mermaid-wrapper { margin: 1.2em 0; padding: 16px 18px 18px; border-radius: 16px; background: var(--surface-alt); overflow: auto; page-break-inside: avoid; break-inside: avoid; }
+    .mermaid-wrapper .mermaid { display: flex; justify-content: center; min-width: fit-content; }
+    .mermaid-wrapper svg { max-width: 100%; width: auto !important; height: auto; display: block; margin: 12px auto 0; }
     .mermaid-fallback { white-space: pre-wrap; }
     .mermaid text, .mermaid .label, .mermaid .nodeLabel, .mermaid .edgeLabel, .mermaid .edgeLabel p, .mermaid .edgeLabel span, .mermaid .cluster-label text, .mermaid .cluster-label span, .mermaid .mindmap-node .label, .mermaid .mindmap-node text, .mermaid .mindmap-node foreignObject, .mermaid .mindmap-node foreignObject div { fill: ${isLight ? '#172033' : '#e5eefc'} !important; color: ${isLight ? '#172033' : '#e5eefc'} !important; }
     .mermaid .edgeLabel rect, .mermaid .labelBkg { fill: ${isLight ? 'rgba(255, 255, 255, 0.96)' : 'rgba(23, 24, 28, 0.92)'} !important; }
@@ -388,18 +405,18 @@ export function buildPrintableDocumentHtml(title: string, bodyHtml: string, them
     .mermaid .mindmap-node:nth-of-type(4n + 2) rect, .mermaid .mindmap-node:nth-of-type(4n + 2) circle, .mermaid .mindmap-node:nth-of-type(4n + 2) path { fill: ${isLight ? '#dff4ea' : '#1f5a4c'} !important; }
     .mermaid .mindmap-node:nth-of-type(4n + 3) rect, .mermaid .mindmap-node:nth-of-type(4n + 3) circle, .mermaid .mindmap-node:nth-of-type(4n + 3) path { fill: ${isLight ? '#fff1d6' : '#6a4f1f'} !important; }
     .mermaid .mindmap-node:nth-of-type(4n + 4) rect, .mermaid .mindmap-node:nth-of-type(4n + 4) circle, .mermaid .mindmap-node:nth-of-type(4n + 4) path { fill: ${isLight ? '#f4e3ff' : '#4b2e67'} !important; }
-    @page { size: A4; margin: 14mm; }
+    @page { size: A4 ${orientation}; margin: 0; }
     @media print {
       html, body { background: var(--surface); }
-      body { padding: 0; }
-      .document-shell { width: 100%; max-width: none; padding: 0; box-shadow: none; border-radius: 0; }
+      body { padding: var(--page-pad-y) var(--page-pad-x); }
+      .document-shell { width: 100%; max-width: none; padding: 0; box-shadow: none; border-radius: 0; background: transparent; }
       a { color: inherit; text-decoration: none; }
     }
   </style>
 </head>
 <body>
   <main class="document-shell">
-    <h1 class="document-title">${markdownUtils.escapeHtml(title)}</h1>
+    ${includeTitle ? `<h1 class="document-title">${markdownUtils.escapeHtml(title)}</h1>` : ''}
     <section class="document-body">${bodyHtml}</section>
   </main>
 </body>

@@ -30,6 +30,7 @@ interface LanServerDescriptor {
 interface ExportDocumentPdfPayload {
     html: string
     fileName: string
+    orientation?: 'portrait' | 'landscape'
 }
 
 let mainWindow: BrowserWindow | null = null
@@ -251,6 +252,7 @@ ipcMain.handle('export-document-pdf', async (_event, payload: ExportDocumentPdfP
         `)
 
         const pdfBuffer = await exportWindow.webContents.printToPDF({
+            landscape: payload.orientation === 'landscape',
             printBackground: true,
             preferCSSPageSize: true
         })

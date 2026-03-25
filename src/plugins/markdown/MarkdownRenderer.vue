@@ -397,11 +397,13 @@ const renderedHtml = computed(() => {
 .markdown-full :deep(img) {
     display: block;
     max-width: 100%;
+    max-height: 56%;
     width: auto;
     height: auto;
     margin: 0.8em auto 0;
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.04);
+    object-fit: contain;
 }
 
 .markdown-full :deep(.placeholder) {

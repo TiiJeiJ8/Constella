@@ -23,6 +23,7 @@ interface ElectronBridgeApi {
     exportDocumentPdf: (payload: {
         html: string
         fileName: string
+        orientation?: 'portrait' | 'landscape'
     }) => Promise<{
         canceled?: boolean
         filePath?: string

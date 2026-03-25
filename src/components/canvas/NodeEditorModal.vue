@@ -12,7 +12,7 @@
                 @mouseleave="handleOverlayPointerLeave"
             >
                 <Transition name="modal-scale" appear>
-                    <div class="editor-container">
+                    <div ref="editorContainerRef" class="editor-container">
                         <div class="editor-header">
                             <div class="header-left">
                                 <span class="type-icon">{{ pluginMeta?.icon || 'N' }}</span>
@@ -31,33 +31,28 @@
                                     </div>
                                 </div>
                             </div>
+                            <div v-if="isMarkdown" class="view-mode-switch" role="tablist" :aria-label="t('canvas.editor.viewMode')">
+                                <button
+                                    v-for="mode in viewModes"
+                                    :key="mode.id"
+                                    type="button"
+                                    class="view-mode-btn"
+                                    :class="{ active: effectiveViewMode === mode.id }"
+                                    :title="mode.label"
+                                    @click="viewMode = mode.id"
+                                >
+                                    {{ mode.label }}
+                                </button>
+                            </div>
                             <div class="header-actions">
                                 <button
-                                    v-if="canExportMd"
-                                    type="button"
-                                    class="header-action-btn"
-                                    :title="t('canvas.editor.exportMd')"
-                                    @click="handleExport('md')"
-                                >
-                                    {{ t('canvas.editor.exportMdShort') }}
-                                </button>
-                                <button
-                                    v-if="canExportText"
-                                    type="button"
-                                    class="header-action-btn"
-                                    :title="t('canvas.editor.exportTxt')"
-                                    @click="handleExport('txt')"
-                                >
-                                    {{ t('canvas.editor.exportTxtShort') }}
-                                </button>
-                                <button
-                                    v-if="canExportPdf"
+                                    v-if="canExportDocument"
                                     type="button"
                                     class="header-action-btn primary"
-                                    :title="t('canvas.editor.exportPdf')"
-                                    @click="handleExport('pdf')"
+                                    :title="t('canvas.editor.exportAction')"
+                                    @click="handleExport"
                                 >
-                                    {{ t('canvas.editor.exportPdfShort') }}
+                                    {{ t('canvas.editor.exportAction') }}
                                 </button>
                                 <button class="close-btn" :title="t('canvas.editor.closeHint')" @click="handleClose">
                                     <span>&times;</span>
@@ -65,8 +60,8 @@
                             </div>
                         </div>
 
-                        <div class="editor-body" :class="{ 'split-view': isMarkdown }">
-                            <div class="edit-pane">
+                        <div class="editor-body" :class="editorBodyClass">
+                            <div v-if="showEditorPane" class="edit-pane">
                                 <div class="pane-header-row">
                                     <div class="pane-header">{{ t('canvas.editor.edit') }}</div>
                                     <div v-if="isMarkdown && activeCodeFence" class="pane-subtools">
@@ -163,7 +158,7 @@
 
                             </div>
 
-                            <div v-if="isMarkdown" class="preview-pane">
+                            <div v-if="showPreviewPane" class="preview-pane">
                                 <div class="pane-header-row preview-pane-header">
                                     <div class="pane-header">{{ t('canvas.editor.preview') }}</div>
                                     <div class="preview-stats">
@@ -182,7 +177,7 @@
                                             :id="block.anchorId"
                                             :key="block.id"
                                             class="preview-block"
-                                            :class="{ 'is-heavy': block.isHeavy, 'is-deferred': block.isDeferred }"
+                                            :class="{ 'is-heavy': block.isHeavy, 'is-deferred': block.isDeferred, active: block.id === activePreviewBlockId }"
                                             :data-preview-block-id="block.id"
                                         >
                                             <div v-if="block.isDeferred" class="preview-block-placeholder">
@@ -209,7 +204,7 @@
                         </div>
                     </div>
                 </Transition>
-                <div v-if="isMarkdown && outlineItems.length > 0" class="outline-floating-shell">
+                <div v-if="showPreviewPane && outlineItems.length > 0" class="outline-floating-shell">
                     <button
                         type="button"
                         class="outline-toggle"
@@ -237,13 +232,31 @@
                 </div>
             </div>
         </Transition>
-        <InputDialog
-            v-model="isExportDialogOpen"
-            :title="t('canvas.editor.exportFilenameTitle')"
-            :placeholder="t('canvas.editor.exportFilenamePlaceholder')"
-            :default-value="exportFileNameDraft"
-            @confirm="handleExportFilenameConfirm"
+        <DocumentExportPanel
+            v-model="isExportPanelOpen"
+            :kind="isMarkdown ? 'markdown' : 'text'"
+            :default-settings="exportPanelDefaults"
+            :supports-electron-pdf="supportsElectronPdf"
+            @confirm="handleExportConfirm"
         />
+        <Transition name="modal-fade">
+            <div
+                v-if="activeImagePreview"
+                ref="imageLightboxRef"
+                class="image-lightbox"
+                tabindex="-1"
+                @click.self="closeImagePreview"
+                @keydown.esc.stop="closeImagePreview"
+            >
+                <button type="button" class="image-lightbox-close" @click="closeImagePreview">&times;</button>
+                <img
+                    class="image-lightbox-media"
+                    :src="activeImagePreview.src"
+                    :alt="activeImagePreview.alt"
+                />
+                <div v-if="activeImagePreview.alt" class="image-lightbox-caption">{{ activeImagePreview.alt }}</div>
+            </div>
+        </Transition>
     </Teleport>
 </template>
 
@@ -258,8 +271,13 @@ import mermaid from 'mermaid'
 import type { MermaidConfig } from 'mermaid'
 // @ts-ignore
 import { pluginRegistry, type NodeContent } from '@/plugins'
-import InputDialog from '@/components/base/InputDialog.vue'
-import { exportDocument, type DocumentExportFormat, type ExportTheme } from '@/utils/documentExport'
+import DocumentExportPanel from '@/components/canvas/DocumentExportPanel.vue'
+import {
+    exportDocument,
+    type ExportTheme,
+    type ExportPanelSettings,
+    type ExportPanelThemeMode
+} from '@/utils/documentExport'
 import { deriveDocumentTitle, sanitizeFilename } from '@/utils/markdownRender'
 import { useToast } from '@/utils/useToast'
 import type { UserState } from '../../composables/useAwareness'
@@ -428,6 +446,8 @@ interface CodeFenceContext {
     lineEnd: number
 }
 
+type EditorViewMode = 'edit' | 'split' | 'preview'
+
 const props = defineProps<{
     nodeId: string
     content: NodeContent
@@ -444,9 +464,11 @@ const awareness = inject<{
 }>('awareness', { otherUsers: { value: [] } })
 
 const overlayRef = ref<HTMLDivElement | null>(null)
+const editorContainerRef = ref<HTMLDivElement | null>(null)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const previewRef = ref<HTMLDivElement | null>(null)
 const slashMenuRef = ref<HTMLDivElement | null>(null)
+const imageLightboxRef = ref<HTMLDivElement | null>(null)
 const localContent = ref('')
 const showSlashMenu = ref(false)
 const slashMenuPosition = ref({ top: 0, left: 0 })
@@ -457,9 +479,11 @@ const visiblePreviewBlockIds = ref<Set<string>>(new Set())
 const outlineOpen = ref(false)
 const activeOutlineId = ref('')
 const outlineHintActive = ref(false)
-const isExportDialogOpen = ref(false)
-const exportFileNameDraft = ref('')
-const pendingExportFormat = ref<DocumentExportFormat | null>(null)
+const isExportPanelOpen = ref(false)
+const viewMode = ref<EditorViewMode>('edit')
+const editorSelectionStart = ref(0)
+const forceSingleColumn = ref(false)
+const activeImagePreview = ref<{ src: string; alt: string } | null>(null)
 
 const previewCache = new Map<string, string>()
 const mathPlaceholders = new Map<string, string>()
@@ -473,6 +497,10 @@ let previewObserver: IntersectionObserver | null = null
 let previewSyncFrame: number | null = null
 let pendingEditorScrollTop = 0
 let syncingSource: 'editor' | null = null
+let editorLayoutResizeObserver: ResizeObserver | null = null
+
+const VIEW_MODE_STORAGE_KEY = 'constella.node-editor.view-mode'
+const SINGLE_COLUMN_BREAKPOINT = 1180
 
 const md = new MarkdownIt({
     html: false,
@@ -658,9 +686,25 @@ function isHeavyBlock(text: string): boolean {
 
 const pluginMeta = computed(() => pluginRegistry.getMeta(props.content.kind))
 const isMarkdown = computed(() => props.content.kind === 'markdown')
-const canExportMd = computed(() => props.content.kind === 'markdown')
-const canExportText = computed(() => props.content.kind === 'markdown' || props.content.kind === 'text')
-const canExportPdf = computed(() => props.content.kind === 'markdown' || props.content.kind === 'text')
+const effectiveViewMode = computed<EditorViewMode>(() => {
+    if (!isMarkdown.value) return 'edit'
+    if (forceSingleColumn.value && viewMode.value === 'split') return 'edit'
+    return viewMode.value
+})
+const viewModes = computed(() => ([
+    { id: 'edit' as EditorViewMode, label: t('canvas.editor.modeEdit') },
+    { id: 'split' as EditorViewMode, label: t('canvas.editor.modeSplit') },
+    { id: 'preview' as EditorViewMode, label: t('canvas.editor.modePreview') }
+]))
+const canExportDocument = computed(() => props.content.kind === 'markdown' || props.content.kind === 'text')
+const supportsElectronPdf = computed(() => Boolean(window.electron?.exportDocumentPdf))
+const showEditorPane = computed(() => !isMarkdown.value || effectiveViewMode.value === 'edit' || effectiveViewMode.value === 'split')
+const showPreviewPane = computed(() => isMarkdown.value && (effectiveViewMode.value === 'split' || effectiveViewMode.value === 'preview'))
+const editorBodyClass = computed(() => ({
+    'split-view': showEditorPane.value && showPreviewPane.value,
+    'edit-only': showEditorPane.value && !showPreviewPane.value,
+    'preview-only': showPreviewPane.value && !showEditorPane.value
+}))
 const placeholder = computed(() => isMarkdown.value ? t('canvas.editor.markdownPlaceholder') : t('canvas.editor.textPlaceholder'))
 const slashMenuStyle = computed(() => ({ top: `${slashMenuPosition.value.top}px`, left: `${slashMenuPosition.value.left}px` }))
 const editingUsers = computed(() => awareness.otherUsers.value.filter(user => user.selection?.includes(props.nodeId)))
@@ -794,6 +838,13 @@ const previewBlocks = computed<PreviewBlock[]>(() => {
             isDeferred: shouldDefer
         }
     })
+})
+
+const activePreviewBlockId = computed(() => {
+    if (!isMarkdown.value || editorBlockMetrics.value.length === 0) return ''
+    const cursor = Math.min(localContent.value.length, Math.max(0, editorSelectionStart.value))
+    const metric = editorBlockMetrics.value.find(block => cursor <= block.end) ?? editorBlockMetrics.value[editorBlockMetrics.value.length - 1]
+    return metric?.id ?? ''
 })
 
 const toolbarActions = computed<ToolbarAction[]>(() => [
@@ -1034,6 +1085,112 @@ function markPreviewIntent() {
     // Preview is now read-follow by default; clicking can still trigger explicit jumps.
 }
 
+function createImageFallback(img: HTMLImageElement) {
+    if (img.nextElementSibling?.classList.contains('preview-image-fallback')) return
+    const fallback = document.createElement('div')
+    fallback.className = 'preview-image-fallback'
+    const alt = img.getAttribute('alt')?.trim()
+    fallback.innerHTML = `
+        <span class="preview-image-fallback-badge">Image unavailable</span>
+        <strong>${markdownUtils.escapeHtml(alt || 'Unable to load image')}</strong>
+        <span>${markdownUtils.escapeHtml(img.currentSrc || img.src || '')}</span>
+    `
+    img.insertAdjacentElement('afterend', fallback)
+}
+
+function decoratePreviewImages() {
+    const preview = previewRef.value
+    if (!preview) return
+
+    preview.querySelectorAll<HTMLImageElement>('img').forEach((img) => {
+        if (!img.dataset.previewEnhanced) {
+            img.dataset.previewEnhanced = 'true'
+            img.loading = 'lazy'
+            img.referrerPolicy = 'no-referrer'
+            img.addEventListener('load', () => {
+                img.classList.remove('is-error')
+                img.nextElementSibling?.classList.contains('preview-image-fallback') && img.nextElementSibling.remove()
+            })
+            img.addEventListener('error', () => {
+                img.classList.add('is-error')
+                createImageFallback(img)
+            })
+        }
+
+        if (img.complete && img.naturalWidth === 0) {
+            img.classList.add('is-error')
+            createImageFallback(img)
+        }
+    })
+}
+
+function closeImagePreview() {
+    activeImagePreview.value = null
+}
+
+function readStoredViewMode(): EditorViewMode {
+    if (!isMarkdown.value) return 'edit'
+    try {
+        const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY)
+        if (stored === 'edit' || stored === 'split' || stored === 'preview') {
+            return stored
+        }
+    } catch {}
+    return 'split'
+}
+
+function updateLayoutMode() {
+    const width = editorContainerRef.value?.clientWidth ?? window.innerWidth
+    forceSingleColumn.value = width < SINGLE_COLUMN_BREAKPOINT
+}
+
+function animateScrollTop(element: HTMLElement, targetScrollTop: number, duration = 220) {
+    const start = element.scrollTop
+    const delta = targetScrollTop - start
+    if (Math.abs(delta) < 1) {
+        element.scrollTop = targetScrollTop
+        return
+    }
+
+    const startTime = performance.now()
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3)
+
+    const step = (now: number) => {
+        const progress = Math.min(1, (now - startTime) / duration)
+        element.scrollTop = start + (delta * easeOutCubic(progress))
+        if (progress < 1) {
+            requestAnimationFrame(step)
+        }
+    }
+
+    requestAnimationFrame(step)
+}
+
+function focusEditorAtOffset(offset: number) {
+    const textarea = textareaRef.value
+    if (!textarea) return
+
+    const safeOffset = Math.max(0, Math.min(localContent.value.length, offset))
+    const lineHeight = 27
+    const lineIndex = localContent.value.slice(0, safeOffset).split('\n').length - 1
+    const targetScrollTop = Math.max(0, (lineIndex * lineHeight) - (textarea.clientHeight * 0.28))
+
+    textarea.focus()
+    textarea.setSelectionRange(safeOffset, safeOffset)
+    animateScrollTop(textarea, targetScrollTop)
+    editorSelectionStart.value = safeOffset
+    awareness.updateTextCursor?.(props.nodeId, safeOffset, safeOffset)
+    window.setTimeout(() => {
+        syncPreviewFromEditor()
+    }, 40)
+}
+
+function focusEditorAtBlock(blockId: string) {
+    const metric = editorBlockMetrics.value.find(item => item.id === blockId)
+    if (!metric) return
+    focusEditorAtOffset(metric.start)
+}
+
 function handleOverlayPointerMove(event: MouseEvent) {
     outlineHintActive.value = event.clientX <= 120
 }
@@ -1044,16 +1201,34 @@ function handleOverlayPointerLeave() {
 
 function handlePreviewClick(event: MouseEvent) {
     const target = event.target as HTMLElement | null
-    const anchor = target?.closest('a[href]') as HTMLAnchorElement | null
-    if (!anchor) return
-    event.preventDefault()
-    const href = anchor.href
-    if (!href) return
-    if (window.electron?.openExternal) {
-        window.electron.openExternal(href)
+    const image = target?.closest('img') as HTMLImageElement | null
+    if (image && !image.classList.contains('is-error')) {
+        activeImagePreview.value = {
+            src: image.currentSrc || image.src,
+            alt: image.alt || ''
+        }
+        nextTick(() => imageLightboxRef.value?.focus())
         return
     }
-    window.open(href, '_blank', 'noopener,noreferrer')
+
+    const anchor = target?.closest('a[href]') as HTMLAnchorElement | null
+    if (anchor) {
+        event.preventDefault()
+        const href = anchor.href
+        if (!href) return
+        if (window.electron?.openExternal) {
+            window.electron.openExternal(href)
+            return
+        }
+        window.open(href, '_blank', 'noopener,noreferrer')
+        return
+    }
+
+    const blockElement = target?.closest<HTMLElement>('[data-preview-block-id]')
+    const blockId = blockElement?.dataset.previewBlockId
+    if (!blockId) return
+
+    focusEditorAtBlock(blockId)
 }
 
 function handlePaste(event: ClipboardEvent) {
@@ -1085,8 +1260,9 @@ function handleSelection() {
 
 function handleCursorChange() {
     const textarea = textareaRef.value
-    if (!textarea || !awareness.updateTextCursor) return
-    awareness.updateTextCursor(props.nodeId, textarea.selectionStart, textarea.selectionEnd)
+    if (!textarea) return
+    editorSelectionStart.value = textarea.selectionStart
+    awareness.updateTextCursor?.(props.nodeId, textarea.selectionStart, textarea.selectionEnd)
 }
 
 function checkSlashCommand(textarea: HTMLTextAreaElement) {
@@ -1334,6 +1510,7 @@ function setCurrentCodeFenceLanguage(language: string) {
 function scrollToOutlineItem(item: OutlineItem) {
     activeOutlineId.value = item.id
     previewRef.value?.querySelector<HTMLElement>(`#${item.anchorId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    focusEditorAtBlock(item.blockId)
 }
 
 async function renderMermaidDiagrams() {
@@ -1341,17 +1518,19 @@ async function renderMermaidDiagrams() {
     const preview = previewRef.value
     if (!preview) return
     const mermaidElements = preview.querySelectorAll('.mermaid')
-    if (mermaidElements.length === 0) return
-    try {
-        const themeMode: MermaidThemeMode = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
-        mermaid.initialize(getMermaidConfig(themeMode))
-        await mermaid.run({
-            nodes: mermaidElements as NodeListOf<HTMLElement>,
-            suppressErrors: true
-        })
-    } catch (error) {
-        console.warn('[Mermaid] Render error:', error)
+    if (mermaidElements.length > 0) {
+        try {
+            const themeMode: MermaidThemeMode = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
+            mermaid.initialize(getMermaidConfig(themeMode))
+            await mermaid.run({
+                nodes: mermaidElements as NodeListOf<HTMLElement>,
+                suppressErrors: true
+            })
+        } catch (error) {
+            console.warn('[Mermaid] Render error:', error)
+        }
     }
+    decoratePreviewImages()
 }
 
 function setupPreviewObserver() {
@@ -1401,24 +1580,31 @@ function getDefaultExportFileName() {
     return sanitizeFilename(deriveDocumentTitle(localContent.value, isMarkdown.value ? 'markdown' : 'text'))
 }
 
-function handleExport(format: DocumentExportFormat) {
-    if (!canExportText.value) {
+const exportPanelDefaults = computed<ExportPanelSettings>(() => ({
+    format: isMarkdown.value ? 'pdf' : 'txt',
+    fileName: getDefaultExportFileName(),
+    pdfTheme: 'current',
+    pdfOrientation: 'portrait',
+    pdfIncludeTitle: true,
+    txtMode: 'plain'
+}))
+
+function resolveExportTheme(themeMode: ExportPanelThemeMode): ExportTheme {
+    return themeMode === 'current' ? getExportTheme() : themeMode
+}
+
+function handleExport() {
+    if (!canExportDocument.value) {
         toast.error(t('canvas.editor.exportUnsupported'))
         return
     }
 
-    pendingExportFormat.value = format
-    exportFileNameDraft.value = getDefaultExportFileName()
-    isExportDialogOpen.value = true
+    isExportPanelOpen.value = true
 }
 
-async function handleExportFilenameConfirm(value: string) {
-    const format = pendingExportFormat.value
-    pendingExportFormat.value = null
-
-    if (!format) return
-
-    const fileName = sanitizeFilename(value, getDefaultExportFileName())
+async function handleExportConfirm(settings: ExportPanelSettings) {
+    const format = settings.format
+    const fileName = sanitizeFilename(settings.fileName, getDefaultExportFileName())
 
     try {
         const result = await exportDocument(format, {
@@ -1426,17 +1612,33 @@ async function handleExportFilenameConfirm(value: string) {
             content: localContent.value,
             title: deriveDocumentTitle(localContent.value, isMarkdown.value ? 'markdown' : 'text'),
             fileName,
-            theme: getExportTheme()
+            theme: resolveExportTheme(settings.pdfTheme),
+            includeTitle: settings.pdfIncludeTitle,
+            orientation: settings.pdfOrientation,
+            textMode: settings.txtMode
         })
 
         if (result.canceled) {
             return
         }
 
+        if (format === 'pdf' && !window.electron?.exportDocumentPdf) {
+            toast.success(t('canvas.editor.exportPdfReady'))
+            return
+        }
+
+        if (result.filePath) {
+            toast.success(t('canvas.editor.exportSavedTo', { path: result.filePath }))
+            return
+        }
+
+        if (result.fileName) {
+            toast.success(t('canvas.editor.exportSavedAs', { name: result.fileName }))
+            return
+        }
+
         if (format === 'pdf') {
-            toast.success(window.electron?.exportDocumentPdf
-                ? t('canvas.editor.exportPdfSaved')
-                : t('canvas.editor.exportPdfReady'))
+            toast.success(t('canvas.editor.exportPdfSaved'))
             return
         }
 
@@ -1449,12 +1651,23 @@ async function handleExportFilenameConfirm(value: string) {
 
 onMounted(() => {
     localContent.value = props.content.data || ''
+    viewMode.value = readStoredViewMode()
     nextTick(() => {
         overlayRef.value?.focus()
         textareaRef.value?.focus()
+        editorSelectionStart.value = textareaRef.value?.selectionStart ?? 0
+        updateLayoutMode()
         setupPreviewObserver()
         renderMermaidDiagrams()
     })
+    if (typeof ResizeObserver !== 'undefined' && editorContainerRef.value) {
+        editorLayoutResizeObserver = new ResizeObserver(() => {
+            updateLayoutMode()
+        })
+        editorLayoutResizeObserver.observe(editorContainerRef.value)
+    } else {
+        window.addEventListener('resize', updateLayoutMode)
+    }
     if (!document.querySelector('link[href*="katex"]')) {
         const link = document.createElement('link')
         link.rel = 'stylesheet'
@@ -1467,6 +1680,17 @@ watch(() => props.content.data, (newData) => {
     if (newData !== localContent.value) {
         localContent.value = newData || ''
     }
+})
+
+watch(() => props.content.kind, (kind) => {
+    viewMode.value = kind === 'markdown' ? readStoredViewMode() : 'edit'
+})
+
+watch(viewMode, (mode) => {
+    if (!isMarkdown.value) return
+    try {
+        window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode)
+    } catch {}
 })
 
 watch(rawBlocks, async () => {
@@ -1492,6 +1716,8 @@ onUnmounted(() => {
         cancelAnimationFrame(previewSyncFrame)
     }
     previewObserver?.disconnect()
+    editorLayoutResizeObserver?.disconnect()
+    window.removeEventListener('resize', updateLayoutMode)
     awareness.updateTextCursor?.('', -1, -1)
 })
 </script>
@@ -1502,8 +1728,12 @@ onUnmounted(() => {
 .editor-header, .editor-footer { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; background: rgba(255, 255, 255, 0.03); }
 .editor-header { border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
 .editor-footer { border-top: 1px solid rgba(255, 255, 255, 0.08); }
-.header-left, .header-actions, .footer-right, .collab-users, .pane-header-row, .pane-subtools, .editor-toolbar, .preview-stats { display: flex; align-items: center; }
+.header-left, .header-actions, .footer-right, .collab-users, .pane-header-row, .pane-subtools, .editor-toolbar, .preview-stats, .view-mode-switch { display: flex; align-items: center; }
 .header-left { gap: 10px; }
+.view-mode-switch { gap: 6px; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.05); }
+.view-mode-btn { min-width: 74px; height: 32px; padding: 0 14px; border: none; border-radius: 999px; background: transparent; color: rgba(255, 255, 255, 0.58); cursor: pointer; font-size: 12px; font-weight: 700; transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease; }
+.view-mode-btn:hover { color: rgba(255, 255, 255, 0.9); }
+.view-mode-btn.active { background: rgba(96, 165, 250, 0.18); color: #dbeafe; box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.16); }
 .header-actions { gap: 10px; }
 .type-icon { font-size: 20px; }
 .type-label { font-size: 16px; font-weight: 600; color: rgba(255, 255, 255, 0.92); }
@@ -1517,7 +1747,30 @@ onUnmounted(() => {
 .close-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.14); }
 .editor-body { flex: 1; min-height: 0; display: flex; overflow: hidden; }
 .editor-body.split-view { gap: 1px; background: rgba(255, 255, 255, 0.08); }
+.editor-body.edit-only .edit-pane,
+.editor-body.preview-only .preview-pane { flex: 1 1 100%; }
+.editor-body.preview-only {
+    background:
+        radial-gradient(circle at top, rgba(96, 165, 250, 0.08), transparent 38%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+}
+.editor-body.split-view .edit-pane { flex: 0 1 52%; }
+.editor-body.split-view .preview-pane { flex: 0 1 48%; }
 .edit-pane, .preview-pane { min-width: 0; display: flex; flex: 1; flex-direction: column; position: relative; background: #17181c; }
+.editor-body.preview-only .preview-pane-header { justify-content: center; padding: 18px 24px 8px; border-bottom: none; background: transparent; }
+.editor-body.preview-only .preview-stats { display: none; }
+.editor-body.preview-only .preview-layout { padding: 8px 28px 32px; background: transparent; }
+.editor-body.preview-only .preview-content {
+    width: min(100%, 940px);
+    margin: 0 auto 12px;
+    padding: 44px 52px 60px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 28px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025)),
+        rgba(15, 18, 24, 0.7);
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+}
 .pane-header-row { justify-content: space-between; gap: 12px; padding: 10px 18px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
 .pane-header { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.45); }
 .pane-subtools, .preview-stats { flex-wrap: wrap; gap: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.42); }
@@ -1549,6 +1802,7 @@ onUnmounted(() => {
 .preview-empty { color: rgba(255, 255, 255, 0.34); font-style: italic; }
 .preview-block { position: relative; margin-bottom: 18px; border-radius: 14px; opacity: 0; transform: translateY(10px) scale(0.992); animation: preview-block-enter 0.26s ease forwards; transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.22s ease; }
 .preview-block:hover { transform: translateY(-1px); }
+.preview-block.active { background: linear-gradient(135deg, rgba(96, 165, 250, 0.045), rgba(96, 165, 250, 0.015)); box-shadow: 0 0 0 1px rgba(147, 197, 253, 0.08), 0 8px 18px rgba(37, 99, 235, 0.04); }
 .preview-block.is-heavy:not(.is-deferred) { background: transparent; }
 .preview-block-placeholder, .preview-block-inner { border-radius: 14px; }
 .preview-block-placeholder { position: relative; padding: 18px 18px 18px 20px; border: 1px solid rgba(255, 255, 255, 0.08); background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(96, 165, 250, 0.04)); color: rgba(255, 255, 255, 0.64); overflow: hidden; }
@@ -1604,16 +1858,23 @@ onUnmounted(() => {
 .preview-content :deep(blockquote) { margin: 1em 0; padding-left: 16px; border-left: 4px solid rgba(255, 255, 255, 0.18); color: rgba(255, 255, 255, 0.7); }
 .preview-content :deep(ul), .preview-content :deep(ol) { margin: 0.8em 0; padding-left: 1.5em; }
 .preview-content :deep(a) { color: #60a5fa; text-decoration: none; }
-.preview-content :deep(img) { display: block; max-width: min(100%, 760px); width: auto; height: auto; margin: 1em auto; border-radius: 14px; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18); background: rgba(255, 255, 255, 0.03); }
+.preview-content :deep(img) { display: block; max-width: min(100%, 780px); max-height: min(52vh, 560px); width: auto; height: auto; margin: 1.1em auto; border-radius: 16px; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18); background: rgba(255, 255, 255, 0.03); object-fit: contain; cursor: zoom-in; transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease; }
+.preview-content :deep(img:hover) { transform: translateY(-1px); box-shadow: 0 22px 44px rgba(0, 0, 0, 0.22); }
+.preview-content :deep(img.is-error) { display: none; }
+.preview-content :deep(.preview-image-fallback) { display: flex; flex-direction: column; gap: 6px; margin: 1em auto; padding: 16px 18px; border: 1px dashed rgba(255, 255, 255, 0.18); border-radius: 14px; background: rgba(255, 255, 255, 0.03); color: rgba(255, 255, 255, 0.7); }
+.preview-content :deep(.preview-image-fallback strong) { color: rgba(255, 255, 255, 0.9); font-size: 13px; }
+.preview-content :deep(.preview-image-fallback span:last-child) { font-size: 12px; line-height: 1.45; word-break: break-all; }
+.preview-content :deep(.preview-image-fallback-badge) { display: inline-flex; align-self: flex-start; padding: 4px 8px; border-radius: 999px; background: rgba(248, 113, 113, 0.14); color: #fecaca; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .preview-content :deep(hr) { margin: 1.5em 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.1); }
 .preview-content :deep(table) { width: 100%; margin: 1em 0; border-collapse: collapse; }
 .preview-content :deep(th), .preview-content :deep(td) { padding: 8px 12px; border: 1px solid rgba(255, 255, 255, 0.1); }
 .preview-content :deep(th) { font-weight: 700; background: rgba(255, 255, 255, 0.04); }
 .preview-content :deep(.katex-block) { display: flex; justify-content: center; margin: 1.2em 0; padding: 1em; border-radius: 12px; background: rgba(255, 255, 255, 0.03); overflow-x: auto; }
 .preview-content :deep(.katex-error) { padding: 2px 6px; border-radius: 6px; color: #fca5a5; background: rgba(239, 68, 68, 0.1); }
-.preview-content :deep(.mermaid-wrapper) { position: relative; margin: 1.2em 0; padding: 38px 18px 18px; border-radius: 12px; background: rgba(255, 255, 255, 0.02); overflow-x: auto; }
+.preview-content :deep(.mermaid-wrapper) { position: relative; margin: 1.25em 0; padding: 38px 18px 18px; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; background: rgba(255, 255, 255, 0.03); overflow: auto; break-inside: avoid; }
 .preview-content :deep(.mermaid-block-lang) { position: absolute; top: 10px; left: 12px; z-index: 1; display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.68); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-.preview-content :deep(.mermaid svg) { max-width: 100%; height: auto; }
+.preview-content :deep(.mermaid) { display: flex; justify-content: center; min-width: fit-content; }
+.preview-content :deep(.mermaid svg) { display: block; width: auto !important; max-width: 100%; height: auto; margin: 0 auto; }
 .preview-content :deep(.mermaid text),
 .preview-content :deep(.mermaid .label),
 .preview-content :deep(.mermaid .nodeLabel),
@@ -1676,6 +1937,10 @@ onUnmounted(() => {
 @keyframes placeholder-sheen { from { transform: translateX(-120%); } to { transform: translateX(120%); } }
 .outline-float-enter-active, .outline-float-leave-active { transition: opacity 0.22s ease, transform 0.22s ease; }
 .outline-float-enter-from, .outline-float-leave-to { opacity: 0; transform: translateX(-10px) scale(0.98); }
+.image-lightbox { position: fixed; inset: 0; z-index: 10040; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 32px; background: rgba(5, 8, 14, 0.82); backdrop-filter: blur(12px); }
+.image-lightbox-close { position: absolute; top: 20px; right: 24px; width: 40px; height: 40px; border: none; border-radius: 999px; background: rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.88); font-size: 28px; line-height: 1; cursor: pointer; }
+.image-lightbox-media { max-width: min(92vw, 1440px); max-height: calc(100vh - 120px); border-radius: 18px; box-shadow: 0 26px 60px rgba(0, 0, 0, 0.35); object-fit: contain; background: rgba(255, 255, 255, 0.04); }
+.image-lightbox-caption { max-width: min(90vw, 960px); padding: 10px 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.86); font-size: 13px; line-height: 1.4; text-align: center; }
 html[data-theme='light'] .editor-overlay { background: rgba(0, 0, 0, 0.45); }
 html[data-theme='light'] .editor-container, html[data-theme='light'] .edit-pane, html[data-theme='light'] .preview-pane { background: #ffffff; }
 html[data-theme='light'] .editor-container { box-shadow: 0 25px 80px rgba(0, 0, 0, 0.18); }
@@ -1683,6 +1948,22 @@ html[data-theme='light'] .editor-header, html[data-theme='light'] .editor-footer
 html[data-theme='light'] .editor-header, html[data-theme='light'] .pane-header-row, html[data-theme='light'] .editor-footer, html[data-theme='light'] .outline-pane { border-color: rgba(0, 0, 0, 0.08); }
 html[data-theme='light'] .type-label, html[data-theme='light'] .editor-textarea, html[data-theme='light'] .preview-content, html[data-theme='light'] .cmd-label { color: rgba(0, 0, 0, 0.9); }
 html[data-theme='light'] .pane-header, html[data-theme='light'] .preview-stats, html[data-theme='light'] .subtool-label, html[data-theme='light'] .outline-header, html[data-theme='light'] .footer-hint, html[data-theme='light'] .char-count, html[data-theme='light'] .cmd-desc, html[data-theme='light'] .cmd-shortcut, html[data-theme='light'] .slash-menu-header, html[data-theme='light'] .slash-menu-empty { color: rgba(0, 0, 0, 0.48); }
+html[data-theme='light'] .editor-body.preview-only {
+    background:
+        radial-gradient(circle at top, rgba(59, 130, 246, 0.08), transparent 38%),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.015), rgba(0, 0, 0, 0));
+}
+html[data-theme='light'] .editor-body.preview-only .preview-content {
+    border-color: rgba(15, 23, 42, 0.08);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.92)),
+        #ffffff;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+}
+html[data-theme='light'] .view-mode-switch { background: rgba(0, 0, 0, 0.04); }
+html[data-theme='light'] .view-mode-btn { color: rgba(15, 23, 42, 0.52); }
+html[data-theme='light'] .view-mode-btn:hover { color: rgba(15, 23, 42, 0.84); }
+html[data-theme='light'] .view-mode-btn.active { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.12); }
 html[data-theme='light'] .collab-users { border-color: rgba(0, 0, 0, 0.08); }
 html[data-theme='light'] .collab-avatar { border-color: #ffffff; }
 html[data-theme='light'] .header-action-btn, html[data-theme='light'] .close-btn, html[data-theme='light'] .toolbar-button, html[data-theme='light'] .code-language-chip, html[data-theme='light'] .cmd-icon { background: rgba(0, 0, 0, 0.06); color: rgba(0, 0, 0, 0.72); }
@@ -1699,6 +1980,7 @@ html[data-theme='light'] .outline-pane { border-color: rgba(0, 0, 0, 0.08); back
 html[data-theme='light'] .outline-item { color: rgba(0, 0, 0, 0.72); }
 html[data-theme='light'] .outline-item.active { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.12); }
 html[data-theme='light'] .preview-block.is-heavy:not(.is-deferred) { background: transparent; }
+html[data-theme='light'] .preview-block.active { background: linear-gradient(135deg, rgba(59, 130, 246, 0.04), rgba(59, 130, 246, 0.015)); box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.07), 0 8px 18px rgba(37, 99, 235, 0.035); }
 html[data-theme='light'] .preview-block-placeholder { border-color: rgba(0, 0, 0, 0.12); background: rgba(0, 0, 0, 0.02); color: rgba(0, 0, 0, 0.62); }
 html[data-theme='light'] .preview-block-badge { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
 html[data-theme='light'] .slash-menu { border-color: rgba(0, 0, 0, 0.12); background: rgba(255, 255, 255, 0.96); box-shadow: 0 18px 42px rgba(0, 0, 0, 0.12); }
@@ -1722,8 +2004,15 @@ html[data-theme='light'] .preview-content :deep(th), html[data-theme='light'] .p
 html[data-theme='light'] .preview-content :deep(th) { background: rgba(0, 0, 0, 0.04); }
 html[data-theme='light'] .preview-content :deep(hr) { border-top-color: rgba(0, 0, 0, 0.1); }
 html[data-theme='light'] .preview-content :deep(img) { background: rgba(0, 0, 0, 0.02); box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08); }
+html[data-theme='light'] .preview-content :deep(.preview-image-fallback) { border-color: rgba(0, 0, 0, 0.14); background: rgba(0, 0, 0, 0.02); color: rgba(0, 0, 0, 0.62); }
+html[data-theme='light'] .preview-content :deep(.preview-image-fallback strong) { color: rgba(0, 0, 0, 0.82); }
+html[data-theme='light'] .preview-content :deep(.preview-image-fallback-badge) { background: rgba(239, 68, 68, 0.1); color: #b91c1c; }
+html[data-theme='light'] .image-lightbox { background: rgba(241, 245, 249, 0.82); }
+html[data-theme='light'] .image-lightbox-close { background: rgba(15, 23, 42, 0.08); color: rgba(15, 23, 42, 0.86); }
+html[data-theme='light'] .image-lightbox-media { background: rgba(255, 255, 255, 0.78); box-shadow: 0 22px 52px rgba(15, 23, 42, 0.18); }
+html[data-theme='light'] .image-lightbox-caption { background: rgba(255, 255, 255, 0.88); color: rgba(15, 23, 42, 0.84); }
 html[data-theme='light'] .preview-content :deep(.katex-block) { background: rgba(0, 0, 0, 0.03); }
-html[data-theme='light'] .preview-content :deep(.mermaid-wrapper) { background: rgba(0, 0, 0, 0.02); }
+html[data-theme='light'] .preview-content :deep(.mermaid-wrapper) { border-color: rgba(0, 0, 0, 0.08); background: rgba(0, 0, 0, 0.02); }
 html[data-theme='light'] .preview-content :deep(.mermaid-block-lang) { background: rgba(255, 255, 255, 0.72); color: rgba(15, 23, 42, 0.52); }
 html[data-theme='light'] .preview-content :deep(.mermaid text),
 html[data-theme='light'] .preview-content :deep(.mermaid .label),
