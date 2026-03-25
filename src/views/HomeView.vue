@@ -46,7 +46,7 @@
                         <p class="subtitle" style="user-select: none;">{{ t('home.subtitle') }}</p>
                     </div>
 
-                    <div ref="serverShellRef" class="server-shell">
+                    <div class="server-shell">
                         <div class="server-card">
                             <label class="input-label">{{ t('home.serverInput.label') }}</label>
                             <div class="input-group">
@@ -93,20 +93,32 @@
                             </Transition>
                         </div>
 
-                        <div class="discovery-ribbon" @click="clearDiscoverySelection">
+                        <div class="discovery-ribbon">
                             <div class="discovery-ribbon-header">
                                 <div class="discovery-ribbon-title">
-                                    <span class="discovery-label">{{ discoveryText.label }}</span>
+                                    <span class="discovery-label-group">
+                                        <span class="discovery-label">{{ discoveryText.label }}</span>
+                                        <button
+                                            class="discovery-inline-icon"
+                                            :title="discoveryText.hintTitle"
+                                            type="button"
+                                        >
+                                            <HelpCircleIcon />
+                                        </button>
+                                    </span>
                                     <span class="discovery-summary">{{ discoveryCountText }}</span>
                                 </div>
+
                                 <button
                                     v-if="supportsLanDiscovery"
-                                    class="refresh-btn compact"
+                                    class="discovery-icon-btn refresh-icon-btn"
                                     :disabled="isDiscovering || isConnecting"
-                                    @click.stop="refreshDiscoveredServers"
+                                    :title="isDiscovering ? discoveryText.searching : discoveryText.refresh"
+                                    @click="refreshDiscoveredServers"
+                                    type="button"
                                 >
                                     <span v-if="isDiscovering" class="loading-spinner small"></span>
-                                    {{ discoveryText.refresh }}
+                                    <RefreshIcon v-else />
                                 </button>
                             </div>
 
@@ -116,38 +128,47 @@
                                 </div>
                             </Transition>
 
-                            <div v-if="supportsLanDiscovery && discoveredServers.length > 0" class="discovery-lane" @click.stop>
-                                <button
-                                    v-for="server in discoveredServers"
-                                    :key="server.id"
-                                    class="discovery-pill"
-                                    :class="{ active: selectedDiscoveryId === server.id || normalizedInputUrl === server.url }"
-                                    :disabled="isConnecting"
-                                    @click.stop="selectDiscoveredServer(server)"
-                                    @dblclick.stop="connectDiscoveredServer(server)"
-                                >
-                                    <span class="discovery-pill-name">{{ server.name }}</span>
-                                    <span v-if="server.version" class="discovery-pill-version">{{ server.version }}</span>
-                                </button>
-                            </div>
-
-                            <Transition name="fade">
-                                <div v-if="selectedServer" class="selected-server-card" @click.stop>
-                                    <div class="selected-server-title-row">
-                                        <span class="selected-server-name">{{ selectedServer.name }}</span>
-                                        <span v-if="selectedServer.version" class="discovery-badge">{{ selectedServer.version }}</span>
-                                    </div>
-                                    <div class="selected-server-url">{{ selectedServer.url }}</div>
-                                    <div class="selected-server-meta">
-                                        <span>{{ selectedServer.host }}:{{ selectedServer.port }}</span>
-                                        <span>{{ selectedServer.instanceId }}</span>
-                                    </div>
+                            <template v-if="supportsLanDiscovery && discoveredServers.length > 0">
+                                <div class="discovery-lane">
+                                    <button
+                                        v-for="server in discoveredServers"
+                                        :key="server.id"
+                                        class="discovery-pill"
+                                        :class="{ active: selectedDiscoveryId === server.id || normalizedInputUrl === server.url }"
+                                        :disabled="isConnecting"
+                                        @click="selectDiscoveredServer(server)"
+                                        @dblclick="connectDiscoveredServer(server)"
+                                    >
+                                        <span class="discovery-pill-name">{{ server.name }}</span>
+                                        <span v-if="server.version" class="discovery-pill-version">{{ server.version }}</span>
+                                    </button>
                                 </div>
-                            </Transition>
 
-                            <div v-if="supportsLanDiscovery && discoveredServers.length > 0" class="discovery-lane-hint">
-                                {{ discoveryText.hint }}
-                            </div>
+                                <Transition name="strip-float">
+                                    <div v-if="selectedServer" class="selected-server-strip-layer">
+                                        <div class="selected-server-strip">
+                                            <div class="selected-server-accent"></div>
+                                            <div class="selected-server-strip-main">
+                                                <div class="selected-server-title-row">
+                                                    <span class="selected-server-name">{{ selectedServer.name }}</span>
+                                                    <span v-if="selectedServer.version" class="discovery-badge">{{ selectedServer.version }}</span>
+                                                </div>
+                                                <div class="selected-server-url">{{ selectedServer.url }}</div>
+                                            </div>
+                                            <div class="selected-server-strip-side">
+                                                <div class="selected-server-meta-item">
+                                                    <span class="selected-server-meta-label">Host</span>
+                                                    <span class="selected-server-meta-value">{{ selectedServer.host }}:{{ selectedServer.port }}</span>
+                                                </div>
+                                                <div class="selected-server-meta-item">
+                                                    <span class="selected-server-meta-label">ID</span>
+                                                    <span class="selected-server-meta-value">{{ selectedServer.instanceId }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Transition>
+                            </template>
 
                             <div v-else class="discovery-empty">
                                 {{ discoveryEmptyText }}
@@ -170,7 +191,8 @@ import {
     MoonIcon,
     SunnyIcon,
     HelpCircleIcon,
-    LogoGithubIcon
+    LogoGithubIcon,
+    RefreshIcon
 } from 'tdesign-icons-vue-next'
 import SettingsPanel from '../components/base/SettingsPanel.vue'
 import WindowControls from '../components/base/WindowControls.vue'
@@ -196,11 +218,10 @@ interface DiscoveryText {
     searching: string
     empty: string
     desktopOnly: string
-    quickConnect: string
     failed: string
     label: string
     countSuffix: string
-    hint: string
+    hintTitle: string
 }
 
 interface ElectronApi {
@@ -218,11 +239,10 @@ const ZH_DISCOVERY_TEXT: DiscoveryText = {
     searching: '正在搜索附近服务器...',
     empty: '暂未在当前局域网中发现可用的 Constella 服务器。',
     desktopOnly: '局域网自动发现仅在桌面端可用，你仍然可以手动输入服务器地址连接。',
-    quickConnect: '快速连接',
     failed: '扫描局域网失败，请稍后重试。',
     label: '局域网发现',
     countSuffix: '台服务器',
-    hint: '单击查看，双击直连'
+    hintTitle: '单击查看，双击直连'
 }
 
 const EN_DISCOVERY_TEXT: DiscoveryText = {
@@ -230,11 +250,10 @@ const EN_DISCOVERY_TEXT: DiscoveryText = {
     searching: 'Searching nearby servers...',
     empty: 'No Constella servers were found on this local network yet.',
     desktopOnly: 'LAN auto-discovery is available in the desktop app. You can still connect manually here.',
-    quickConnect: 'Quick Connect',
     failed: 'Failed to scan the local network. Please try again.',
     label: 'LAN Discovery',
     countSuffix: 'servers',
-    hint: 'Click to preview, double-click to connect'
+    hintTitle: 'Click to preview, double-click to connect'
 }
 
 const { t, locale } = useI18n()
@@ -265,28 +284,14 @@ const discoveryText = computed<DiscoveryText>(() =>
     locale.value === 'zh-CN' ? ZH_DISCOVERY_TEXT : EN_DISCOVERY_TEXT
 )
 const discoveryEmptyText = computed(() => {
-    if (!supportsLanDiscovery.value) {
-        return discoveryText.value.desktopOnly
-    }
-
-    if (isDiscovering.value) {
-        return discoveryText.value.searching
-    }
-
+    if (!supportsLanDiscovery.value) return discoveryText.value.desktopOnly
+    if (isDiscovering.value) return discoveryText.value.searching
     return discoveryText.value.empty
 })
 const discoveryCountText = computed(() => {
-    if (!supportsLanDiscovery.value) {
-        return discoveryText.value.desktopOnly
-    }
-
-    if (isDiscovering.value) {
-        return discoveryText.value.searching
-    }
-
-    if (discoveredServers.value.length === 0) {
-        return discoveryText.value.empty
-    }
+    if (!supportsLanDiscovery.value) return discoveryText.value.desktopOnly
+    if (isDiscovering.value) return discoveryText.value.searching
+    if (discoveredServers.value.length === 0) return discoveryText.value.empty
 
     return locale.value === 'zh-CN'
         ? `已发现 ${discoveredServers.value.length} ${discoveryText.value.countSuffix}`
@@ -356,6 +361,7 @@ async function refreshDiscoveredServers() {
 
     try {
         discoveredServers.value = await electronApi.discoverLanServers(DISCOVERY_TIMEOUT_MS)
+
         if (
             selectedDiscoveryId.value &&
             !discoveredServers.value.some((server) => server.id === selectedDiscoveryId.value)
@@ -373,22 +379,17 @@ async function refreshDiscoveredServers() {
 
 function selectDiscoveredServer(server: DiscoveredServer) {
     if (selectedDiscoveryId.value === server.id) {
-        // 再次点击同一胶囊，取消选择
         selectedDiscoveryId.value = ''
-        serverUrl.value = ''
-    } else {
-        // 点击不同胶囊，显示该服务器
-        selectedDiscoveryId.value = server.id
-        serverUrl.value = server.url
+        return
     }
-}
 
-function clearDiscoverySelection() {
-    selectedDiscoveryId.value = ''
+    selectedDiscoveryId.value = server.id
+    serverUrl.value = server.url
 }
 
 async function connectDiscoveredServer(server: DiscoveredServer) {
-    selectDiscoveredServer(server)
+    selectedDiscoveryId.value = server.id
+    serverUrl.value = server.url
     await connectToServer(server.url)
 }
 
@@ -633,9 +634,16 @@ function showInfo() {
     font-weight: 400;
 }
 
-.server-card {
+.server-shell {
     width: 100%;
     max-width: 520px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.server-card {
+    width: 100%;
     padding: 28px;
     background: var(--bg-secondary);
     border: 1px solid var(--border-light);
@@ -644,28 +652,92 @@ function showInfo() {
     transition: all 0.3s ease;
 }
 
-.server-shell {
-    width: 100%;
-    max-width: 520px;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-}
-
 .server-card:hover {
     box-shadow: var(--shadow-lg);
     transform: translateY(-2px);
 }
 
-.discovery-section {
+.input-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.input-group {
     display: flex;
-    flex-direction: column;
-    gap: 14px;
+    gap: 12px;
+}
+
+.server-input {
+    flex: 1;
+    padding: 12px 16px;
+    font-size: 1rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.server-input:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1);
+}
+
+.server-input.error {
+    border-color: #e53935;
+}
+
+.server-input.success {
+    border-color: #43a047;
+}
+
+.server-input.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.connect-btn {
+    padding: 12px 28px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--accent-primary);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 120px;
+    justify-content: center;
+}
+
+.connect-btn:hover:not(:disabled) {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.connect-btn.connecting {
+    background: #ff9800;
+}
+
+.connect-btn.success {
+    background: #43a047;
+    cursor: default;
+}
+
+.connect-btn:disabled {
+    opacity: 0.8;
+    cursor: not-allowed;
 }
 
 .discovery-ribbon {
-    width: 100%;
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -685,6 +757,12 @@ function showInfo() {
     min-width: 0;
 }
 
+.discovery-label-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .discovery-label {
     font-size: 0.82rem;
     font-weight: 700;
@@ -692,6 +770,27 @@ function showInfo() {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     white-space: nowrap;
+}
+
+.discovery-inline-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.discovery-inline-icon:hover {
+    color: var(--accent-primary);
+    transform: translateY(-1px);
+}
+
+.discovery-inline-icon :deep(svg) {
+    width: 15px;
+    height: 15px;
 }
 
 .discovery-summary {
@@ -702,43 +801,40 @@ function showInfo() {
     white-space: nowrap;
 }
 
-.refresh-btn {
+.discovery-icon-btn {
     border: 1px solid var(--border-color);
     background: var(--bg-primary);
     color: var(--text-primary);
-    border-radius: 999px;
-    padding: 10px 16px;
-    font-size: 0.875rem;
-    font-weight: 600;
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
     transition: all 0.2s ease;
-    white-space: nowrap;
 }
 
-.refresh-btn:hover:not(:disabled) {
+.discovery-icon-btn:hover:not(:disabled) {
     border-color: var(--accent-primary);
     color: var(--accent-primary);
+    transform: translateY(-1px);
 }
 
-.refresh-btn:disabled {
+.discovery-icon-btn:disabled {
     opacity: 0.65;
     cursor: not-allowed;
 }
 
-.refresh-btn.compact {
-    padding: 8px 12px;
-    border-radius: 999px;
-    font-size: 0.8rem;
+.discovery-icon-btn :deep(svg) {
+    width: 16px;
+    height: 16px;
 }
 
 .discovery-lane {
     display: flex;
     gap: 10px;
     overflow-x: auto;
-    padding: 2px 2px 6px;
+    padding: 2px 2px 52px;
     scroll-behavior: smooth;
     scrollbar-width: none;
 }
@@ -759,7 +855,11 @@ function showInfo() {
     gap: 8px;
     white-space: nowrap;
     box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
-    transition: all 0.2s ease;
+    transition:
+        background-color 0.22s ease,
+        border-color 0.22s ease,
+        box-shadow 0.22s ease,
+        transform 0.22s ease;
 }
 
 .discovery-pill:hover:not(:disabled),
@@ -805,26 +905,41 @@ function showInfo() {
     line-height: 1.5;
 }
 
-.discovery-lane-hint {
-    padding: 0 2px;
-    color: var(--text-secondary);
-    font-size: 0.74rem;
-    text-align: center;
+.selected-server-strip-layer {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    top: calc(100% - 30px);
+    z-index: 12;
+    pointer-events: none;
 }
 
-.selected-server-card {
-    padding: 14px;
-    border-radius: 16px;
-    background: color-mix(in srgb, var(--bg-secondary) 82%, white 18%);
-    border: 1px solid var(--border-light);
-    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
-}
-
-.selected-server-header {
+.selected-server-strip {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--bg-secondary) 78%, white 22%);
+    border: 1px solid color-mix(in srgb, var(--border-light) 72%, white 28%);
+    box-shadow:
+        0 14px 30px rgba(15, 23, 42, 0.1),
+        0 4px 12px rgba(15, 23, 42, 0.05);
+    backdrop-filter: blur(16px);
+    pointer-events: auto;
+}
+
+.selected-server-accent {
+    width: 5px;
+    align-self: stretch;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--accent-primary), color-mix(in srgb, var(--accent-primary) 55%, white 45%));
+    box-shadow: 0 0 0 1px rgba(64, 158, 255, 0.1);
+}
+
+.selected-server-strip-main {
+    min-width: 0;
+    flex: 1;
 }
 
 .selected-server-title-row {
@@ -832,127 +947,54 @@ function showInfo() {
     align-items: center;
     gap: 10px;
     min-width: 0;
-    margin-bottom: 10px;
 }
 
 .selected-server-name {
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     font-weight: 700;
     color: var(--text-primary);
 }
 
 .selected-server-url {
-    margin-top: 10px;
+    margin-top: 4px;
     color: var(--text-secondary);
-    font-size: 0.84rem;
+    font-size: 0.8rem;
+    line-height: 1.4;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.selected-server-meta {
-    margin-top: 8px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 14px;
-    color: var(--text-secondary);
-    font-size: 0.75rem;
+.selected-server-strip-side {
+    flex-shrink: 0;
+    min-width: 160px;
+    display: grid;
+    gap: 6px;
 }
 
-.input-label {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 600;
+.selected-server-meta-item {
+    display: grid;
+    gap: 2px;
+    text-align: right;
+}
+
+.selected-server-meta-label {
     color: var(--text-secondary);
-    margin-bottom: 12px;
+    font-size: 0.64rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
 }
 
-.input-group {
-    display: flex;
-    gap: 12px;
-}
-
-.server-input {
-    flex: 1;
-    padding: 12px 16px;
-    font-size: 1rem;
-    background: var(--bg-primary);
+.selected-server-meta-value {
     color: var(--text-primary);
-    border: 2px solid var(--border-color);
-    border-radius: 12px;
-    transition: all 0.3s ease;
-}
-
-.server-input:focus {
-    border-color: var(--accent-primary);
-    box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1);
-}
-
-.server-input.error {
-    border-color: #e53935;
-}
-
-.server-input.error:focus {
-    box-shadow: 0 0 0 3px rgba(229, 57, 53, 0.1);
-}
-
-.server-input.success {
-    border-color: #43a047;
-}
-
-.server-input.success:focus {
-    box-shadow: 0 0 0 3px rgba(67, 160, 71, 0.1);
-}
-
-.server-input.disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.connect-btn {
-    padding: 12px 28px;
-    font-size: 1rem;
+    font-size: 0.74rem;
     font-weight: 600;
-    color: #fff;
-    background: var(--accent-primary);
-    border-radius: 12px;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 120px;
-    justify-content: center;
-}
-
-.connect-btn:hover:not(:disabled) {
-    background: var(--accent-hover);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
-}
-
-.connect-btn:active:not(:disabled) {
-    background: var(--accent-active);
-    transform: translateY(0);
-}
-
-.connect-btn.connecting {
-    background: #ff9800;
-}
-
-.connect-btn.connecting:hover {
-    background: #f57c00;
-}
-
-.connect-btn.success {
-    background: #43a047;
-    cursor: default;
-}
-
-.connect-btn:disabled {
-    opacity: 0.8;
-    cursor: not-allowed;
+    line-height: 1.35;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .loading-spinner {
@@ -1014,6 +1056,17 @@ function showInfo() {
     transform: translateY(-5px);
 }
 
+.strip-float-enter-active,
+.strip-float-leave-active {
+    transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.strip-float-enter-from,
+.strip-float-leave-to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.985);
+}
+
 @media (max-width: 768px) {
     .title {
         font-size: 2.5rem;
@@ -1024,13 +1077,8 @@ function showInfo() {
     }
 
     .server-card {
-        max-width: 100%;
         padding: 24px;
         border-radius: 12px;
-    }
-
-    .server-shell {
-        max-width: 100%;
     }
 
     .input-group {
@@ -1044,6 +1092,39 @@ function showInfo() {
     .discovery-ribbon-header {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .discovery-icon-btn {
+        align-self: flex-start;
+    }
+
+    .selected-server-strip-layer {
+        left: 0;
+        right: 0;
+        top: calc(100% - 22px);
+    }
+
+    .selected-server-strip {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .selected-server-topline {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .selected-server-strip-side {
+        min-width: 0;
+    }
+
+    .selected-server-meta-item {
+        text-align: left;
+    }
+
+    .selected-server-meta-value {
+        max-width: none;
     }
 
     .char {
