@@ -3,20 +3,22 @@
         <Transition name="modal-fade">
             <div
                 v-if="true"
+                ref="overlayRef"
                 class="editor-overlay"
+                tabindex="-1"
                 @click.self="handleClose"
                 @keydown.esc.stop="handleClose"
-                tabindex="-1"
-                ref="overlayRef"
+                @mousemove="handleOverlayPointerMove"
+                @mouseleave="handleOverlayPointerLeave"
             >
                 <Transition name="modal-scale" appear>
                     <div class="editor-container">
-                        <!-- 头部 -->
                         <div class="editor-header">
                             <div class="header-left">
-                                <span class="type-icon">{{ pluginMeta?.icon || '📝' }}</span>
-                                <span class="type-label">{{ pluginMeta ? (te(`canvas.nodeTypes.${pluginMeta.kind}`) ? t(`canvas.nodeTypes.${pluginMeta.kind}`) : pluginMeta.label) : t('canvas.editor.edit') }}</span>
-                                <!-- 在线协作用户指示器 -->
+                                <span class="type-icon">{{ pluginMeta?.icon || 'N' }}</span>
+                                <span class="type-label">
+                                    {{ pluginMeta ? (te(`canvas.nodeTypes.${pluginMeta.kind}`) ? t(`canvas.nodeTypes.${pluginMeta.kind}`) : pluginMeta.label) : t('canvas.editor.edit') }}
+                                </span>
                                 <div v-if="editingUsers.length > 0" class="collab-users">
                                     <div
                                         v-for="user in editingUsers"
@@ -29,64 +31,83 @@
                                     </div>
                                 </div>
                             </div>
-                            <button class="close-btn" @click="handleClose" :title="t('canvas.editor.closeHint')">
-                                <span>✕</span>
+                            <button class="close-btn" :title="t('canvas.editor.closeHint')" @click="handleClose">
+                                <span>&times;</span>
                             </button>
                         </div>
-                        
-                        <!-- 编辑器主体 -->
+
                         <div class="editor-body" :class="{ 'split-view': isMarkdown }">
-                            <!-- 编辑区 -->
                             <div class="edit-pane">
-                                <div class="pane-header" v-if="isMarkdown">{{ t('canvas.editor.edit') }}</div>
+                                <div class="pane-header-row">
+                                    <div class="pane-header">{{ t('canvas.editor.edit') }}</div>
+                                    <div v-if="isMarkdown && activeCodeFence" class="pane-subtools">
+                                        <span class="subtool-label">Code Block</span>
+                                        <button
+                                            v-for="language in commonCodeLanguages"
+                                            :key="language"
+                                            type="button"
+                                            class="code-language-chip"
+                                            :class="{ active: activeCodeFence.language === language }"
+                                            @click="setCurrentCodeFenceLanguage(language)"
+                                        >
+                                            {{ language }}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div v-if="isMarkdown" class="editor-toolbar">
+                                    <button
+                                        v-for="action in toolbarActions"
+                                        :key="action.id"
+                                        type="button"
+                                        class="toolbar-button"
+                                        :title="action.description"
+                                        @click="action.action"
+                                    >
+                                        <span class="toolbar-button-label">{{ action.label }}</span>
+                                    </button>
+                                </div>
+
                                 <div class="textarea-wrapper">
                                     <textarea
                                         ref="textareaRef"
                                         class="editor-textarea"
                                         :value="localContent"
+                                        :placeholder="placeholder"
+                                        spellcheck="false"
                                         @input="handleInput"
                                         @keydown="handleKeyDown"
+                                        @paste="handlePaste"
+                                        @wheel="markEditorIntent"
+                                        @pointerdown="markEditorIntent"
+                                        @scroll="handleEditorScroll"
                                         @select="handleSelection"
                                         @click="handleCursorChange"
                                         @keyup="handleCursorChange"
-                                        :placeholder="placeholder"
-                                        spellcheck="false"
                                     />
-                                    <!-- 远程用户光标指示器 -->
                                     <div
                                         v-for="cursor in remoteCursors"
                                         :key="cursor.clientId"
                                         class="remote-cursor"
                                         :style="cursor.style"
                                     >
-                                        <div
-                                            class="remote-cursor-caret" 
-                                            :style="{ backgroundColor: cursor.color }"
-                                        />
-                                        <div
-                                            class="remote-cursor-label"
-                                            :style="{ backgroundColor: cursor.color }"
-                                        >
+                                        <div class="remote-cursor-caret" :style="{ backgroundColor: cursor.color }" />
+                                        <div class="remote-cursor-label" :style="{ backgroundColor: cursor.color }">
                                             {{ cursor.name }}
                                         </div>
-                                        <!-- 选区高亮 -->
                                         <div
                                             v-if="cursor.selectionWidth > 0"
                                             class="remote-selection"
-                                            :style="{
-                                                backgroundColor: cursor.color + '40',
-                                                width: cursor.selectionWidth + 'ch'
-                                            }"
+                                            :style="{ backgroundColor: `${cursor.color}40`, width: `${cursor.selectionWidth}ch` }"
                                         />
                                     </div>
                                 </div>
-                                
-                                <!-- 斜杠命令菜单 -->
+
                                 <div
                                     v-if="showSlashMenu"
+                                    ref="slashMenuRef"
                                     class="slash-menu"
                                     :style="slashMenuStyle"
-                                    ref="slashMenuRef"
                                 >
                                     <div class="slash-menu-header">{{ t('canvas.editor.insertBlock') }}</div>
                                     <div class="slash-menu-scroll">
@@ -111,50 +132,98 @@
                                     </div>
                                 </div>
                             </div>
-                            
-                            <!-- 预览区（仅 Markdown） -->
+
                             <div v-if="isMarkdown" class="preview-pane">
-                                <div class="pane-header">{{ t('canvas.editor.preview') }}</div>
-                                <div class="preview-content" v-html="renderedHtml" ref="previewRef" />
+                                <div class="pane-header-row preview-pane-header">
+                                    <div class="pane-header">{{ t('canvas.editor.preview') }}</div>
+                                    <div class="preview-stats">
+                                        <span>{{ previewBlocks.length }} blocks</span>
+                                        <span>{{ outlineItems.length }} headings</span>
+                                    </div>
+                                </div>
+
+                                <div class="preview-layout">
+                                    <div ref="previewRef" class="preview-content" @click="handlePreviewClick" @wheel="markPreviewIntent" @pointerdown="markPreviewIntent" @scroll="handlePreviewScroll">
+                                        <div v-if="previewBlocks.length === 0" class="preview-empty">
+                                            {{ t('canvas.editor.previewArea') }}
+                                        </div>
+                                        <div
+                                            v-for="block in previewBlocks"
+                                            :id="block.anchorId"
+                                            :key="block.id"
+                                            class="preview-block"
+                                            :class="{ 'is-heavy': block.isHeavy, 'is-deferred': block.isDeferred }"
+                                            :data-preview-block-id="block.id"
+                                        >
+                                            <div v-if="block.isDeferred" class="preview-block-placeholder">
+                                                <span class="preview-block-badge">Lazy Render</span>
+                                                <p>{{ block.summary }}</p>
+                                            </div>
+                                            <div v-else class="preview-block-inner" v-html="block.html" />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        
-                        <!-- 底部状态栏 -->
+
                         <div class="editor-footer">
                             <div class="footer-hint">
-                                <kbd>/</kbd> {{ t('canvas.editor.footerHint') }} · <kbd>Esc</kbd> {{ t('canvas.editor.footerClose') }}
+                                <kbd>/</kbd> {{ t('canvas.editor.footerHint') }} · <kbd>Tab</kbd> indent · <kbd>Esc</kbd> {{ t('canvas.editor.footerClose') }}
                             </div>
                             <div class="footer-right">
                                 <span v-if="editingUsers.length > 0" class="collab-indicator">
-                                    👥 {{ t('canvas.editor.collaborating', { count: editingUsers.length + 1 }) }}
+                                    {{ t('canvas.editor.collaborating', { count: editingUsers.length + 1 }) }}
                                 </span>
                                 <span class="char-count">{{ t('canvas.editor.characters', { count: localContent.length }) }}</span>
                             </div>
                         </div>
                     </div>
                 </Transition>
+                <div v-if="isMarkdown && outlineItems.length > 0" class="outline-floating-shell">
+                    <button
+                        type="button"
+                        class="outline-toggle"
+                        :class="{ open: outlineOpen, armed: outlineHintActive }"
+                        @click="outlineOpen = !outlineOpen"
+                    >
+                        <span class="outline-toggle-icon">{{ outlineOpen ? '‹' : '›' }}</span>
+                    </button>
+
+                    <Transition name="outline-float">
+                        <aside v-if="outlineOpen" class="outline-pane">
+                            <div class="outline-header">Outline</div>
+                            <button
+                                v-for="item in outlineItems"
+                                :key="item.id"
+                                type="button"
+                                class="outline-item"
+                                :class="[`level-${item.level}`, { active: activeOutlineId === item.id }]"
+                                @click="scrollToOutlineItem(item)"
+                            >
+                                {{ item.text }}
+                            </button>
+                        </aside>
+                    </Transition>
+                </div>
             </div>
         </Transition>
     </Teleport>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick, inject } from 'vue'
+import { computed, inject, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-// @ts-ignore
-import { pluginRegistry, type NodeContent } from '@/plugins'
 import MarkdownIt from 'markdown-it'
 import DOMPurify from 'dompurify'
-import katex from 'katex'
 import hljs from 'highlight.js'
+import katex from 'katex'
 import mermaid from 'mermaid'
+// @ts-ignore
+import { pluginRegistry, type NodeContent } from '@/plugins'
 import type { UserState } from '../../composables/useAwareness'
 
 const { t, te } = useI18n()
 
-// 获取当前主题（unused removed to satisfy TS strict checks）
-
-// 初始化 Mermaid
 mermaid.initialize({
     startOnLoad: false,
     theme: 'dark',
@@ -182,6 +251,44 @@ interface RemoteCursor {
     selectionWidth: number
 }
 
+interface PreviewBlock {
+    id: string
+    anchorId: string
+    raw: string
+    html: string
+    summary: string
+    isHeavy: boolean
+    isDeferred: boolean
+}
+
+interface EditorBlockMetric {
+    id: string
+    start: number
+    end: number
+    length: number
+}
+
+interface OutlineItem {
+    id: string
+    blockId: string
+    anchorId: string
+    text: string
+    level: number
+}
+
+interface ToolbarAction {
+    id: string
+    label: string
+    description: string
+    action: () => void
+}
+
+interface CodeFenceContext {
+    language: string
+    lineStart: number
+    lineEnd: number
+}
+
 const props = defineProps<{
     nodeId: string
     content: NodeContent
@@ -192,7 +299,6 @@ const emit = defineEmits<{
     (e: 'close'): void
 }>()
 
-// 注入协作功能
 const awareness = inject<{
     otherUsers: { value: UserState[] }
     updateTextCursor?: (nodeId: string, position: number, selectionEnd: number) => void
@@ -208,39 +314,57 @@ const slashMenuPosition = ref({ top: 0, left: 0 })
 const selectedCommandIndex = ref(0)
 const slashQuery = ref('')
 const slashStartPosition = ref(0)
+const visiblePreviewBlockIds = ref<Set<string>>(new Set())
+const outlineOpen = ref(false)
+const activeOutlineId = ref('')
+const outlineHintActive = ref(false)
 
-// Mermaid 图表计数器
+const previewCache = new Map<string, string>()
+const mathPlaceholders = new Map<string, string>()
+const codePlaceholders = new Map<string, string>()
+const markdownUtils = new MarkdownIt().utils
+const commonCodeLanguages = ['text', 'javascript', 'typescript', 'python', 'bash', 'sql', 'json', 'html', 'css']
+
+let placeholderCounter = 0
 let mermaidCounter = 0
+let previewObserver: IntersectionObserver | null = null
+let syncingSource: 'editor' | 'preview' | null = null
+let previewSyncFrame: number | null = null
+let pendingEditorScrollTop = 0
+let suppressPreviewDrivenSyncUntil = 0
+let dominantScrollSource: 'editor' | 'preview' | null = null
+let dominantScrollUntil = 0
 
-// Markdown 解析器 - 增强版本
 const md = new MarkdownIt({
     html: false,
     breaks: true,
     linkify: true,
     typographer: true,
-    // highlight 在内部不要引用外部 md 变量以避免循环引用，使用新实例的 utils
-    highlight: function (str: string, lang: string): string {
-        // Mermaid 图表特殊处理
+    highlight(str: string, lang: string): string {
         if (lang === 'mermaid') {
             const id = `mermaid-${mermaidCounter++}`
-            return `<div class="mermaid-wrapper"><pre class="mermaid" id="${id}">${str}</pre></div>`
+            return `<div class="mermaid-wrapper"><pre class="mermaid" id="${id}">${markdownUtils.escapeHtml(str)}</pre></div>`
         }
-
-        // 代码语法高亮
+        const languageLabel = markdownUtils.escapeHtml(lang || 'text')
         if (lang && hljs.getLanguage(lang)) {
             try {
-                return `<pre class="hljs"><code class="language-${lang}">${
-                    hljs.highlight(str, { language: lang, ignoreIllegals: true }).value
-                }</code></pre>`
-            } catch (__) {}
+                return `<div class="code-block-shell"><span class="code-block-lang">${languageLabel}</span><pre class="hljs"><code class="language-${lang}">${hljs.highlight(str, { language: lang, ignoreIllegals: true }).value}</code></pre></div>`
+            } catch {
+                return `<div class="code-block-shell"><span class="code-block-lang">${languageLabel}</span><pre class="hljs"><code>${markdownUtils.escapeHtml(str)}</code></pre></div>`
+            }
         }
-
-        // 使用临时 MarkdownIt 实例的 utils.escapeHtml 来转义
-        return `<pre class="hljs"><code>${new MarkdownIt().utils.escapeHtml(str)}</code></pre>`
+        return `<div class="code-block-shell"><span class="code-block-lang">${languageLabel}</span><pre class="hljs"><code>${markdownUtils.escapeHtml(str)}</code></pre></div>`
     }
 })
 
-// 自定义 KaTeX 渲染规则
+const defaultLinkOpen = md.renderer.rules.link_open ?? ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options))
+md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
+    const token = tokens[idx]
+    token.attrSet('target', '_blank')
+    token.attrSet('rel', 'noopener noreferrer')
+    return defaultLinkOpen(tokens, idx, options, env, self)
+}
+
 function renderKaTeX(tex: string, displayMode: boolean): string {
     try {
         return katex.renderToString(tex, {
@@ -250,38 +374,29 @@ function renderKaTeX(tex: string, displayMode: boolean): string {
             trust: true,
             strict: false
         })
-    } catch (e) {
-        return `<span class="katex-error">${tex}</span>`
+    } catch {
+        return `<span class="katex-error">${markdownUtils.escapeHtml(tex)}</span>`
     }
 }
 
-// 使用占位符保护公式，避免被 Markdown 解析器处理
-const mathPlaceholders = new Map<string, string>()
-let placeholderCounter = 0
-
-const codePlaceholders = new Map<string, string>()
-
 function protectCode(text: string): string {
     codePlaceholders.clear()
-
-    text = text.replace(/(^|\n)(```[\s\S]*?```)(?=\n|$)/g, (_, prefix, block) => {
+    text = text.replace(/(^|\n)(```[\s\S]*?```)(?=\n|$)/g, (_, prefix: string, block: string) => {
         const id = `%%CODE_BLOCK_${placeholderCounter++}%%`
         codePlaceholders.set(id, block)
         return `${prefix}${id}`
     })
-
-    text = text.replace(/`([^`\n]+)`/g, (match) => {
+    text = text.replace(/`([^`\n]+)`/g, (match: string) => {
         const id = `%%CODE_INLINE_${placeholderCounter++}%%`
         codePlaceholders.set(id, match)
         return id
     })
-
     return text
 }
 
 function restoreCode(text: string): string {
     codePlaceholders.forEach((replacement, placeholder) => {
-        text = text.replace(placeholder, replacement)
+        text = text.replaceAll(placeholder, replacement)
     })
     return text
 }
@@ -290,265 +405,547 @@ function protectMath(text: string): string {
     mathPlaceholders.clear()
     placeholderCounter = 0
     text = protectCode(text)
-    
-    // 块级公式 $$...$$（先处理块级，避免被行内匹配）
-    text = text.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
+    text = text.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex: string) => {
         const id = `%%MATH_BLOCK_${placeholderCounter++}%%`
         mathPlaceholders.set(id, `<div class="katex-block">${renderKaTeX(tex.trim(), true)}</div>`)
         return id
     })
-    
-    // 行内公式 $...$（不跨行）
-    text = text.replace(/\$([^$\n]+?)\$/g, (_, tex) => {
+    text = text.replace(/\$([^$\n]+?)\$/g, (_, tex: string) => {
         const id = `%%MATH_INLINE_${placeholderCounter++}%%`
         mathPlaceholders.set(id, renderKaTeX(tex.trim(), false))
         return id
     })
-    
     return restoreCode(text)
 }
 
 function restoreMath(html: string): string {
     mathPlaceholders.forEach((replacement, placeholder) => {
-        html = html.replace(placeholder, replacement)
+        html = html.replaceAll(placeholder, replacement)
     })
     return html
 }
 
-// 插件元信息
+function sanitizeHtml(rawHtml: string): string {
+    return DOMPurify.sanitize(rawHtml, {
+        ADD_TAGS: ['span', 'svg', 'path', 'line', 'rect', 'circle', 'g', 'semantics', 'mrow', 'mi', 'mo', 'mn', 'msup', 'msub', 'mfrac', 'mroot', 'msqrt', 'mtext', 'annotation', 'math', 'foreignObject', 'polygon', 'polyline', 'ellipse', 'text', 'tspan', 'marker', 'defs', 'clipPath', 'use', 'image', 'pattern', 'linearGradient', 'radialGradient', 'stop', 'title', 'desc'],
+        ADD_ATTR: ['xmlns', 'width', 'height', 'viewBox', 'd', 'fill', 'stroke', 'stroke-width', 'transform', 'style', 'aria-hidden', 'focusable', 'role', 'encoding', 'id', 'class', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry', 'points', 'marker-end', 'marker-start', 'text-anchor', 'dominant-baseline', 'font-size', 'font-family', 'font-weight', 'fill-opacity', 'stroke-opacity', 'stroke-dasharray', 'clip-path', 'xlink:href', 'href', 'preserveAspectRatio'],
+        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'a', 'hr', 'span', 'div', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'svg', 'path', 'line', 'rect', 'circle', 'g', 'semantics', 'mrow', 'mi', 'mo', 'mn', 'msup', 'msub', 'mfrac', 'mroot', 'msqrt', 'mtext', 'annotation', 'math', 'polygon', 'polyline', 'ellipse', 'text', 'tspan', 'marker', 'defs', 'clipPath', 'use', 'foreignObject'],
+        ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style', 'id', 'xmlns', 'width', 'height', 'viewBox', 'd', 'fill', 'stroke', 'stroke-width', 'transform', 'aria-hidden', 'focusable', 'role', 'encoding', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry', 'points', 'marker-end', 'text-anchor', 'dominant-baseline', 'font-size', 'font-family', 'font-weight']
+    })
+}
+
+function renderMarkdown(text: string): string {
+    mermaidCounter = 0
+    const processed = protectMath(text)
+    return sanitizeHtml(restoreMath(md.render(processed)))
+}
+
+function stripMarkdownSyntax(text: string): string {
+    return text
+        .replace(/```[\s\S]*?```/g, 'code block')
+        .replace(/`([^`\n]+)`/g, '$1')
+        .replace(/^#{1,6}\s+/gm, '')
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/\*([^*]+)\*/g, '$1')
+        .replace(/~~([^~]+)~~/g, '$1')
+        .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/^\s*[-*+]\s+/gm, '')
+        .replace(/^\s*\d+\.\s+/gm, '')
+        .replace(/^\s*>\s?/gm, '')
+        .replace(/\$\$[\s\S]+?\$\$/g, 'formula')
+        .replace(/\$([^$\n]+)\$/g, '$1')
+        .replace(/\|/g, ' ')
+        .replace(/\n+/g, ' ')
+        .trim()
+}
+
+function summarizeBlock(text: string): string {
+    const plain = stripMarkdownSyntax(text)
+    return plain ? plain.slice(0, 120) : 'Heavy block will render when it enters the viewport.'
+}
+
+function hashText(text: string): string {
+    let hash = 0
+    for (let i = 0; i < text.length; i += 1) {
+        hash = ((hash << 5) - hash) + text.charCodeAt(i)
+        hash |= 0
+    }
+    return Math.abs(hash).toString(36)
+}
+
+function splitMarkdownBlocks(text: string): string[] {
+    if (!text.trim()) return []
+    const blocks: string[] = []
+    const lines = text.split('\n')
+    let current: string[] = []
+    let inFence = false
+    let inMath = false
+
+    const pushCurrent = () => {
+        const block = current.join('\n').trim()
+        if (block) blocks.push(block)
+        current = []
+    }
+
+    for (const line of lines) {
+        const trimmed = line.trim()
+        if (trimmed.startsWith('```')) {
+            current.push(line)
+            inFence = !inFence
+            continue
+        }
+        if (!inFence && trimmed === '$$') {
+            current.push(line)
+            inMath = !inMath
+            continue
+        }
+        if (!inFence && !inMath && trimmed === '') {
+            pushCurrent()
+            continue
+        }
+        current.push(line)
+    }
+
+    pushCurrent()
+    return blocks
+}
+
+function isHeavyBlock(text: string): boolean {
+    return /```|^\$\$|^\|.*\|$/m.test(text) || text.length > 600
+}
+
 const pluginMeta = computed(() => pluginRegistry.getMeta(props.content.kind))
 const isMarkdown = computed(() => props.content.kind === 'markdown')
+const placeholder = computed(() => isMarkdown.value ? t('canvas.editor.markdownPlaceholder') : t('canvas.editor.textPlaceholder'))
+const slashMenuStyle = computed(() => ({ top: `${slashMenuPosition.value.top}px`, left: `${slashMenuPosition.value.left}px` }))
+const editingUsers = computed(() => awareness.otherUsers.value.filter(user => user.selection?.includes(props.nodeId)))
 
-const placeholder = computed(() => {
-    if (isMarkdown.value) {
-        return t('canvas.editor.markdownPlaceholder')
-    }
-    return t('canvas.editor.textPlaceholder')
-})
-
-const slashMenuStyle = computed(() => ({
-    top: `${slashMenuPosition.value.top}px`,
-    left: `${slashMenuPosition.value.left}px`
-}))
-
-// 正在编辑此节点的其他用户
-const editingUsers = computed(() => {
-    return awareness.otherUsers.value.filter(u => 
-        u.selection?.includes(props.nodeId)
-    )
-})
-
-// 远程用户在文本编辑器中的光标
 const remoteCursors = computed<RemoteCursor[]>(() => {
     if (!textareaRef.value) return []
-    
     return awareness.otherUsers.value
-        .filter(u => u.textCursor?.nodeId === props.nodeId)
-        .map(u => {
-            const pos = u.textCursor!.position
-            const selEnd = u.textCursor!.selectionEnd || pos
-            const { top, left } = getCaretCoordinates(pos)
-            
+        .filter(user => user.textCursor?.nodeId === props.nodeId)
+        .map(user => {
+            const position = user.textCursor?.position ?? 0
+            const selectionEnd = user.textCursor?.selectionEnd ?? position
+            const { top, left } = getCaretCoordinates(position)
             return {
-                clientId: u.clientId,
-                name: u.user.name,
-                color: u.user.color,
-                position: pos,
-                selectionEnd: selEnd,
+                clientId: user.clientId,
+                name: user.user.name,
+                color: user.user.color,
+                position,
+                selectionEnd,
                 style: { top: `${top}px`, left: `${left}px` },
-                selectionWidth: Math.abs(selEnd - pos)
+                selectionWidth: Math.abs(selectionEnd - position)
             }
         })
 })
 
-// 计算光标在 textarea 中的坐标（简化版本）
-function getCaretCoordinates(position: number): { top: number; left: number } {
+const activeCodeFence = computed<CodeFenceContext | null>(() => {
     const textarea = textareaRef.value
-    if (!textarea) return { top: 0, left: 0 }
-    
-    // 限制 position 在有效范围内，避免超出文本长度
-    const safePos = Math.max(0, Math.min(position, textarea.value.length))
-    const text = textarea.value.substring(0, safePos)
-    const lines = text.split('\n')
-    const lineIndex = Math.max(0, lines.length - 1)
-    const currentLine = lines[lineIndex] ?? ''
-    const charIndex = currentLine.length
-    
-    // 估算坐标（基于等宽字体）
-    const lineHeight = 27 // 15px * 1.8 line-height
-    const charWidth = 9 // 约等于 15px 字体的字符宽度
-    
-    return {
-        top: lineIndex * lineHeight + 20, // 20px padding
-        left: charIndex * charWidth + 20
-    }
-}
+    if (!textarea || !isMarkdown.value) return null
 
-// 渲染 Markdown 预览（支持公式和代码高亮）
-const renderedHtml = computed(() => {
-    // 重置 mermaid 计数器
-    mermaidCounter = 0
-    
-    if (!localContent.value) {
-        return `<p class="placeholder">${t('canvas.editor.previewArea')}</p>`
+    const cursor = textarea.selectionStart
+    const lines = localContent.value.split('\n')
+    let offset = 0
+    let openFence: CodeFenceContext | null = null
+
+    for (const line of lines) {
+        const lineStart = offset
+        const lineEnd = offset + line.length
+        const trimmed = line.trim()
+
+        if (trimmed.startsWith('```')) {
+            if (!openFence) {
+                openFence = {
+                    language: trimmed.slice(3).trim() || 'text',
+                    lineStart,
+                    lineEnd
+                }
+            } else if (cursor >= openFence.lineStart && cursor <= lineEnd) {
+                return openFence
+            } else {
+                openFence = null
+            }
+        }
+
+        if (openFence && cursor >= openFence.lineEnd + 1 && cursor <= lineEnd) {
+            return openFence
+        }
+
+        offset = lineEnd + 1
     }
-    
-    // 1. 先用占位符保护数学公式
-    let processed = protectMath(localContent.value)
-    
-    // 2. 渲染 Markdown
-    let rawHtml = md.render(processed)
-    
-    // 3. 恢复数学公式
-    rawHtml = restoreMath(rawHtml)
-    
-    // 4. 清理 HTML（允许 KaTeX 和 Mermaid 标签）
-    return DOMPurify.sanitize(rawHtml, {
-        ADD_TAGS: ['span', 'svg', 'path', 'line', 'rect', 'circle', 'g', 'semantics', 
-                   'mrow', 'mi', 'mo', 'mn', 'msup', 'msub', 'mfrac', 'mroot', 
-                   'msqrt', 'mtext', 'annotation', 'math', 'foreignObject', 
-                   'polygon', 'polyline', 'ellipse', 'text', 'tspan', 'marker', 
-                   'defs', 'clipPath', 'use', 'image', 'pattern', 'linearGradient',
-                   'radialGradient', 'stop', 'title', 'desc'],
-        ADD_ATTR: ['xmlns', 'width', 'height', 'viewBox', 'd', 'fill', 'stroke', 
-                   'stroke-width', 'transform', 'style', 'aria-hidden', 'focusable',
-                   'role', 'encoding', 'id', 'class', 'x', 'y', 'x1', 'y1', 'x2', 'y2',
-                   'cx', 'cy', 'r', 'rx', 'ry', 'points', 'marker-end', 'marker-start',
-                   'text-anchor', 'dominant-baseline', 'font-size', 'font-family',
-                   'font-weight', 'fill-opacity', 'stroke-opacity', 'stroke-dasharray',
-                   'clip-path', 'xlink:href', 'href', 'preserveAspectRatio'],
-        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre',
-                       'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-                       'ul', 'ol', 'li', 'blockquote', 'a', 'hr', 'span',
-                       'div', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
-                       'svg', 'path', 'line', 'rect', 'circle', 'g',
-                       'semantics', 'mrow', 'mi', 'mo', 'mn', 'msup', 'msub',
-                       'mfrac', 'mroot', 'msqrt', 'mtext', 'annotation', 'math',
-                       'polygon', 'polyline', 'ellipse', 'text', 'tspan', 
-                       'marker', 'defs', 'clipPath', 'use', 'foreignObject'],
-        ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style', 'id',
-                       'xmlns', 'width', 'height', 'viewBox', 'd', 
-                       'fill', 'stroke', 'stroke-width', 'transform',
-                       'aria-hidden', 'focusable', 'role', 'encoding',
-                       'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry',
-                       'points', 'marker-end', 'text-anchor', 'dominant-baseline',
-                       'font-size', 'font-family', 'font-weight']
+
+    return openFence && cursor >= openFence.lineEnd + 1 ? openFence : null
+})
+
+const rawBlocks = computed(() => splitMarkdownBlocks(localContent.value))
+
+const editorBlockMetrics = computed<EditorBlockMetric[]>(() => {
+    let cursor = 0
+    return rawBlocks.value.map((block, index) => {
+        const foundIndex = localContent.value.indexOf(block, cursor)
+        const start = foundIndex === -1 ? cursor : foundIndex
+        const end = start + block.length
+        cursor = end
+        const id = `preview-block-${index}-${hashText(block)}`
+        return {
+            id,
+            start,
+            end,
+            length: Math.max(1, end - start)
+        }
     })
 })
 
-// 渲染 Mermaid 图表
-async function renderMermaidDiagrams() {
-    await nextTick()
-    const preview = previewRef.value
-    if (!preview) return
-    
-    const mermaidElements = preview.querySelectorAll('.mermaid')
-    if (mermaidElements.length === 0) return
-    
-    try {
-        // 使用 mermaid.run 渲染所有图表
-        await mermaid.run({
-            nodes: mermaidElements as NodeListOf<HTMLElement>,
-            suppressErrors: true
-        })
-    } catch (e) {
-        console.warn('[Mermaid] Render error:', e)
+const lineStartOffsets = computed(() => {
+    const offsets = [0]
+    for (let index = 0; index < localContent.value.length; index += 1) {
+        if (localContent.value[index] === '\n') {
+            offsets.push(index + 1)
+        }
     }
-}
+    return offsets
+})
 
-// 监听内容变化，渲染 Mermaid
-watch(renderedHtml, () => {
-    renderMermaidDiagrams()
-}, { flush: 'post' })
+const outlineItems = computed<OutlineItem[]>(() => {
+    const items: OutlineItem[] = []
+    rawBlocks.value.forEach((block, index) => {
+        const match = block.match(/^(#{1,6})\s+(.+)$/m)
+        if (!match) return
+        const blockId = `preview-block-${index}-${hashText(block)}`
+        items.push({
+            id: `outline-${blockId}`,
+            blockId,
+            anchorId: `${blockId}-anchor`,
+            text: stripMarkdownSyntax(match[2]),
+            level: match[1].length
+        })
+    })
+    return items
+})
 
-// 扩展的斜杠命令列表（使用多语言）
+const previewBlocks = computed<PreviewBlock[]>(() => {
+    return rawBlocks.value.map((block, index) => {
+        const id = `preview-block-${index}-${hashText(block)}`
+        const isHeavy = isHeavyBlock(block)
+        const shouldDefer = isHeavy && !visiblePreviewBlockIds.value.has(id) && !previewCache.has(block)
+        const html = shouldDefer
+            ? ''
+            : (previewCache.get(block) ?? (() => {
+                const rendered = renderMarkdown(block)
+                previewCache.set(block, rendered)
+                return rendered
+            })())
+
+        return {
+            id,
+            anchorId: `${id}-anchor`,
+            raw: block,
+            html,
+            summary: summarizeBlock(block),
+            isHeavy,
+            isDeferred: shouldDefer
+        }
+    })
+})
+
+const toolbarActions = computed<ToolbarAction[]>(() => [
+    { id: 'h1', label: 'H1', description: 'Insert heading 1', action: () => prependToCurrentLine('# ') },
+    { id: 'h2', label: 'H2', description: 'Insert heading 2', action: () => prependToCurrentLine('## ') },
+    { id: 'bullet', label: '• List', description: 'Insert bullet list', action: () => prependToCurrentLine('- ') },
+    { id: 'todo', label: 'Todo', description: 'Insert checklist item', action: () => prependToCurrentLine('- [ ] ') },
+    { id: 'quote', label: 'Quote', description: 'Insert quote block', action: () => prependToCurrentLine('> ') },
+    { id: 'code', label: 'Code', description: 'Insert fenced code block', action: () => insertSnippet('```\n\n```', 4) },
+    { id: 'math', label: 'Math', description: 'Insert inline math', action: () => wrapSelection('$', '$', 'formula') },
+    { id: 'table', label: 'Table', description: 'Insert markdown table', action: () => insertSnippet('| Col 1 | Col 2 |\n| --- | --- |\n| Item | Item |') },
+    { id: 'link', label: 'Link', description: 'Wrap selection with a link', action: () => wrapSelection('[', '](https://)', 'text') },
+    { id: 'flow', label: 'Flow', description: 'Insert mermaid flowchart', action: () => insertSnippet('```mermaid\nflowchart TD\n    A[Start] --> B{Decision}\n    B -->|Yes| C[Done]\n    B -->|No| D[Retry]\n```', 13) }
+])
+
 const slashCommands = computed<SlashCommand[]>(() => [
-    // 标题
     { id: 'h1', icon: 'H1', label: t('canvas.editor.commands.h1'), description: t('canvas.editor.commands.h1Desc'), action: () => '# ' },
     { id: 'h2', icon: 'H2', label: t('canvas.editor.commands.h2'), description: t('canvas.editor.commands.h2Desc'), action: () => '## ' },
     { id: 'h3', icon: 'H3', label: t('canvas.editor.commands.h3'), description: t('canvas.editor.commands.h3Desc'), action: () => '### ' },
-    
-    // 列表
     { id: 'bullet', icon: '•', label: t('canvas.editor.commands.bullet'), description: t('canvas.editor.commands.bulletDesc'), action: () => '- ' },
     { id: 'numbered', icon: '1.', label: t('canvas.editor.commands.numbered'), description: t('canvas.editor.commands.numberedDesc'), action: () => '1. ' },
     { id: 'todo', icon: '☐', label: t('canvas.editor.commands.todo'), description: t('canvas.editor.commands.todoDesc'), action: () => '- [ ] ' },
-    
-    // 引用和分割
     { id: 'quote', icon: '"', label: t('canvas.editor.commands.quote'), description: t('canvas.editor.commands.quoteDesc'), action: () => '> ' },
     { id: 'divider', icon: '—', label: t('canvas.editor.commands.divider'), description: t('canvas.editor.commands.dividerDesc'), action: () => '\n---\n' },
-    
-    // 代码块（带语言选择）
     { id: 'code', icon: '<>', iconClass: 'code-icon', label: t('canvas.editor.commands.code'), description: t('canvas.editor.commands.codeDesc'), action: () => '```\n\n```' },
     { id: 'code-js', icon: 'JS', iconClass: 'lang-js', label: t('canvas.editor.commands.codeJs'), description: t('canvas.editor.commands.codeJsDesc'), action: () => '```javascript\n\n```' },
     { id: 'code-ts', icon: 'TS', iconClass: 'lang-ts', label: t('canvas.editor.commands.codeTs'), description: t('canvas.editor.commands.codeTsDesc'), action: () => '```typescript\n\n```' },
     { id: 'code-py', icon: 'PY', iconClass: 'lang-py', label: t('canvas.editor.commands.codePy'), description: t('canvas.editor.commands.codePyDesc'), action: () => '```python\n\n```' },
-    { id: 'code-java', icon: '☕', label: t('canvas.editor.commands.codeJava'), description: t('canvas.editor.commands.codeJavaDesc'), action: () => '```java\n\n```' },
+    { id: 'code-java', icon: 'J', label: t('canvas.editor.commands.codeJava'), description: t('canvas.editor.commands.codeJavaDesc'), action: () => '```java\n\n```' },
     { id: 'code-css', icon: '#', iconClass: 'lang-css', label: t('canvas.editor.commands.codeCss'), description: t('canvas.editor.commands.codeCssDesc'), action: () => '```css\n\n```' },
     { id: 'code-html', icon: '<>', iconClass: 'lang-html', label: t('canvas.editor.commands.codeHtml'), description: t('canvas.editor.commands.codeHtmlDesc'), action: () => '```html\n\n```' },
     { id: 'code-sql', icon: 'DB', label: t('canvas.editor.commands.codeSql'), description: t('canvas.editor.commands.codeSqlDesc'), action: () => '```sql\n\n```' },
     { id: 'code-sh', icon: '$', label: t('canvas.editor.commands.codeSh'), description: t('canvas.editor.commands.codeShDesc'), action: () => '```bash\n\n```' },
     { id: 'code-json', icon: '{}', label: t('canvas.editor.commands.codeJson'), description: t('canvas.editor.commands.codeJsonDesc'), action: () => '```json\n\n```' },
-    
-    // 数学公式
-    { id: 'math', icon: '∑', iconClass: 'math-icon', label: t('canvas.editor.commands.math'), description: t('canvas.editor.commands.mathDesc'), shortcut: '$...$', action: () => '$E = mc^2$' },
+    { id: 'math', icon: 'Σ', iconClass: 'math-icon', label: t('canvas.editor.commands.math'), description: t('canvas.editor.commands.mathDesc'), shortcut: '$...$', action: () => '$E = mc^2$' },
     { id: 'math-block', icon: '∫', iconClass: 'math-icon', label: t('canvas.editor.commands.mathBlock'), description: t('canvas.editor.commands.mathBlockDesc'), shortcut: '$$...$$', action: () => '$$\n\\int_{a}^{b} f(x) dx\n$$' },
-    
-    // 图表（Mermaid）
-    { id: 'mermaid-flow', icon: '📊', label: t('canvas.editor.commands.flowchart'), description: t('canvas.editor.commands.flowchartDesc'), action: () => `\`\`\`mermaid\nflowchart TD\n    A[${t('canvas.editor.examples.start')}] --> B{${t('canvas.editor.examples.decision')}}\n    B -->|${t('canvas.editor.examples.yes')}| C[${t('canvas.editor.examples.execute')}]\n    B -->|${t('canvas.editor.examples.no')}| D[${t('canvas.editor.examples.end')}]\n\`\`\`` },
-    { id: 'mermaid-seq', icon: '📈', label: t('canvas.editor.commands.sequence'), description: t('canvas.editor.commands.sequenceDesc'), action: () => '```mermaid\nsequenceDiagram\n    Alice->>Bob: Hello\n    Bob-->>Alice: Hi\n```' },
-    { id: 'mermaid-mindmap', icon: '🧠', label: t('canvas.editor.commands.mindmap'), description: t('canvas.editor.commands.mindmapDesc'), action: () => `\`\`\`mermaid\nmindmap\n  root((${t('canvas.editor.examples.topic')}))\n    ${t('canvas.editor.examples.branch1')}\n      ${t('canvas.editor.examples.subitemA')}\n      ${t('canvas.editor.examples.subitemB')}\n    ${t('canvas.editor.examples.branch2')}\n      ${t('canvas.editor.examples.subitemC')}\n\`\`\`` },
-    
-    // 文本格式
+    { id: 'mermaid-flow', icon: 'Flow', label: t('canvas.editor.commands.flowchart'), description: t('canvas.editor.commands.flowchartDesc'), action: () => '```mermaid\nflowchart TD\n    A[Start] --> B{Decision}\n    B -->|Yes| C[Done]\n    B -->|No| D[Retry]\n```' },
+    { id: 'mermaid-seq', icon: 'Seq', label: t('canvas.editor.commands.sequence'), description: t('canvas.editor.commands.sequenceDesc'), action: () => '```mermaid\nsequenceDiagram\n    Alice->>Bob: Hello\n    Bob-->>Alice: Hi\n```' },
+    { id: 'mermaid-mindmap', icon: 'Map', label: t('canvas.editor.commands.mindmap'), description: t('canvas.editor.commands.mindmapDesc'), action: () => '```mermaid\nmindmap\n  root((Topic))\n    Branch One\n      Detail A\n      Detail B\n```' },
     { id: 'bold', icon: 'B', iconClass: 'bold-icon', label: t('canvas.editor.commands.bold'), description: t('canvas.editor.commands.boldDesc'), action: () => `**${t('canvas.editor.examples.bold')}**` },
     { id: 'italic', icon: 'I', iconClass: 'italic-icon', label: t('canvas.editor.commands.italic'), description: t('canvas.editor.commands.italicDesc'), action: () => `*${t('canvas.editor.examples.italic')}*` },
     { id: 'strike', icon: 'S', iconClass: 'strike-icon', label: t('canvas.editor.commands.strike'), description: t('canvas.editor.commands.strikeDesc'), action: () => `~~${t('canvas.editor.examples.strikethrough')}~~` },
     { id: 'link', icon: '🔗', label: t('canvas.editor.commands.link'), description: t('canvas.editor.commands.linkDesc'), action: () => `[${t('canvas.editor.examples.text')}](${t('canvas.editor.examples.url')})` },
-    { id: 'image', icon: '🖼️', label: t('canvas.editor.commands.image'), description: t('canvas.editor.commands.imageDesc'), action: () => `![${t('canvas.editor.examples.description')}](${t('canvas.editor.examples.url')})` },
-    
-    // 表格
-    { id: 'table', icon: '▦', label: t('canvas.editor.commands.table'), description: t('canvas.editor.commands.tableDesc'), action: () => `| ${t('canvas.editor.examples.col1')} | ${t('canvas.editor.examples.col2')} | ${t('canvas.editor.examples.col3')} |\n| --- | --- | --- |\n| ${t('canvas.editor.examples.content')} | ${t('canvas.editor.examples.content')} | ${t('canvas.editor.examples.content')} |` },
+    { id: 'image', icon: '🖼', label: t('canvas.editor.commands.image'), description: t('canvas.editor.commands.imageDesc'), action: () => `![${t('canvas.editor.examples.description')}](${t('canvas.editor.examples.url')})` },
+    { id: 'table', icon: '▦', label: t('canvas.editor.commands.table'), description: t('canvas.editor.commands.tableDesc'), action: () => `| ${t('canvas.editor.examples.col1')} | ${t('canvas.editor.examples.col2')} | ${t('canvas.editor.examples.col3')} |\n| --- | --- | --- |\n| ${t('canvas.editor.examples.content')} | ${t('canvas.editor.examples.content')} | ${t('canvas.editor.examples.content')} |` }
 ])
 
-// 过滤后的命令 - 默认显示所有命令
 const filteredCommands = computed(() => {
-    if (!slashQuery.value) return slashCommands.value // 显示所有命令
+    if (!slashQuery.value) return slashCommands.value
     const query = slashQuery.value.toLowerCase()
-    return slashCommands.value.filter(cmd => 
-        cmd.label.toLowerCase().includes(query) ||
-        cmd.id.toLowerCase().includes(query) ||
-        cmd.description.toLowerCase().includes(query)
-    )
+    return slashCommands.value.filter(command => command.label.toLowerCase().includes(query) || command.id.toLowerCase().includes(query) || command.description.toLowerCase().includes(query))
 })
 
-// 初始化
-onMounted(() => {
-    localContent.value = props.content.data || ''
+function getCaretCoordinates(position: number): { top: number; left: number } {
+    const textarea = textareaRef.value
+    if (!textarea) return { top: 0, left: 0 }
+    const safePosition = Math.max(0, Math.min(position, textarea.value.length))
+    const text = textarea.value.slice(0, safePosition)
+    const lines = text.split('\n')
+    const lineIndex = Math.max(0, lines.length - 1)
+    const currentLine = lines[lineIndex] ?? ''
+    return {
+        top: lineIndex * 27 + 20,
+        left: currentLine.length * 9 + 20
+    }
+}
+
+function getLineRange(value: string, index: number): { start: number; end: number; text: string } {
+    const start = value.lastIndexOf('\n', index - 1) + 1
+    const endIndex = value.indexOf('\n', index)
+    const end = endIndex === -1 ? value.length : endIndex
+    return { start, end, text: value.slice(start, end) }
+}
+
+function setEditorValue(value: string, selectionStart?: number, selectionEnd?: number) {
+    localContent.value = value
+    emit('update', props.nodeId, value)
     nextTick(() => {
-        overlayRef.value?.focus()
-        textareaRef.value?.focus()
+        const textarea = textareaRef.value
+        if (!textarea) return
+        textarea.value = value
+        if (typeof selectionStart === 'number') {
+            textarea.setSelectionRange(selectionStart, selectionEnd ?? selectionStart)
+        }
+        checkSlashCommand(textarea)
+        handleCursorChange()
+        textarea.focus()
     })
-    
-    // 添加 KaTeX CSS
-    if (!document.querySelector('link[href*="katex"]')) {
-        const link = document.createElement('link')
-        link.rel = 'stylesheet'
-        link.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css'
-        document.head.appendChild(link)
-    }
-})
+}
 
-// 监听内容变化
-watch(() => props.content.data, (newData) => {
-    if (newData !== localContent.value) {
-        localContent.value = newData || ''
-    }
-})
+function insertSnippet(snippet: string, cursorOffsetFromStart?: number) {
+    const textarea = textareaRef.value
+    if (!textarea) return
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const value = localContent.value
+    const nextValue = `${value.slice(0, start)}${snippet}${value.slice(end)}`
+    const nextCursor = cursorOffsetFromStart === undefined ? start + snippet.length : start + cursorOffsetFromStart
+    setEditorValue(nextValue, nextCursor)
+}
 
-function handleInput(e: Event) {
-    const target = e.target as HTMLTextAreaElement
+function wrapSelection(prefix: string, suffix: string, placeholderText = '') {
+    const textarea = textareaRef.value
+    if (!textarea) return
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const value = localContent.value
+    const selected = value.slice(start, end) || placeholderText
+    const nextValue = `${value.slice(0, start)}${prefix}${selected}${suffix}${value.slice(end)}`
+    const selectionStart = start + prefix.length
+    const selectionEnd = selectionStart + selected.length
+    setEditorValue(nextValue, selectionStart, selectionEnd)
+}
+
+function prependToCurrentLine(prefix: string) {
+    const textarea = textareaRef.value
+    if (!textarea) return
+    const start = textarea.selectionStart
+    const range = getLineRange(localContent.value, start)
+    const nextValue = `${localContent.value.slice(0, range.start)}${prefix}${range.text}${localContent.value.slice(range.end)}`
+    setEditorValue(nextValue, start + prefix.length)
+}
+
+function handleInput(event: Event) {
+    const target = event.target as HTMLTextAreaElement
     localContent.value = target.value
     emit('update', props.nodeId, target.value)
     checkSlashCommand(target)
+    handleCursorChange()
+}
+
+function syncPreviewFromEditor() {
+    const textarea = textareaRef.value
+    const preview = previewRef.value
+    if (!textarea || !preview || syncingSource === 'preview') return
+    markEditorIntent()
+    suppressPreviewDrivenSyncUntil = performance.now() + 140
+    const metrics = editorBlockMetrics.value
+    if (metrics.length === 0) return
+    pendingEditorScrollTop = textarea.scrollTop
+    if (previewSyncFrame !== null) return
+    previewSyncFrame = requestAnimationFrame(() => {
+        const lineHeight = 27
+        const anchorLine = Math.max(
+            0,
+            Math.min(
+                lineStartOffsets.value.length - 1,
+                Math.floor((pendingEditorScrollTop + (textarea.clientHeight * 0.32)) / lineHeight)
+            )
+        )
+        const visibleCharIndex = Math.min(localContent.value.length, lineStartOffsets.value[anchorLine] ?? 0)
+        let safeBlockIndex = metrics.findIndex(metric => visibleCharIndex <= metric.end)
+        if (safeBlockIndex === -1) safeBlockIndex = metrics.length - 1
+        const currentMetric = metrics[safeBlockIndex]
+        const currentElement = preview.querySelector<HTMLElement>(`[data-preview-block-id="${currentMetric.id}"]`)
+        if (!currentElement) {
+            previewSyncFrame = null
+            return
+        }
+
+        const blockProgress = Math.min(1, Math.max(0, (visibleCharIndex - currentMetric.start) / currentMetric.length))
+        const currentTop = currentElement.offsetTop
+        const currentHeight = currentElement.offsetHeight
+        const nextElement = safeBlockIndex < metrics.length - 1
+            ? preview.querySelector<HTMLElement>(`[data-preview-block-id="${metrics[safeBlockIndex + 1].id}"]`)
+            : null
+        const nextTop = nextElement?.offsetTop ?? currentTop + currentHeight
+        const interpolatedTop = currentTop + ((nextTop - currentTop) * blockProgress)
+        const targetScrollTop = Math.max(0, interpolatedTop - (preview.clientHeight * 0.16))
+        syncingSource = 'editor'
+        preview.scrollTop = targetScrollTop
+        updateActiveOutline()
+        previewSyncFrame = null
+        window.setTimeout(() => {
+            if (syncingSource === 'editor') syncingSource = null
+        }, 24)
+    })
+}
+
+function syncEditorFromPreview() {
+    const textarea = textareaRef.value
+    const preview = previewRef.value
+    if (!textarea || !preview || syncingSource === 'editor') return
+    if (performance.now() < suppressPreviewDrivenSyncUntil) return
+    const previewMax = preview.scrollHeight - preview.clientHeight
+    const editorMax = textarea.scrollHeight - textarea.clientHeight
+    if (previewMax <= 0 || editorMax <= 0) return
+    syncingSource = 'preview'
+    textarea.scrollTop = (preview.scrollTop / previewMax) * editorMax
+    updateActiveOutline()
+    window.setTimeout(() => {
+        if (syncingSource === 'preview') syncingSource = null
+    }, 16)
+}
+
+function updateActiveOutline() {
+    const preview = previewRef.value
+    if (!preview || outlineItems.value.length === 0) {
+        activeOutlineId.value = ''
+        return
+    }
+
+    const previewRect = preview.getBoundingClientRect()
+    let nextActive = outlineItems.value[0]?.id ?? ''
+    let bestDistance = Number.POSITIVE_INFINITY
+
+    for (const item of outlineItems.value) {
+        const element = preview.querySelector<HTMLElement>(`#${item.anchorId}`)
+        if (!element) continue
+        const distance = Math.abs(element.getBoundingClientRect().top - previewRect.top - 28)
+        if (element.getBoundingClientRect().top - previewRect.top <= 48 && distance < bestDistance) {
+            bestDistance = distance
+            nextActive = item.id
+        }
+    }
+
+    if (bestDistance === Number.POSITIVE_INFINITY) {
+        const firstVisible = outlineItems.value.find(item => {
+            const element = preview.querySelector<HTMLElement>(`#${item.anchorId}`)
+            return element ? element.getBoundingClientRect().bottom > previewRect.top + 48 : false
+        })
+        nextActive = firstVisible?.id ?? nextActive
+    }
+
+    activeOutlineId.value = nextActive
+}
+
+function handlePreviewScroll() {
+    const now = performance.now()
+    if (now < suppressPreviewDrivenSyncUntil) {
+        updateActiveOutline()
+        return
+    }
+    if (dominantScrollSource === 'editor' && now < dominantScrollUntil) {
+        updateActiveOutline()
+        return
+    }
+    syncEditorFromPreview()
+    updateActiveOutline()
+}
+
+function handleEditorScroll() {
+    syncPreviewFromEditor()
+}
+
+function markEditorIntent() {
+    dominantScrollSource = 'editor'
+    dominantScrollUntil = performance.now() + 320
+}
+
+function markPreviewIntent() {
+    dominantScrollSource = 'preview'
+    dominantScrollUntil = performance.now() + 320
+}
+
+function handleOverlayPointerMove(event: MouseEvent) {
+    outlineHintActive.value = event.clientX <= 120
+}
+
+function handleOverlayPointerLeave() {
+    outlineHintActive.value = false
+}
+
+function handlePreviewClick(event: MouseEvent) {
+    const target = event.target as HTMLElement | null
+    const anchor = target?.closest('a[href]') as HTMLAnchorElement | null
+    if (!anchor) return
+    event.preventDefault()
+    const href = anchor.href
+    if (!href) return
+    if (window.electron?.openExternal) {
+        window.electron.openExternal(href)
+        return
+    }
+    window.open(href, '_blank', 'noopener,noreferrer')
+}
+
+function handlePaste(event: ClipboardEvent) {
+    if (!isMarkdown.value || !textareaRef.value) return
+    const clipboardText = event.clipboardData?.getData('text/plain')?.trim()
+    if (!clipboardText) return
+    const textarea = textareaRef.value
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selected = localContent.value.slice(start, end)
+
+    if (/^https?:\/\//i.test(clipboardText) && selected) {
+        event.preventDefault()
+        const nextValue = `${localContent.value.slice(0, start)}[${selected}](${clipboardText})${localContent.value.slice(end)}`
+        setEditorValue(nextValue, start + 1, start + 1 + selected.length)
+        return
+    }
+
+    if (!selected && clipboardText.includes('\n') && /[{};<>]/.test(clipboardText)) {
+        event.preventDefault()
+        const snippet = `\`\`\`\n${clipboardText}\n\`\`\``
+        setEditorValue(`${localContent.value.slice(0, start)}${snippet}${localContent.value.slice(end)}`, start + 4)
+    }
 }
 
 function handleSelection() {
@@ -558,33 +955,26 @@ function handleSelection() {
 function handleCursorChange() {
     const textarea = textareaRef.value
     if (!textarea || !awareness.updateTextCursor) return
-    
-    awareness.updateTextCursor(
-        props.nodeId,
-        textarea.selectionStart,
-        textarea.selectionEnd
-    )
+    awareness.updateTextCursor(props.nodeId, textarea.selectionStart, textarea.selectionEnd)
 }
 
 function checkSlashCommand(textarea: HTMLTextAreaElement) {
     const cursorPos = textarea.selectionStart
-    const textBefore = textarea.value.substring(0, cursorPos)
+    const textBefore = textarea.value.slice(0, cursorPos)
     const lastSlashIndex = textBefore.lastIndexOf('/')
-    
     if (lastSlashIndex !== -1) {
         const charBefore = lastSlashIndex > 0 ? textBefore[lastSlashIndex - 1] : '\n'
         if (charBefore === ' ' || charBefore === '\n' || lastSlashIndex === 0) {
-            const query = textBefore.substring(lastSlashIndex + 1)
+            const query = textBefore.slice(lastSlashIndex + 1)
             if (!query.includes(' ') && !query.includes('\n')) {
                 slashQuery.value = query
                 slashStartPosition.value = lastSlashIndex
                 selectedCommandIndex.value = 0
                 showSlashMenu.value = true
-                // 计算菜单位置
                 const rect = textarea.getBoundingClientRect()
-                slashMenuPosition.value = { 
-                    top: Math.min(100, rect.height - 350), 
-                    left: 20 
+                slashMenuPosition.value = {
+                    top: Math.min(108, rect.height - 360),
+                    left: 20
                 }
                 return
             }
@@ -594,28 +984,178 @@ function checkSlashCommand(textarea: HTMLTextAreaElement) {
     slashQuery.value = ''
 }
 
-function handleKeyDown(e: KeyboardEvent) {
+function handleTabIndent(event: KeyboardEvent): boolean {
+    const textarea = textareaRef.value
+    if (!textarea) return false
+    event.preventDefault()
+    const value = localContent.value
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const lineStart = value.lastIndexOf('\n', start - 1) + 1
+    const lineEndIndex = value.indexOf('\n', end)
+    const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex
+    const selectedText = value.slice(lineStart, lineEnd)
+    const lines = selectedText.split('\n')
+
+    if (event.shiftKey) {
+        const updatedLines = lines.map(line => line.replace(/^ {1,2}/, ''))
+        const removedChars = lines.reduce((total, line) => total + (line.match(/^ {1,2}/)?.[0].length ?? 0), 0)
+        const nextValue = `${value.slice(0, lineStart)}${updatedLines.join('\n')}${value.slice(lineEnd)}`
+        setEditorValue(nextValue, Math.max(lineStart, start - Math.min(2, start - lineStart)), Math.max(lineStart, end - removedChars))
+    } else {
+        const updatedLines = lines.map(line => `  ${line}`)
+        const nextValue = `${value.slice(0, lineStart)}${updatedLines.join('\n')}${value.slice(lineEnd)}`
+        setEditorValue(nextValue, start + 2, end + lines.length * 2)
+    }
+    return true
+}
+
+function handleListContinuation(event: KeyboardEvent): boolean {
+    const textarea = textareaRef.value
+    if (!textarea) return false
+    const value = localContent.value
+    const cursor = textarea.selectionStart
+    const range = getLineRange(value, cursor)
+    const currentLine = range.text
+
+    const todoMatch = currentLine.match(/^(\s*[-*+]\s\[[ xX]\]\s)(.*)$/)
+    if (todoMatch) {
+        event.preventDefault()
+        const insert = todoMatch[2].trim() ? `\n${todoMatch[1]}` : '\n'
+        setEditorValue(`${value.slice(0, cursor)}${insert}${value.slice(textarea.selectionEnd)}`, cursor + insert.length)
+        return true
+    }
+
+    const bulletMatch = currentLine.match(/^(\s*[-*+]\s)(.*)$/)
+    if (bulletMatch) {
+        event.preventDefault()
+        const insert = bulletMatch[2].trim() ? `\n${bulletMatch[1]}` : '\n'
+        setEditorValue(`${value.slice(0, cursor)}${insert}${value.slice(textarea.selectionEnd)}`, cursor + insert.length)
+        return true
+    }
+
+    const orderedMatch = currentLine.match(/^(\s*)(\d+)\.\s(.*)$/)
+    if (orderedMatch) {
+        event.preventDefault()
+        const insert = orderedMatch[3].trim() ? `\n${orderedMatch[1]}${Number(orderedMatch[2]) + 1}. ` : '\n'
+        setEditorValue(`${value.slice(0, cursor)}${insert}${value.slice(textarea.selectionEnd)}`, cursor + insert.length)
+        return true
+    }
+
+    const quoteMatch = currentLine.match(/^(\s*>\s?)(.*)$/)
+    if (quoteMatch) {
+        event.preventDefault()
+        const insert = quoteMatch[2].trim() ? `\n${quoteMatch[1]}` : '\n'
+        setEditorValue(`${value.slice(0, cursor)}${insert}${value.slice(textarea.selectionEnd)}`, cursor + insert.length)
+        return true
+    }
+
+    return false
+}
+
+function handlePairing(event: KeyboardEvent): boolean {
+    const textarea = textareaRef.value
+    if (!textarea || !isMarkdown.value || event.ctrlKey || event.metaKey || event.altKey) return false
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const value = localContent.value
+    const selected = value.slice(start, end)
+    const nextChar = value[start]
+
+    if ((event.key === '"' || event.key === "'" || event.key === ')' || event.key === ']' || event.key === '}' || event.key === '`') && !selected && nextChar === event.key) {
+        event.preventDefault()
+        setEditorValue(value, start + 1)
+        return true
+    }
+
+    if (event.key === '[') {
+        event.preventDefault()
+        if (selected) {
+            setEditorValue(`${value.slice(0, start)}[${selected}]()${value.slice(end)}`, end + 3)
+        } else {
+            setEditorValue(`${value.slice(0, start)}[]()${value.slice(end)}`, start + 1)
+        }
+        return true
+    }
+
+    if (event.key === '`') {
+        event.preventDefault()
+        if (selected) {
+            wrapSelection('`', '`')
+        } else {
+            setEditorValue(`${value.slice(0, start)}\`\`${value.slice(end)}`, start + 1)
+        }
+        return true
+    }
+
+    if (event.key === '$') {
+        event.preventDefault()
+        if (selected) {
+            wrapSelection('$', '$')
+        } else {
+            setEditorValue(`${value.slice(0, start)}$${'$'}${value.slice(end)}`, start + 1)
+        }
+        return true
+    }
+
+    if (event.key === '*' && selected) {
+        event.preventDefault()
+        wrapSelection('**', '**')
+        return true
+    }
+
+    const pairs: Record<string, string> = {
+        '(': ')',
+        '{': '}',
+        '"': '"',
+        "'": "'"
+    }
+
+    const closing = pairs[event.key]
+    if (!closing) return false
+
+    event.preventDefault()
+    const nextValue = `${value.slice(0, start)}${event.key}${selected}${closing}${value.slice(end)}`
+    const selectionStart = start + 1
+    setEditorValue(nextValue, selectionStart, selected ? selectionStart + selected.length : selectionStart)
+    return true
+}
+
+function handleKeyDown(event: KeyboardEvent) {
     if (showSlashMenu.value) {
-        if (e.key === 'ArrowDown') {
-            e.preventDefault()
+        if (event.key === 'ArrowDown') {
+            event.preventDefault()
             selectedCommandIndex.value = Math.min(selectedCommandIndex.value + 1, filteredCommands.value.length - 1)
             scrollCommandIntoView()
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault()
+            return
+        }
+        if (event.key === 'ArrowUp') {
+            event.preventDefault()
             selectedCommandIndex.value = Math.max(selectedCommandIndex.value - 1, 0)
             scrollCommandIntoView()
-        } else if (e.key === 'Enter' || e.key === 'Tab') {
-            e.preventDefault()
-            const cmd = filteredCommands.value[selectedCommandIndex.value]
-            if (cmd) executeCommand(cmd)
-        } else if (e.key === 'Escape') {
-            e.preventDefault()
-            e.stopPropagation()
-            showSlashMenu.value = false
+            return
         }
-    } else if (e.key === 'Escape') {
-        e.preventDefault()
-        e.stopPropagation()
+        if (event.key === 'Enter' || event.key === 'Tab') {
+            event.preventDefault()
+            const command = filteredCommands.value[selectedCommandIndex.value]
+            if (command) executeCommand(command)
+            return
+        }
+        if (event.key === 'Escape') {
+            event.preventDefault()
+            event.stopPropagation()
+            showSlashMenu.value = false
+            return
+        }
+    }
+
+    if (isMarkdown.value && event.key === 'Tab' && handleTabIndent(event)) return
+    if (isMarkdown.value && event.key === 'Enter' && handleListContinuation(event)) return
+    if (handlePairing(event)) return
+
+    if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
         handleClose()
     }
 }
@@ -624,863 +1164,315 @@ function scrollCommandIntoView() {
     nextTick(() => {
         const menu = slashMenuRef.value
         if (!menu) return
-        const activeItem = menu.querySelector('.slash-menu-item.active')
-        activeItem?.scrollIntoView({ block: 'nearest' })
+        menu.querySelector('.slash-menu-item.active')?.scrollIntoView({ block: 'nearest' })
     })
 }
 
-function executeCommand(cmd: SlashCommand) {
+function executeCommand(command: SlashCommand) {
     const textarea = textareaRef.value
     if (!textarea) return
-    
-    const insertText = cmd.action()
-    const before = localContent.value.substring(0, slashStartPosition.value)
-    const after = localContent.value.substring(textarea.selectionStart)
-    
-    localContent.value = before + insertText + after
-    emit('update', props.nodeId, localContent.value)
-    
+    const insertText = command.action()
+    const before = localContent.value.slice(0, slashStartPosition.value)
+    const after = localContent.value.slice(textarea.selectionStart)
+    const nextValue = `${before}${insertText}${after}`
     showSlashMenu.value = false
     slashQuery.value = ''
-    
-    nextTick(() => {
-        // 智能光标定位：对于代码块，定位到中间
-        let newPos = before.length + insertText.length
-        if (insertText.includes('```') && insertText.endsWith('```')) {
-            newPos = before.length + insertText.indexOf('\n') + 1
-        } else if (insertText.includes('$$') && insertText.endsWith('$$')) {
-            newPos = before.length + insertText.indexOf('\n') + 1
-        }
-        textarea.setSelectionRange(newPos, newPos)
-        textarea.focus()
+    let nextCursor = before.length + insertText.length
+    if ((insertText.includes('```') || insertText.includes('$$')) && insertText.includes('\n')) {
+        nextCursor = before.length + insertText.indexOf('\n') + 1
+    }
+    setEditorValue(nextValue, nextCursor)
+}
+
+function setCurrentCodeFenceLanguage(language: string) {
+    const context = activeCodeFence.value
+    if (!context) return
+    const nextValue = `${localContent.value.slice(0, context.lineStart)}\`\`\`${language}${localContent.value.slice(context.lineEnd)}`
+    setEditorValue(nextValue, textareaRef.value?.selectionStart ?? context.lineEnd)
+}
+
+function scrollToOutlineItem(item: OutlineItem) {
+    activeOutlineId.value = item.id
+    previewRef.value?.querySelector<HTMLElement>(`#${item.anchorId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+async function renderMermaidDiagrams() {
+    await nextTick()
+    const preview = previewRef.value
+    if (!preview) return
+    const mermaidElements = preview.querySelectorAll('.mermaid')
+    if (mermaidElements.length === 0) return
+    try {
+        await mermaid.run({
+            nodes: mermaidElements as NodeListOf<HTMLElement>,
+            suppressErrors: true
+        })
+    } catch (error) {
+        console.warn('[Mermaid] Render error:', error)
+    }
+}
+
+function setupPreviewObserver() {
+    previewObserver?.disconnect()
+    previewObserver = null
+    const root = previewRef.value
+    if (!root) return
+    if (!('IntersectionObserver' in window)) {
+        visiblePreviewBlockIds.value = new Set(previewBlocks.value.map(block => block.id))
+        return
+    }
+
+    previewObserver = new IntersectionObserver((entries) => {
+        const nextIds = new Set(visiblePreviewBlockIds.value)
+        let changed = false
+        entries.forEach(entry => {
+            const id = (entry.target as HTMLElement).dataset.previewBlockId
+            if (!id) return
+            if (entry.isIntersecting && !nextIds.has(id)) {
+                nextIds.add(id)
+                changed = true
+            }
+        })
+        if (changed) visiblePreviewBlockIds.value = nextIds
+    }, {
+        root,
+        rootMargin: '180px 0px'
     })
+
+    root.querySelectorAll<HTMLElement>('[data-preview-block-id]').forEach(element => {
+        previewObserver?.observe(element)
+    })
+
+    updateActiveOutline()
 }
 
 function handleClose() {
-    // 清除文本光标
-    if (awareness.updateTextCursor) {
-        awareness.updateTextCursor('', -1, -1)
-    }
+    awareness.updateTextCursor?.('', -1, -1)
     emit('close')
 }
 
-// 组件卸载时清理
-onUnmounted(() => {
-    if (awareness.updateTextCursor) {
-        awareness.updateTextCursor('', -1, -1)
+onMounted(() => {
+    localContent.value = props.content.data || ''
+    nextTick(() => {
+        overlayRef.value?.focus()
+        textareaRef.value?.focus()
+        setupPreviewObserver()
+        renderMermaidDiagrams()
+    })
+    if (!document.querySelector('link[href*="katex"]')) {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css'
+        document.head.appendChild(link)
     }
+})
+
+watch(() => props.content.data, (newData) => {
+    if (newData !== localContent.value) {
+        localContent.value = newData || ''
+    }
+})
+
+watch(rawBlocks, async () => {
+    visiblePreviewBlockIds.value = new Set()
+    activeOutlineId.value = outlineItems.value[0]?.id ?? ''
+    await nextTick()
+    setupPreviewObserver()
+    renderMermaidDiagrams()
+}, { flush: 'post' })
+
+watch(visiblePreviewBlockIds, () => {
+    renderMermaidDiagrams()
+}, { flush: 'post' })
+
+watch(outlineItems, (items) => {
+    if (!items.some(item => item.id === activeOutlineId.value)) {
+        activeOutlineId.value = items[0]?.id ?? ''
+    }
+})
+
+onUnmounted(() => {
+    if (previewSyncFrame !== null) {
+        cancelAnimationFrame(previewSyncFrame)
+    }
+    previewObserver?.disconnect()
+    awareness.updateTextCursor?.('', -1, -1)
 })
 </script>
 
 <style scoped>
-.editor-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10000;
-    padding: 20px;
-}
-
-.editor-container {
-    width: 100%;
-    height: 100%;
-    max-width: 1400px;
-    max-height: 100%;
-    background: #1a1a1a;
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
-}
-
-.editor-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 24px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.02);
-    flex-shrink: 0;
-}
-
-.header-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.type-icon {
-    font-size: 20px;
-}
-
-.type-label {
-    font-size: 16px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
-}
-
-/* 协作用户头像 */
-.collab-users {
-    display: flex;
-    align-items: center;
-    margin-left: 16px;
-    padding-left: 16px;
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.collab-avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 600;
-    color: white;
-    margin-left: -8px;
-    border: 2px solid #1a1a1a;
-    cursor: default;
-}
-
-.collab-avatar:first-child {
-    margin-left: 0;
-}
-
-.close-btn {
-    width: 32px;
-    height: 32px;
-    border: none;
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.6);
-    border-radius: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    transition: all 0.15s;
-}
-
-.close-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    color: white;
-}
-
-.editor-body {
-    flex: 1;
-    display: flex;
-    overflow: hidden;
-    min-height: 0;
-}
-
-.editor-body.split-view {
-    gap: 1px;
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.edit-pane, .preview-pane {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    background: #1a1a1a;
-    min-width: 0;
-    position: relative;
-}
-
-.pane-header {
-    padding: 10px 20px;
-    font-size: 12px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.4);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    flex-shrink: 0;
-}
-
-.textarea-wrapper {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-}
-
-.editor-textarea {
-    width: 100%;
-    height: 100%;
-    padding: 20px;
-    background: transparent;
-    border: none;
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 15px;
-    line-height: 1.8;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    resize: none;
-    outline: none;
-    caret-color: #60a5fa;
-}
-
-.editor-textarea:focus {
-    caret-color: #60a5fa;
-}
-
-.editor-textarea::placeholder {
-    color: rgba(255, 255, 255, 0.25);
-}
-
-/* 远程用户光标 */
-.remote-cursor {
-    position: absolute;
-    pointer-events: none;
-    z-index: 10;
-}
-
-.remote-cursor-caret {
-    width: 2px;
-    height: 20px;
-    animation: cursor-blink 1s ease-in-out infinite;
-}
-
-@keyframes cursor-blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-.remote-cursor-label {
-    position: absolute;
-    top: -18px;
-    left: 0;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 10px;
-    font-weight: 500;
-    color: white;
-    white-space: nowrap;
-}
-
-.remote-selection {
-    position: absolute;
-    top: 0;
-    left: 2px;
-    height: 20px;
-    border-radius: 2px;
-}
-
-.preview-content {
-    flex: 1;
-    padding: 20px;
-    overflow-y: auto;
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 15px;
-    line-height: 1.7;
-}
-
-/* Markdown 预览样式 */
-.preview-content :deep(h1) { font-size: 1.8em; margin: 0.5em 0; font-weight: 600; }
-.preview-content :deep(h2) { font-size: 1.5em; margin: 0.5em 0; font-weight: 600; }
-.preview-content :deep(h3) { font-size: 1.2em; margin: 0.5em 0; font-weight: 600; }
-.preview-content :deep(p) { margin: 0.8em 0; }
-.preview-content :deep(code) { 
-    background: rgba(255, 255, 255, 0.1); 
-    padding: 2px 6px; 
-    border-radius: 4px; 
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.9em;
-}
-.preview-content :deep(pre) {
-    background: rgba(0, 0, 0, 0.4);
-    padding: 16px;
-    border-radius: 8px;
-    overflow-x: auto;
-    margin: 1em 0;
-    white-space: pre-wrap;
-    word-break: normal;
-    overflow-wrap: break-word;
-}
-.preview-content :deep(pre code) {
-    background: transparent;
-    padding: 0;
-    font-size: 13px;
-    line-height: 1.5;
-    display: block;
-    white-space: pre-wrap;
-    word-break: normal;
-    overflow-wrap: normal;
-    tab-size: 2;
-}
-.preview-content :deep(blockquote) {
-    border-left: 4px solid rgba(255, 255, 255, 0.2);
-    margin: 1em 0;
-    padding-left: 16px;
-    color: rgba(255, 255, 255, 0.7);
-}
-.preview-content :deep(ul), .preview-content :deep(ol) {
-    margin: 0.8em 0;
-    padding-left: 1.5em;
-}
-.preview-content :deep(a) {
-    color: #60a5fa;
-    text-decoration: none;
-}
-.preview-content :deep(hr) {
-    border: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    margin: 1.5em 0;
-}
-.preview-content :deep(table) {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 1em 0;
-}
-.preview-content :deep(th), .preview-content :deep(td) {
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 8px 12px;
-    text-align: left;
-}
-.preview-content :deep(th) {
-    background: rgba(255, 255, 255, 0.05);
-    font-weight: 600;
-}
-.preview-content .placeholder {
-    color: rgba(255, 255, 255, 0.3);
-    font-style: italic;
-}
-
-/* KaTeX 数学公式样式 */
-.preview-content :deep(.katex-block) {
-    display: flex;
-    justify-content: center;
-    margin: 1.5em 0;
-    padding: 1em;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 8px;
-    overflow-x: auto;
-}
-.preview-content :deep(.katex) {
-    font-size: 1.1em;
-}
-.preview-content :deep(.katex-error) {
-    color: #f56565;
-    background: rgba(245, 101, 101, 0.1);
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: monospace;
-}
-
-/* highlight.js 代码高亮样式 */
-.preview-content :deep(.hljs) {
-    background: transparent !important;
-    display: block;
-}
-.preview-content :deep(.hljs span) {
-    display: inline;
-    -webkit-box-decoration-break: clone;
-    box-decoration-break: clone;
-}
-.preview-content :deep(.hljs-keyword) { color: #c678dd; }
-.preview-content :deep(.hljs-string) { color: #98c379; }
-.preview-content :deep(.hljs-number) { color: #d19a66; }
-.preview-content :deep(.hljs-function) { color: #61afef; }
-.preview-content :deep(.hljs-title) { color: #61afef; }
-.preview-content :deep(.hljs-params) { color: #abb2bf; }
-.preview-content :deep(.hljs-comment) { color: #5c6370; font-style: italic; }
-.preview-content :deep(.hljs-doctag) { color: #c678dd; }
-.preview-content :deep(.hljs-meta) { color: #e06c75; }
-.preview-content :deep(.hljs-attr) { color: #d19a66; }
-.preview-content :deep(.hljs-attribute) { color: #98c379; }
-.preview-content :deep(.hljs-builtin-name) { color: #e06c75; }
-.preview-content :deep(.hljs-name) { color: #e06c75; }
-.preview-content :deep(.hljs-tag) { color: #e06c75; }
-.preview-content :deep(.hljs-variable) { color: #e06c75; }
-.preview-content :deep(.hljs-template-variable) { color: #e06c75; }
-.preview-content :deep(.hljs-selector-tag) { color: #e06c75; }
-.preview-content :deep(.hljs-selector-class) { color: #d19a66; }
-.preview-content :deep(.hljs-selector-id) { color: #61afef; }
-.preview-content :deep(.hljs-literal) { color: #56b6c2; }
-.preview-content :deep(.hljs-type) { color: #56b6c2; }
-.preview-content :deep(.hljs-symbol) { color: #56b6c2; }
-.preview-content :deep(.hljs-bullet) { color: #56b6c2; }
-.preview-content :deep(.hljs-link) { color: #56b6c2; text-decoration: underline; }
-.preview-content :deep(.hljs-deletion) { color: #e06c75; background: rgba(224, 108, 117, 0.1); }
-.preview-content :deep(.hljs-addition) { color: #98c379; background: rgba(152, 195, 121, 0.1); }
-
-/* Mermaid 图表样式 */
-.preview-content :deep(.mermaid-wrapper) {
-    margin: 1.5em 0;
-    padding: 1em;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 8px;
-    overflow-x: auto;
-}
-.preview-content :deep(.mermaid) {
-    display: flex;
-    justify-content: center;
-    background: transparent !important;
-}
-.preview-content :deep(.mermaid svg) {
-    max-width: 100%;
-    height: auto;
-}
-/* Mermaid 文字颜色修正（暗色主题） */
-.preview-content :deep(.mermaid .nodeLabel),
-.preview-content :deep(.mermaid .edgeLabel),
-.preview-content :deep(.mermaid .label),
-.preview-content :deep(.mermaid text) {
-    fill: rgba(255, 255, 255, 0.9) !important;
-    color: rgba(255, 255, 255, 0.9) !important;
-}
-.preview-content :deep(.mermaid .node rect),
-.preview-content :deep(.mermaid .node circle),
-.preview-content :deep(.mermaid .node polygon) {
-    fill: rgba(255, 255, 255, 0.1) !important;
-    stroke: rgba(255, 255, 255, 0.3) !important;
-}
-.preview-content :deep(.mermaid .edgePath path) {
-    stroke: rgba(255, 255, 255, 0.5) !important;
-}
-.preview-content :deep(.mermaid .arrowheadPath) {
-    fill: rgba(255, 255, 255, 0.5) !important;
-}
-
-/* 斜杠命令菜单 */
-.slash-menu {
-    position: absolute;
-    background: #2a2a2a;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-    min-width: 280px;
-    max-width: 320px;
-    max-height: 480px;
-    overflow: hidden;
-    z-index: 100;
-    display: flex;
-    flex-direction: column;
-}
-
-.slash-menu-header {
-    padding: 10px 14px;
-    font-size: 11px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.4);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    flex-shrink: 0;
-}
-
-.slash-menu-scroll {
-    overflow-y: auto;
-    flex: 1;
-}
-
-.slash-menu-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
-    cursor: pointer;
-    transition: background 0.1s;
-}
-
-.slash-menu-item:hover,
-.slash-menu-item.active {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.cmd-icon {
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.8);
-    flex-shrink: 0;
-}
-
-/* 命令图标特殊样式 */
+.editor-overlay { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0, 0, 0, 0.85); }
+.editor-container { width: 100%; height: 100%; max-width: 1440px; max-height: 100%; display: flex; flex-direction: column; overflow: hidden; border-radius: 16px; background: #17181c; box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5); }
+.editor-header, .editor-footer { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; background: rgba(255, 255, 255, 0.03); }
+.editor-header { border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.editor-footer { border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.header-left, .footer-right, .collab-users, .pane-header-row, .pane-subtools, .editor-toolbar, .preview-stats { display: flex; align-items: center; }
+.header-left { gap: 10px; }
+.type-icon { font-size: 20px; }
+.type-label { font-size: 16px; font-weight: 600; color: rgba(255, 255, 255, 0.92); }
+.collab-users { gap: 0; margin-left: 14px; padding-left: 14px; border-left: 1px solid rgba(255, 255, 255, 0.08); }
+.collab-avatar { width: 28px; height: 28px; margin-left: -8px; border: 2px solid #17181c; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 700; }
+.collab-avatar:first-child { margin-left: 0; }
+.close-btn { width: 32px; height: 32px; border: none; border-radius: 8px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.72); cursor: pointer; transition: background 0.15s ease, color 0.15s ease; }
+.close-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.14); }
+.editor-body { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+.editor-body.split-view { gap: 1px; background: rgba(255, 255, 255, 0.08); }
+.edit-pane, .preview-pane { min-width: 0; display: flex; flex: 1; flex-direction: column; position: relative; background: #17181c; }
+.pane-header-row { justify-content: space-between; gap: 12px; padding: 10px 18px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.pane-header { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.45); }
+.pane-subtools, .preview-stats { flex-wrap: wrap; gap: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.42); }
+.subtool-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.35); }
+.editor-toolbar { gap: 8px; flex-wrap: wrap; padding: 12px 18px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015)); }
+.toolbar-button, .code-language-chip, .outline-item, .outline-toggle { border: none; cursor: pointer; transition: background 0.22s ease, color 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease; }
+.toolbar-button { padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.76); }
+.toolbar-button:hover, .code-language-chip:hover, .outline-item:hover, .outline-toggle:hover { transform: translateY(-1px); background: rgba(96, 165, 250, 0.16); color: #dbeafe; box-shadow: 0 10px 24px rgba(37, 99, 235, 0.16); }
+.toolbar-button-label { font-size: 12px; font-weight: 600; }
+.code-language-chip { padding: 3px 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.72); font-size: 10px; line-height: 1.45; text-transform: lowercase; }
+.code-language-chip.active { background: rgba(96, 165, 250, 0.22); color: #dbeafe; }
+.textarea-wrapper { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.editor-textarea, .preview-content { width: 100%; height: 100%; padding: 20px; overflow-y: auto; font-size: 15px; line-height: 1.8; }
+.editor-textarea { resize: none; border: none; outline: none; background: transparent; color: rgba(255, 255, 255, 0.92); caret-color: #60a5fa; font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+.editor-textarea::placeholder { color: rgba(255, 255, 255, 0.25); }
+.preview-layout { position: relative; flex: 1; min-height: 0; display: flex; }
+.outline-floating-shell { position: absolute; top: 50%; left: 28px; z-index: 12; display: flex; align-items: center; gap: 10px; transform: translateY(-50%); }
+.outline-toggle { display: inline-flex; align-items: center; justify-content: center; width: 24px; min-height: 112px; padding: 14px 0; border-radius: 999px; opacity: 0.42; background: rgba(20, 24, 31, 0.22); color: rgba(255, 255, 255, 0.22); backdrop-filter: blur(14px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06); }
+.outline-toggle.armed { background: rgba(20, 24, 31, 0.48); color: rgba(255, 255, 255, 0.56); box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14); }
+.outline-toggle.open { opacity: 1; background: rgba(59, 130, 246, 0.2); color: #dbeafe; box-shadow: 0 14px 34px rgba(37, 99, 235, 0.18); }
+.outline-toggle-icon { font-size: 18px; line-height: 1; }
+.outline-pane { width: 240px; max-height: min(66vh, 560px); overflow-y: auto; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; padding: 14px 12px 14px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; background: rgba(20, 24, 31, 0.82); box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24); backdrop-filter: blur(18px); }
+.outline-header { margin-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.35); }
+.outline-item { width: 100%; padding: 8px 10px; border-radius: 10px; background: transparent; color: rgba(255, 255, 255, 0.68); text-align: left; font-size: 12px; line-height: 1.4; }
+.outline-item.active { background: rgba(96, 165, 250, 0.16); color: #dbeafe; box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.16); }
+.outline-item.level-2 { padding-left: 18px; }
+.outline-item.level-3, .outline-item.level-4, .outline-item.level-5, .outline-item.level-6 { padding-left: 26px; }
+.preview-content { flex: 1; min-width: 0; color: rgba(255, 255, 255, 0.92); scroll-behavior: smooth; }
+.preview-empty { color: rgba(255, 255, 255, 0.34); font-style: italic; }
+.preview-block { position: relative; margin-bottom: 18px; border-radius: 14px; opacity: 0; transform: translateY(10px) scale(0.992); animation: preview-block-enter 0.26s ease forwards; transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.22s ease; }
+.preview-block:hover { transform: translateY(-1px); }
+.preview-block.is-heavy:not(.is-deferred) { background: transparent; }
+.preview-block-placeholder, .preview-block-inner { border-radius: 14px; }
+.preview-block-placeholder { position: relative; padding: 18px 18px 18px 20px; border: 1px solid rgba(255, 255, 255, 0.08); background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(96, 165, 250, 0.04)); color: rgba(255, 255, 255, 0.64); overflow: hidden; }
+.preview-block-placeholder::before { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 15%, rgba(255, 255, 255, 0.06) 45%, transparent 75%); transform: translateX(-120%); animation: placeholder-sheen 2.4s ease-in-out infinite; }
+.preview-block-placeholder p { position: relative; margin: 0; line-height: 1.6; }
+.preview-block-badge { position: relative; display: inline-flex; margin-bottom: 8px; padding: 4px 8px; border-radius: 999px; background: rgba(96, 165, 250, 0.18); color: #bfdbfe; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.remote-cursor { position: absolute; z-index: 10; pointer-events: none; }
+.remote-cursor-caret { width: 2px; height: 20px; animation: cursor-blink 1s ease-in-out infinite; }
+.remote-cursor-label { position: absolute; top: -18px; left: 0; padding: 2px 6px; border-radius: 4px; color: #fff; font-size: 10px; font-weight: 600; white-space: nowrap; }
+.remote-selection { position: absolute; top: 0; left: 2px; height: 20px; border-radius: 2px; }
+.slash-menu { position: absolute; left: 20px; z-index: 30; width: min(360px, calc(100% - 40px)); overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 14px; background: rgba(20, 20, 24, 0.96); box-shadow: 0 18px 42px rgba(0, 0, 0, 0.32); backdrop-filter: blur(16px); }
+.slash-menu-header { padding: 12px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.42); }
+.slash-menu-scroll { max-height: 320px; overflow-y: auto; padding: 8px; }
+.slash-menu-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; cursor: pointer; }
+.slash-menu-item:hover, .slash-menu-item.active { background: rgba(255, 255, 255, 0.06); }
+.cmd-icon { width: 28px; height: 28px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.75); font-size: 12px; font-weight: 700; }
 .cmd-icon.code-icon { color: #61afef; }
-.cmd-icon.lang-js { background: #f7df1e20; color: #f7df1e; }
-.cmd-icon.lang-ts { background: #3178c620; color: #3178c6; }
-.cmd-icon.lang-py { background: #3776ab20; color: #3776ab; }
-.cmd-icon.lang-css { background: #264de420; color: #264de4; }
-.cmd-icon.lang-html { background: #e34f2620; color: #e34f26; }
-.cmd-icon.math-icon { background: #9f7aea20; color: #9f7aea; }
+.cmd-icon.lang-js { color: #f7df1e; background: rgba(247, 223, 30, 0.12); }
+.cmd-icon.lang-ts { color: #60a5fa; background: rgba(96, 165, 250, 0.14); }
+.cmd-icon.lang-py { color: #93c5fd; background: rgba(59, 130, 246, 0.16); }
+.cmd-icon.lang-css { color: #38bdf8; background: rgba(56, 189, 248, 0.16); }
+.cmd-icon.lang-html { color: #fb7185; background: rgba(251, 113, 133, 0.16); }
+.cmd-icon.math-icon { color: #c4b5fd; background: rgba(196, 181, 253, 0.14); }
 .cmd-icon.bold-icon { font-weight: 800; }
 .cmd-icon.italic-icon { font-style: italic; }
 .cmd-icon.strike-icon { text-decoration: line-through; }
-
-.cmd-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    flex: 1;
-    min-width: 0;
-}
-
-.cmd-label {
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.9);
-}
-
-.cmd-desc {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.4);
-}
-
-.cmd-shortcut {
-    font-size: 10px;
-    color: rgba(255, 255, 255, 0.3);
-    font-family: 'JetBrains Mono', monospace;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 2px 6px;
-    border-radius: 4px;
-}
-
-.slash-menu-empty {
-    padding: 20px 14px;
-    text-align: center;
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 13px;
-}
-
-.editor-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 24px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.02);
-    flex-shrink: 0;
-}
-
-.footer-hint {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.4);
-}
-
-.footer-hint kbd {
-    display: inline-block;
-    padding: 3px 8px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 11px;
-    margin: 0 3px;
-}
-
-.footer-right {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.collab-indicator {
-    font-size: 12px;
-    color: #48bb78;
-}
-
-.char-count {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.4);
-}
-
-/* 动画 */
-.modal-fade-enter-active,
-.modal-fade-leave-active {
-    transition: opacity 0.2s ease;
-}
-
-.modal-fade-enter-from,
-.modal-fade-leave-to {
-    opacity: 0;
-}
-
-.modal-scale-enter-active {
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.modal-scale-leave-active {
-    transition: all 0.15s ease-in;
-}
-
-.modal-scale-enter-from {
-    opacity: 0;
-    transform: scale(0.95);
-}
-
-.modal-scale-leave-to {
-    opacity: 0;
-    transform: scale(0.98);
-}
-
-/* ==================== 深浅色主题适配 ==================== */
-/* 浅色主题 */
-html[data-theme='light'] .editor-overlay {
-    background: rgba(0, 0, 0, 0.5);
-}
-
-html[data-theme='light'] .editor-container {
-    background: #ffffff;
-    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.2);
-}
-
-html[data-theme='light'] .editor-header {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-    background: rgba(0, 0, 0, 0.02);
-}
-
-html[data-theme='light'] .type-label {
-    color: rgba(0, 0, 0, 0.9);
-}
-
-html[data-theme='light'] .collab-users {
-    border-left: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-html[data-theme='light'] .collab-avatar {
-    border-color: #ffffff;
-}
-
-html[data-theme='light'] .close-btn {
-    background: rgba(0, 0, 0, 0.08);
-    color: rgba(0, 0, 0, 0.6);
-}
-
-html[data-theme='light'] .close-btn:hover {
-    background: rgba(0, 0, 0, 0.12);
-    color: rgba(0, 0, 0, 0.9);
-}
-
-html[data-theme='light'] .editor-body.split-view {
-    background: rgba(0, 0, 0, 0.08);
-}
-
-html[data-theme='light'] .edit-pane,
-html[data-theme='light'] .preview-pane {
-    background: #ffffff;
-}
-
-html[data-theme='light'] .pane-header {
-    color: rgba(0, 0, 0, 0.5);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-html[data-theme='light'] .editor-textarea {
-    color: rgba(0, 0, 0, 0.9);
-    caret-color: #3b82f6;
-}
-
-html[data-theme='light'] .editor-textarea::placeholder {
-    color: rgba(0, 0, 0, 0.3);
-}
-
-html[data-theme='light'] .preview-content {
-    color: rgba(0, 0, 0, 0.9);
-}
-
-html[data-theme='light'] .preview-content :deep(code) {
-    background: rgba(0, 0, 0, 0.06);
-}
-
-html[data-theme='light'] .preview-content :deep(pre) {
-    background: #f5f5f5;
-}
-
-html[data-theme='light'] .preview-content :deep(blockquote) {
-    border-left-color: rgba(0, 0, 0, 0.2);
-    color: rgba(0, 0, 0, 0.7);
-}
-
-html[data-theme='light'] .preview-content :deep(hr) {
-    border-top-color: rgba(0, 0, 0, 0.1);
-}
-
-html[data-theme='light'] .preview-content :deep(th),
-html[data-theme='light'] .preview-content :deep(td) {
-    border-color: rgba(0, 0, 0, 0.1);
-}
-
-html[data-theme='light'] .preview-content :deep(th) {
-    background: rgba(0, 0, 0, 0.04);
-}
-
-/* 斜杠菜单浅色主题 */
-html[data-theme='light'] .slash-menu {
-    background: #ffffff;
-    border-color: rgba(0, 0, 0, 0.15);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-}
-
-html[data-theme='light'] .slash-menu-header {
-    color: rgba(0, 0, 0, 0.5);
-    border-bottom-color: rgba(0, 0, 0, 0.1);
-}
-
-html[data-theme='light'] .slash-menu-item:hover,
-html[data-theme='light'] .slash-menu-item.active {
-    background: rgba(0, 0, 0, 0.06);
-}
-
-html[data-theme='light'] .cmd-icon {
-    background: rgba(0, 0, 0, 0.06);
-    color: rgba(0, 0, 0, 0.7);
-}
-
-html[data-theme='light'] .cmd-label {
-    color: rgba(0, 0, 0, 0.9);
-}
-
-html[data-theme='light'] .cmd-desc {
-    color: rgba(0, 0, 0, 0.5);
-}
-
-html[data-theme='light'] .cmd-shortcut {
-    color: rgba(0, 0, 0, 0.4);
-    background: rgba(0, 0, 0, 0.04);
-}
-
-html[data-theme='light'] .slash-menu-empty {
-    color: rgba(0, 0, 0, 0.5);
-}
-
-/* 底部状态栏浅色主题 */
-html[data-theme='light'] .editor-footer {
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
-    background: rgba(0, 0, 0, 0.02);
-}
-
-html[data-theme='light'] .footer-hint {
-    color: rgba(0, 0, 0, 0.5);
-}
-
-html[data-theme='light'] .footer-hint kbd {
-    background: rgba(0, 0, 0, 0.08);
-}
-
-html[data-theme='light'] .char-count {
-    color: rgba(0, 0, 0, 0.5);
-}
-
-/* 预览区 hljs 浅色主题 */
-html[data-theme='light'] .preview-content :deep(.hljs-keyword) { color: #a626a4; }
-html[data-theme='light'] .preview-content :deep(.hljs-string) { color: #50a14f; }
-html[data-theme='light'] .preview-content :deep(.hljs-number) { color: #986801; }
-html[data-theme='light'] .preview-content :deep(.hljs-function) { color: #4078f2; }
-html[data-theme='light'] .preview-content :deep(.hljs-title) { color: #4078f2; }
-html[data-theme='light'] .preview-content :deep(.hljs-params) { color: #383a42; }
-html[data-theme='light'] .preview-content :deep(.hljs-comment) { color: #a0a1a7; font-style: italic; }
-
-/* KaTeX 浅色主题 */
-html[data-theme='light'] .preview-content :deep(.katex-block) {
-    background: rgba(0, 0, 0, 0.03);
-}
-
-html[data-theme='light'] .preview-content :deep(.katex-error) {
-    color: #e45649;
-    background: rgba(228, 86, 73, 0.1);
-}
-
-/* Mermaid 浅色主题 */
-html[data-theme='light'] .preview-content :deep(.mermaid .nodeLabel),
-html[data-theme='light'] .preview-content :deep(.mermaid .edgeLabel),
-html[data-theme='light'] .preview-content :deep(.mermaid .label),
-html[data-theme='light'] .preview-content :deep(.mermaid text) {
-    fill: rgba(0, 0, 0, 0.9) !important;
-    color: rgba(0, 0, 0, 0.9) !important;
-}
-
-html[data-theme='light'] .preview-content :deep(.mermaid .node rect),
-html[data-theme='light'] .preview-content :deep(.mermaid .node circle),
-html[data-theme='light'] .preview-content :deep(.mermaid .node polygon) {
-    fill: rgba(0, 0, 0, 0.05) !important;
-    stroke: rgba(0, 0, 0, 0.2) !important;
-}
-
-/* ==================== 优化滚动条样式 ==================== */
-/* 斜杠菜单滚动条 */
-.slash-menu-scroll::-webkit-scrollbar {
-    width: 6px;
-}
-
-.slash-menu-scroll::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.slash-menu-scroll::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 3px;
-}
-
-.slash-menu-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.25);
-}
-
-html[data-theme='light'] .slash-menu-scroll::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.15);
-}
-
-html[data-theme='light'] .slash-menu-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.25);
-}
-
-/* 预览区滚动条 */
-.preview-content::-webkit-scrollbar {
-    width: 8px;
-}
-
-.preview-content::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.preview-content::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 4px;
-}
-
-.preview-content::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.25);
-}
-
-html[data-theme='light'] .preview-content::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.15);
-}
-
-html[data-theme='light'] .preview-content::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.25);
-}
-
-/* 编辑器文本区滚动条 */
-.editor-textarea::-webkit-scrollbar {
-    width: 8px;
-}
-
-.editor-textarea::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.editor-textarea::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 4px;
-}
-
-.editor-textarea::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.25);
-}
-
-html[data-theme='light'] .editor-textarea::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.15);
-}
-
-html[data-theme='light'] .editor-textarea::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.25);
-}
+.cmd-info { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.cmd-label { color: rgba(255, 255, 255, 0.92); font-size: 13px; }
+.cmd-desc { color: rgba(255, 255, 255, 0.42); font-size: 11px; }
+.cmd-shortcut { padding: 2px 6px; border-radius: 4px; background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.35); font-size: 10px; font-family: 'JetBrains Mono', monospace; }
+.slash-menu-empty { padding: 18px 14px; color: rgba(255, 255, 255, 0.42); text-align: center; }
+.footer-hint, .char-count, .collab-indicator { font-size: 12px; }
+.footer-hint, .char-count { color: rgba(255, 255, 255, 0.42); }
+.collab-indicator { color: #4ade80; }
+.footer-hint kbd { display: inline-block; margin: 0 3px; padding: 3px 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.1); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+.preview-content :deep(h1) { margin: 0.5em 0; font-size: 1.8em; font-weight: 700; }
+.preview-content :deep(h2) { margin: 0.5em 0; font-size: 1.45em; font-weight: 700; }
+.preview-content :deep(h3) { margin: 0.5em 0; font-size: 1.18em; font-weight: 700; }
+.preview-content :deep(p) { margin: 0.85em 0; }
+.preview-content :deep(code) { padding: 2px 6px; border-radius: 5px; background: rgba(255, 255, 255, 0.08); font-size: 0.92em; font-family: 'JetBrains Mono', monospace; }
+.preview-content :deep(.hljs) { color: #d6deeb; background: transparent; }
+.preview-content :deep(.hljs-keyword), .preview-content :deep(.hljs-selector-tag), .preview-content :deep(.hljs-literal), .preview-content :deep(.hljs-title.function_) { color: #c792ea; }
+.preview-content :deep(.hljs-string), .preview-content :deep(.hljs-attr), .preview-content :deep(.hljs-template-string) { color: #c3e88d; }
+.preview-content :deep(.hljs-number), .preview-content :deep(.hljs-symbol), .preview-content :deep(.hljs-bullet) { color: #f78c6c; }
+.preview-content :deep(.hljs-comment), .preview-content :deep(.hljs-quote) { color: #7f8c98; font-style: italic; }
+.preview-content :deep(.hljs-variable), .preview-content :deep(.hljs-title), .preview-content :deep(.hljs-property) { color: #82aaff; }
+.preview-content :deep(.hljs-type), .preview-content :deep(.hljs-built_in), .preview-content :deep(.hljs-class .hljs-title) { color: #ffcb6b; }
+.preview-content :deep(.hljs-meta), .preview-content :deep(.hljs-meta .hljs-keyword), .preview-content :deep(.hljs-doctag) { color: #89ddff; }
+.preview-content :deep(.code-block-shell) { position: relative; margin: 1em 0; border-radius: 14px; background: transparent; border: none; box-shadow: none; overflow: visible; }
+.preview-content :deep(.code-block-lang) { position: absolute; top: 10px; left: 12px; z-index: 1; display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.68); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.preview-content :deep(pre) { margin: 0; padding: 38px 16px 16px; overflow-x: auto; border-radius: 14px; background: rgba(15, 18, 24, 0.72); border: 1px solid rgba(255, 255, 255, 0.06); white-space: pre-wrap; }
+.preview-content :deep(pre code) { display: block; padding: 0; background: transparent; white-space: pre-wrap; }
+.preview-content :deep(blockquote) { margin: 1em 0; padding-left: 16px; border-left: 4px solid rgba(255, 255, 255, 0.18); color: rgba(255, 255, 255, 0.7); }
+.preview-content :deep(ul), .preview-content :deep(ol) { margin: 0.8em 0; padding-left: 1.5em; }
+.preview-content :deep(a) { color: #60a5fa; text-decoration: none; }
+.preview-content :deep(hr) { margin: 1.5em 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.preview-content :deep(table) { width: 100%; margin: 1em 0; border-collapse: collapse; }
+.preview-content :deep(th), .preview-content :deep(td) { padding: 8px 12px; border: 1px solid rgba(255, 255, 255, 0.1); }
+.preview-content :deep(th) { font-weight: 700; background: rgba(255, 255, 255, 0.04); }
+.preview-content :deep(.katex-block) { display: flex; justify-content: center; margin: 1.2em 0; padding: 1em; border-radius: 12px; background: rgba(255, 255, 255, 0.03); overflow-x: auto; }
+.preview-content :deep(.katex-error) { padding: 2px 6px; border-radius: 6px; color: #fca5a5; background: rgba(239, 68, 68, 0.1); }
+.preview-content :deep(.mermaid-wrapper) { margin: 1.2em 0; padding: 18px; border-radius: 12px; background: rgba(255, 255, 255, 0.02); overflow-x: auto; }
+.preview-content :deep(.mermaid svg) { max-width: 100%; height: auto; }
+.preview-content::-webkit-scrollbar, .editor-textarea::-webkit-scrollbar, .slash-menu-scroll::-webkit-scrollbar { width: 8px; }
+.preview-content::-webkit-scrollbar-track, .editor-textarea::-webkit-scrollbar-track, .slash-menu-scroll::-webkit-scrollbar-track { background: transparent; }
+.preview-content::-webkit-scrollbar-thumb, .editor-textarea::-webkit-scrollbar-thumb, .slash-menu-scroll::-webkit-scrollbar-thumb { border-radius: 4px; background: rgba(255, 255, 255, 0.16); }
+.preview-content::-webkit-scrollbar-thumb:hover, .editor-textarea::-webkit-scrollbar-thumb:hover, .slash-menu-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.24); }
+.modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.2s ease; }
+.modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
+.modal-scale-enter-active { transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.modal-scale-leave-active { transition: all 0.16s ease-in; }
+.modal-scale-enter-from { opacity: 0; transform: scale(0.96); }
+.modal-scale-leave-to { opacity: 0; transform: scale(0.985); }
+@keyframes cursor-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+@keyframes preview-block-enter { from { opacity: 0; transform: translateY(10px) scale(0.992); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes placeholder-sheen { from { transform: translateX(-120%); } to { transform: translateX(120%); } }
+.outline-float-enter-active, .outline-float-leave-active { transition: opacity 0.22s ease, transform 0.22s ease; }
+.outline-float-enter-from, .outline-float-leave-to { opacity: 0; transform: translateX(-10px) scale(0.98); }
+html[data-theme='light'] .editor-overlay { background: rgba(0, 0, 0, 0.45); }
+html[data-theme='light'] .editor-container, html[data-theme='light'] .edit-pane, html[data-theme='light'] .preview-pane { background: #ffffff; }
+html[data-theme='light'] .editor-container { box-shadow: 0 25px 80px rgba(0, 0, 0, 0.18); }
+html[data-theme='light'] .editor-header, html[data-theme='light'] .editor-footer { background: rgba(0, 0, 0, 0.02); }
+html[data-theme='light'] .editor-header, html[data-theme='light'] .pane-header-row, html[data-theme='light'] .editor-footer, html[data-theme='light'] .outline-pane { border-color: rgba(0, 0, 0, 0.08); }
+html[data-theme='light'] .type-label, html[data-theme='light'] .editor-textarea, html[data-theme='light'] .preview-content, html[data-theme='light'] .cmd-label { color: rgba(0, 0, 0, 0.9); }
+html[data-theme='light'] .pane-header, html[data-theme='light'] .preview-stats, html[data-theme='light'] .subtool-label, html[data-theme='light'] .outline-header, html[data-theme='light'] .footer-hint, html[data-theme='light'] .char-count, html[data-theme='light'] .cmd-desc, html[data-theme='light'] .cmd-shortcut, html[data-theme='light'] .slash-menu-header, html[data-theme='light'] .slash-menu-empty { color: rgba(0, 0, 0, 0.48); }
+html[data-theme='light'] .collab-users { border-color: rgba(0, 0, 0, 0.08); }
+html[data-theme='light'] .collab-avatar { border-color: #ffffff; }
+html[data-theme='light'] .close-btn, html[data-theme='light'] .toolbar-button, html[data-theme='light'] .code-language-chip, html[data-theme='light'] .cmd-icon { background: rgba(0, 0, 0, 0.06); color: rgba(0, 0, 0, 0.72); }
+html[data-theme='light'] .toolbar-button:hover, html[data-theme='light'] .code-language-chip:hover, html[data-theme='light'] .outline-item:hover, html[data-theme='light'] .outline-toggle:hover { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
+html[data-theme='light'] .code-language-chip.active { background: rgba(59, 130, 246, 0.16); color: #1d4ed8; }
+html[data-theme='light'] .editor-body.split-view { background: rgba(0, 0, 0, 0.08); }
+html[data-theme='light'] .editor-toolbar { border-color: rgba(0, 0, 0, 0.06); background: linear-gradient(180deg, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.015)); }
+html[data-theme='light'] .editor-textarea::placeholder { color: rgba(0, 0, 0, 0.3); }
+html[data-theme='light'] .outline-toggle { opacity: 0.38; background: rgba(255, 255, 255, 0.54); color: rgba(0, 0, 0, 0.22); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04); }
+html[data-theme='light'] .outline-toggle.armed { background: rgba(255, 255, 255, 0.86); color: rgba(0, 0, 0, 0.56); box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1); }
+html[data-theme='light'] .outline-toggle.open { opacity: 1; background: rgba(59, 130, 246, 0.14); color: #1d4ed8; }
+html[data-theme='light'] .outline-pane { border-color: rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.9); }
+html[data-theme='light'] .outline-item { color: rgba(0, 0, 0, 0.72); }
+html[data-theme='light'] .outline-item.active { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.12); }
+html[data-theme='light'] .preview-block.is-heavy:not(.is-deferred) { background: transparent; }
+html[data-theme='light'] .preview-block-placeholder { border-color: rgba(0, 0, 0, 0.12); background: rgba(0, 0, 0, 0.02); color: rgba(0, 0, 0, 0.62); }
+html[data-theme='light'] .preview-block-badge { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+html[data-theme='light'] .slash-menu { border-color: rgba(0, 0, 0, 0.12); background: rgba(255, 255, 255, 0.96); box-shadow: 0 18px 42px rgba(0, 0, 0, 0.12); }
+html[data-theme='light'] .slash-menu-item:hover, html[data-theme='light'] .slash-menu-item.active { background: rgba(0, 0, 0, 0.05); }
+html[data-theme='light'] .footer-hint kbd, html[data-theme='light'] .cmd-shortcut { background: rgba(0, 0, 0, 0.06); }
+html[data-theme='light'] .preview-content :deep(code) { background: rgba(0, 0, 0, 0.06); }
+html[data-theme='light'] .preview-content :deep(.hljs) { color: #24292f; }
+html[data-theme='light'] .preview-content :deep(.hljs-keyword), html[data-theme='light'] .preview-content :deep(.hljs-selector-tag), html[data-theme='light'] .preview-content :deep(.hljs-literal), html[data-theme='light'] .preview-content :deep(.hljs-title.function_) { color: #8250df; }
+html[data-theme='light'] .preview-content :deep(.hljs-string), html[data-theme='light'] .preview-content :deep(.hljs-attr), html[data-theme='light'] .preview-content :deep(.hljs-template-string) { color: #116329; }
+html[data-theme='light'] .preview-content :deep(.hljs-number), html[data-theme='light'] .preview-content :deep(.hljs-symbol), html[data-theme='light'] .preview-content :deep(.hljs-bullet) { color: #bc4c00; }
+html[data-theme='light'] .preview-content :deep(.hljs-comment), html[data-theme='light'] .preview-content :deep(.hljs-quote) { color: #6e7781; font-style: italic; }
+html[data-theme='light'] .preview-content :deep(.hljs-variable), html[data-theme='light'] .preview-content :deep(.hljs-title), html[data-theme='light'] .preview-content :deep(.hljs-property) { color: #0550ae; }
+html[data-theme='light'] .preview-content :deep(.hljs-type), html[data-theme='light'] .preview-content :deep(.hljs-built_in), html[data-theme='light'] .preview-content :deep(.hljs-class .hljs-title) { color: #953800; }
+html[data-theme='light'] .preview-content :deep(.hljs-meta), html[data-theme='light'] .preview-content :deep(.hljs-meta .hljs-keyword), html[data-theme='light'] .preview-content :deep(.hljs-doctag) { color: #0a7ea4; }
+html[data-theme='light'] .preview-content :deep(.code-block-shell) { background: #f3f4f6; border: none; box-shadow: none; overflow: hidden; }
+html[data-theme='light'] .preview-content :deep(.code-block-lang) { background: rgba(255, 255, 255, 0.72); color: rgba(15, 23, 42, 0.52); }
+html[data-theme='light'] .preview-content :deep(pre) { background: transparent; border: none; }
+html[data-theme='light'] .preview-content :deep(pre code) { background: transparent; box-shadow: none; }
+html[data-theme='light'] .preview-content :deep(blockquote) { border-left-color: rgba(0, 0, 0, 0.2); color: rgba(0, 0, 0, 0.68); }
+html[data-theme='light'] .preview-content :deep(th), html[data-theme='light'] .preview-content :deep(td) { border-color: rgba(0, 0, 0, 0.1); }
+html[data-theme='light'] .preview-content :deep(th) { background: rgba(0, 0, 0, 0.04); }
+html[data-theme='light'] .preview-content :deep(hr) { border-top-color: rgba(0, 0, 0, 0.1); }
+html[data-theme='light'] .preview-content :deep(.katex-block) { background: rgba(0, 0, 0, 0.03); }
+html[data-theme='light'] .preview-content :deep(.mermaid-wrapper) { background: rgba(0, 0, 0, 0.02); }
+html[data-theme='light'] .preview-content::-webkit-scrollbar-thumb, html[data-theme='light'] .editor-textarea::-webkit-scrollbar-thumb, html[data-theme='light'] .slash-menu-scroll::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.14); }
+html[data-theme='light'] .preview-content::-webkit-scrollbar-thumb:hover, html[data-theme='light'] .editor-textarea::-webkit-scrollbar-thumb:hover, html[data-theme='light'] .slash-menu-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.22); }
 </style>
