@@ -397,7 +397,7 @@ function protectCode(text: string): string {
 
 function restoreCode(text: string): string {
     codePlaceholders.forEach((replacement, placeholder) => {
-        text = text.replaceAll(placeholder, replacement)
+        text = text.split(placeholder).join(replacement)
     })
     return text
 }
@@ -421,7 +421,7 @@ function protectMath(text: string): string {
 
 function restoreMath(html: string): string {
     mathPlaceholders.forEach((replacement, placeholder) => {
-        html = html.replaceAll(placeholder, replacement)
+        html = html.split(placeholder).join(replacement)
     })
     return html
 }
@@ -614,13 +614,15 @@ const outlineItems = computed<OutlineItem[]>(() => {
     rawBlocks.value.forEach((block, index) => {
         const match = block.match(/^(#{1,6})\s+(.+)$/m)
         if (!match) return
+        const headingMarks = match[1] ?? ''
+        const headingText = match[2] ?? ''
         const blockId = `preview-block-${index}-${hashText(block)}`
         items.push({
             id: `outline-${blockId}`,
             blockId,
             anchorId: `${blockId}-anchor`,
-            text: stripMarkdownSyntax(match[2]),
-            level: match[1].length
+            text: stripMarkdownSyntax(headingText),
+            level: headingMarks.length
         })
     })
     return items
@@ -803,6 +805,10 @@ function syncPreviewFromEditor() {
         let safeBlockIndex = metrics.findIndex(metric => visibleCharIndex <= metric.end)
         if (safeBlockIndex === -1) safeBlockIndex = metrics.length - 1
         const currentMetric = metrics[safeBlockIndex]
+        if (!currentMetric) {
+            previewSyncFrame = null
+            return
+        }
         const currentElement = preview.querySelector<HTMLElement>(`[data-preview-block-id="${currentMetric.id}"]`)
         if (!currentElement) {
             previewSyncFrame = null
@@ -812,8 +818,9 @@ function syncPreviewFromEditor() {
         const blockProgress = Math.min(1, Math.max(0, (visibleCharIndex - currentMetric.start) / currentMetric.length))
         const currentTop = currentElement.offsetTop
         const currentHeight = currentElement.offsetHeight
+        const nextMetric = safeBlockIndex < metrics.length - 1 ? metrics[safeBlockIndex + 1] : undefined
         const nextElement = safeBlockIndex < metrics.length - 1
-            ? preview.querySelector<HTMLElement>(`[data-preview-block-id="${metrics[safeBlockIndex + 1].id}"]`)
+            ? preview.querySelector<HTMLElement>(`[data-preview-block-id="${nextMetric?.id ?? ''}"]`)
             : null
         const nextTop = nextElement?.offsetTop ?? currentTop + currentHeight
         const interpolatedTop = currentTop + ((nextTop - currentTop) * blockProgress)
@@ -1022,7 +1029,9 @@ function handleListContinuation(event: KeyboardEvent): boolean {
     const todoMatch = currentLine.match(/^(\s*[-*+]\s\[[ xX]\]\s)(.*)$/)
     if (todoMatch) {
         event.preventDefault()
-        const insert = todoMatch[2].trim() ? `\n${todoMatch[1]}` : '\n'
+        const prefix = todoMatch[1] ?? ''
+        const content = todoMatch[2] ?? ''
+        const insert = content.trim() ? `\n${prefix}` : '\n'
         setEditorValue(`${value.slice(0, cursor)}${insert}${value.slice(textarea.selectionEnd)}`, cursor + insert.length)
         return true
     }
@@ -1030,7 +1039,9 @@ function handleListContinuation(event: KeyboardEvent): boolean {
     const bulletMatch = currentLine.match(/^(\s*[-*+]\s)(.*)$/)
     if (bulletMatch) {
         event.preventDefault()
-        const insert = bulletMatch[2].trim() ? `\n${bulletMatch[1]}` : '\n'
+        const prefix = bulletMatch[1] ?? ''
+        const content = bulletMatch[2] ?? ''
+        const insert = content.trim() ? `\n${prefix}` : '\n'
         setEditorValue(`${value.slice(0, cursor)}${insert}${value.slice(textarea.selectionEnd)}`, cursor + insert.length)
         return true
     }
@@ -1038,7 +1049,10 @@ function handleListContinuation(event: KeyboardEvent): boolean {
     const orderedMatch = currentLine.match(/^(\s*)(\d+)\.\s(.*)$/)
     if (orderedMatch) {
         event.preventDefault()
-        const insert = orderedMatch[3].trim() ? `\n${orderedMatch[1]}${Number(orderedMatch[2]) + 1}. ` : '\n'
+        const prefix = orderedMatch[1] ?? ''
+        const number = orderedMatch[2] ?? '0'
+        const content = orderedMatch[3] ?? ''
+        const insert = content.trim() ? `\n${prefix}${Number(number) + 1}. ` : '\n'
         setEditorValue(`${value.slice(0, cursor)}${insert}${value.slice(textarea.selectionEnd)}`, cursor + insert.length)
         return true
     }
@@ -1046,7 +1060,9 @@ function handleListContinuation(event: KeyboardEvent): boolean {
     const quoteMatch = currentLine.match(/^(\s*>\s?)(.*)$/)
     if (quoteMatch) {
         event.preventDefault()
-        const insert = quoteMatch[2].trim() ? `\n${quoteMatch[1]}` : '\n'
+        const prefix = quoteMatch[1] ?? ''
+        const content = quoteMatch[2] ?? ''
+        const insert = content.trim() ? `\n${prefix}` : '\n'
         setEditorValue(`${value.slice(0, cursor)}${insert}${value.slice(textarea.selectionEnd)}`, cursor + insert.length)
         return true
     }
