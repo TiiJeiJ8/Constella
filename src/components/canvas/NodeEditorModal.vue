@@ -360,6 +360,7 @@ const md = new MarkdownIt({
 const defaultLinkOpen = md.renderer.rules.link_open ?? ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options))
 md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
     const token = tokens[idx]
+    if (!token) return ''
     token.attrSet('target', '_blank')
     token.attrSet('rel', 'noopener noreferrer')
     return defaultLinkOpen(tokens, idx, options, env, self)

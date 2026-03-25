@@ -126,7 +126,7 @@
                                 </div>
                                 <div class="position-input-row">
                                     <label>Y</label>
-                                    <input 
+                                    <input
                                         type="number"
                                         :value="Math.round(selectedNodes[0].y)"
                                         @input="$emit('node-property-change', selectedNodes[0].id, 'y', Number($event.target.value))"
