@@ -31,9 +31,38 @@
                                     </div>
                                 </div>
                             </div>
-                            <button class="close-btn" :title="t('canvas.editor.closeHint')" @click="handleClose">
-                                <span>&times;</span>
-                            </button>
+                            <div class="header-actions">
+                                <button
+                                    v-if="canExportMd"
+                                    type="button"
+                                    class="header-action-btn"
+                                    :title="t('canvas.editor.exportMd')"
+                                    @click="handleExport('md')"
+                                >
+                                    {{ t('canvas.editor.exportMdShort') }}
+                                </button>
+                                <button
+                                    v-if="canExportText"
+                                    type="button"
+                                    class="header-action-btn"
+                                    :title="t('canvas.editor.exportTxt')"
+                                    @click="handleExport('txt')"
+                                >
+                                    {{ t('canvas.editor.exportTxtShort') }}
+                                </button>
+                                <button
+                                    v-if="canExportPdf"
+                                    type="button"
+                                    class="header-action-btn primary"
+                                    :title="t('canvas.editor.exportPdf')"
+                                    @click="handleExport('pdf')"
+                                >
+                                    {{ t('canvas.editor.exportPdfShort') }}
+                                </button>
+                                <button class="close-btn" :title="t('canvas.editor.closeHint')" @click="handleClose">
+                                    <span>&times;</span>
+                                </button>
+                            </div>
                         </div>
 
                         <div class="editor-body" :class="{ 'split-view': isMarkdown }">
@@ -208,6 +237,13 @@
                 </div>
             </div>
         </Transition>
+        <InputDialog
+            v-model="isExportDialogOpen"
+            :title="t('canvas.editor.exportFilenameTitle')"
+            :placeholder="t('canvas.editor.exportFilenamePlaceholder')"
+            :default-value="exportFileNameDraft"
+            @confirm="handleExportFilenameConfirm"
+        />
     </Teleport>
 </template>
 
@@ -222,9 +258,14 @@ import mermaid from 'mermaid'
 import type { MermaidConfig } from 'mermaid'
 // @ts-ignore
 import { pluginRegistry, type NodeContent } from '@/plugins'
+import InputDialog from '@/components/base/InputDialog.vue'
+import { exportDocument, type DocumentExportFormat, type ExportTheme } from '@/utils/documentExport'
+import { deriveDocumentTitle, sanitizeFilename } from '@/utils/markdownRender'
+import { useToast } from '@/utils/useToast'
 import type { UserState } from '../../composables/useAwareness'
 
 const { t, te } = useI18n()
+const toast = useToast()
 
 type MermaidThemeMode = 'light' | 'dark'
 
@@ -416,6 +457,9 @@ const visiblePreviewBlockIds = ref<Set<string>>(new Set())
 const outlineOpen = ref(false)
 const activeOutlineId = ref('')
 const outlineHintActive = ref(false)
+const isExportDialogOpen = ref(false)
+const exportFileNameDraft = ref('')
+const pendingExportFormat = ref<DocumentExportFormat | null>(null)
 
 const previewCache = new Map<string, string>()
 const mathPlaceholders = new Map<string, string>()
@@ -426,12 +470,9 @@ const commonCodeLanguages = ['text', 'javascript', 'typescript', 'python', 'bash
 let placeholderCounter = 0
 let mermaidCounter = 0
 let previewObserver: IntersectionObserver | null = null
-let syncingSource: 'editor' | 'preview' | null = null
 let previewSyncFrame: number | null = null
 let pendingEditorScrollTop = 0
-let suppressPreviewDrivenSyncUntil = 0
-let dominantScrollSource: 'editor' | 'preview' | null = null
-let dominantScrollUntil = 0
+let syncingSource: 'editor' | null = null
 
 const md = new MarkdownIt({
     html: false,
@@ -527,10 +568,10 @@ function restoreMath(html: string): string {
 
 function sanitizeHtml(rawHtml: string): string {
     return DOMPurify.sanitize(rawHtml, {
-        ADD_TAGS: ['span', 'svg', 'path', 'line', 'rect', 'circle', 'g', 'semantics', 'mrow', 'mi', 'mo', 'mn', 'msup', 'msub', 'mfrac', 'mroot', 'msqrt', 'mtext', 'annotation', 'math', 'foreignObject', 'polygon', 'polyline', 'ellipse', 'text', 'tspan', 'marker', 'defs', 'clipPath', 'use', 'image', 'pattern', 'linearGradient', 'radialGradient', 'stop', 'title', 'desc'],
-        ADD_ATTR: ['xmlns', 'width', 'height', 'viewBox', 'd', 'fill', 'stroke', 'stroke-width', 'transform', 'style', 'aria-hidden', 'focusable', 'role', 'encoding', 'id', 'class', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry', 'points', 'marker-end', 'marker-start', 'text-anchor', 'dominant-baseline', 'font-size', 'font-family', 'font-weight', 'fill-opacity', 'stroke-opacity', 'stroke-dasharray', 'clip-path', 'xlink:href', 'href', 'preserveAspectRatio'],
-        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'a', 'hr', 'span', 'div', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'svg', 'path', 'line', 'rect', 'circle', 'g', 'semantics', 'mrow', 'mi', 'mo', 'mn', 'msup', 'msub', 'mfrac', 'mroot', 'msqrt', 'mtext', 'annotation', 'math', 'polygon', 'polyline', 'ellipse', 'text', 'tspan', 'marker', 'defs', 'clipPath', 'use', 'foreignObject'],
-        ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style', 'id', 'xmlns', 'width', 'height', 'viewBox', 'd', 'fill', 'stroke', 'stroke-width', 'transform', 'aria-hidden', 'focusable', 'role', 'encoding', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry', 'points', 'marker-end', 'text-anchor', 'dominant-baseline', 'font-size', 'font-family', 'font-weight']
+        ADD_TAGS: ['span', 'img', 'svg', 'path', 'line', 'rect', 'circle', 'g', 'semantics', 'mrow', 'mi', 'mo', 'mn', 'msup', 'msub', 'mfrac', 'mroot', 'msqrt', 'mtext', 'annotation', 'math', 'foreignObject', 'polygon', 'polyline', 'ellipse', 'text', 'tspan', 'marker', 'defs', 'clipPath', 'use', 'image', 'pattern', 'linearGradient', 'radialGradient', 'stop', 'title', 'desc'],
+        ADD_ATTR: ['xmlns', 'width', 'height', 'viewBox', 'd', 'fill', 'stroke', 'stroke-width', 'transform', 'style', 'aria-hidden', 'focusable', 'role', 'encoding', 'id', 'class', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry', 'points', 'marker-end', 'marker-start', 'text-anchor', 'dominant-baseline', 'font-size', 'font-family', 'font-weight', 'fill-opacity', 'stroke-opacity', 'stroke-dasharray', 'clip-path', 'xlink:href', 'href', 'src', 'alt', 'title', 'loading', 'referrerpolicy', 'preserveAspectRatio'],
+        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'a', 'hr', 'span', 'div', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'img', 'svg', 'path', 'line', 'rect', 'circle', 'g', 'semantics', 'mrow', 'mi', 'mo', 'mn', 'msup', 'msub', 'mfrac', 'mroot', 'msqrt', 'mtext', 'annotation', 'math', 'polygon', 'polyline', 'ellipse', 'text', 'tspan', 'marker', 'defs', 'clipPath', 'use', 'foreignObject'],
+        ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style', 'id', 'xmlns', 'width', 'height', 'viewBox', 'd', 'fill', 'stroke', 'stroke-width', 'transform', 'aria-hidden', 'focusable', 'role', 'encoding', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry', 'points', 'marker-end', 'text-anchor', 'dominant-baseline', 'font-size', 'font-family', 'font-weight', 'src', 'alt', 'title', 'loading', 'referrerpolicy']
     })
 }
 
@@ -617,6 +658,9 @@ function isHeavyBlock(text: string): boolean {
 
 const pluginMeta = computed(() => pluginRegistry.getMeta(props.content.kind))
 const isMarkdown = computed(() => props.content.kind === 'markdown')
+const canExportMd = computed(() => props.content.kind === 'markdown')
+const canExportText = computed(() => props.content.kind === 'markdown' || props.content.kind === 'text')
+const canExportPdf = computed(() => props.content.kind === 'markdown' || props.content.kind === 'text')
 const placeholder = computed(() => isMarkdown.value ? t('canvas.editor.markdownPlaceholder') : t('canvas.editor.textPlaceholder'))
 const slashMenuStyle = computed(() => ({ top: `${slashMenuPosition.value.top}px`, left: `${slashMenuPosition.value.left}px` }))
 const editingUsers = computed(() => awareness.otherUsers.value.filter(user => user.selection?.includes(props.nodeId)))
@@ -894,9 +938,7 @@ function handleInput(event: Event) {
 function syncPreviewFromEditor() {
     const textarea = textareaRef.value
     const preview = previewRef.value
-    if (!textarea || !preview || syncingSource === 'preview') return
-    markEditorIntent()
-    suppressPreviewDrivenSyncUntil = performance.now() + 140
+    if (!textarea || !preview) return
     const metrics = editorBlockMetrics.value
     if (metrics.length === 0) return
     pendingEditorScrollTop = textarea.scrollTop
@@ -944,22 +986,6 @@ function syncPreviewFromEditor() {
     })
 }
 
-function syncEditorFromPreview() {
-    const textarea = textareaRef.value
-    const preview = previewRef.value
-    if (!textarea || !preview || syncingSource === 'editor') return
-    if (performance.now() < suppressPreviewDrivenSyncUntil) return
-    const previewMax = preview.scrollHeight - preview.clientHeight
-    const editorMax = textarea.scrollHeight - textarea.clientHeight
-    if (previewMax <= 0 || editorMax <= 0) return
-    syncingSource = 'preview'
-    textarea.scrollTop = (preview.scrollTop / previewMax) * editorMax
-    updateActiveOutline()
-    window.setTimeout(() => {
-        if (syncingSource === 'preview') syncingSource = null
-    }, 16)
-}
-
 function updateActiveOutline() {
     const preview = previewRef.value
     if (!preview || outlineItems.value.length === 0) {
@@ -993,16 +1019,6 @@ function updateActiveOutline() {
 }
 
 function handlePreviewScroll() {
-    const now = performance.now()
-    if (now < suppressPreviewDrivenSyncUntil) {
-        updateActiveOutline()
-        return
-    }
-    if (dominantScrollSource === 'editor' && now < dominantScrollUntil) {
-        updateActiveOutline()
-        return
-    }
-    syncEditorFromPreview()
     updateActiveOutline()
 }
 
@@ -1011,13 +1027,11 @@ function handleEditorScroll() {
 }
 
 function markEditorIntent() {
-    dominantScrollSource = 'editor'
-    dominantScrollUntil = performance.now() + 320
+    // Keep editor interactions explicit even though preview no longer drives editor scroll.
 }
 
 function markPreviewIntent() {
-    dominantScrollSource = 'preview'
-    dominantScrollUntil = performance.now() + 320
+    // Preview is now read-follow by default; clicking can still trigger explicit jumps.
 }
 
 function handleOverlayPointerMove(event: MouseEvent) {
@@ -1379,6 +1393,60 @@ function handleClose() {
     emit('close')
 }
 
+function getExportTheme(): ExportTheme {
+    return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
+}
+
+function getDefaultExportFileName() {
+    return sanitizeFilename(deriveDocumentTitle(localContent.value, isMarkdown.value ? 'markdown' : 'text'))
+}
+
+function handleExport(format: DocumentExportFormat) {
+    if (!canExportText.value) {
+        toast.error(t('canvas.editor.exportUnsupported'))
+        return
+    }
+
+    pendingExportFormat.value = format
+    exportFileNameDraft.value = getDefaultExportFileName()
+    isExportDialogOpen.value = true
+}
+
+async function handleExportFilenameConfirm(value: string) {
+    const format = pendingExportFormat.value
+    pendingExportFormat.value = null
+
+    if (!format) return
+
+    const fileName = sanitizeFilename(value, getDefaultExportFileName())
+
+    try {
+        const result = await exportDocument(format, {
+            kind: isMarkdown.value ? 'markdown' : 'text',
+            content: localContent.value,
+            title: deriveDocumentTitle(localContent.value, isMarkdown.value ? 'markdown' : 'text'),
+            fileName,
+            theme: getExportTheme()
+        })
+
+        if (result.canceled) {
+            return
+        }
+
+        if (format === 'pdf') {
+            toast.success(window.electron?.exportDocumentPdf
+                ? t('canvas.editor.exportPdfSaved')
+                : t('canvas.editor.exportPdfReady'))
+            return
+        }
+
+        toast.success(t('canvas.toast.exportSuccess', { format: format.toUpperCase() }))
+    } catch (error) {
+        console.error('[NodeEditorModal] Document export failed:', error)
+        toast.error(t('canvas.toast.exportFailed'))
+    }
+}
+
 onMounted(() => {
     localContent.value = props.content.data || ''
     nextTick(() => {
@@ -1434,14 +1502,18 @@ onUnmounted(() => {
 .editor-header, .editor-footer { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; background: rgba(255, 255, 255, 0.03); }
 .editor-header { border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
 .editor-footer { border-top: 1px solid rgba(255, 255, 255, 0.08); }
-.header-left, .footer-right, .collab-users, .pane-header-row, .pane-subtools, .editor-toolbar, .preview-stats { display: flex; align-items: center; }
+.header-left, .header-actions, .footer-right, .collab-users, .pane-header-row, .pane-subtools, .editor-toolbar, .preview-stats { display: flex; align-items: center; }
 .header-left { gap: 10px; }
+.header-actions { gap: 10px; }
 .type-icon { font-size: 20px; }
 .type-label { font-size: 16px; font-weight: 600; color: rgba(255, 255, 255, 0.92); }
 .collab-users { gap: 0; margin-left: 14px; padding-left: 14px; border-left: 1px solid rgba(255, 255, 255, 0.08); }
 .collab-avatar { width: 28px; height: 28px; margin-left: -8px; border: 2px solid #17181c; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 700; }
 .collab-avatar:first-child { margin-left: 0; }
+.header-action-btn { min-width: 56px; height: 32px; padding: 0 12px; border: none; border-radius: 8px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.72); cursor: pointer; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; transition: background 0.15s ease, color 0.15s ease; }
+.header-action-btn.primary { background: rgba(96, 165, 250, 0.16); color: #dbeafe; }
 .close-btn { width: 32px; height: 32px; border: none; border-radius: 8px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.72); cursor: pointer; transition: background 0.15s ease, color 0.15s ease; }
+.header-action-btn:hover,
 .close-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.14); }
 .editor-body { flex: 1; min-height: 0; display: flex; overflow: hidden; }
 .editor-body.split-view { gap: 1px; background: rgba(255, 255, 255, 0.08); }
@@ -1463,8 +1535,8 @@ onUnmounted(() => {
 .editor-textarea::placeholder { color: rgba(255, 255, 255, 0.25); }
 .preview-layout { position: relative; flex: 1; min-height: 0; display: flex; }
 .outline-floating-shell { position: absolute; top: 50%; left: 28px; z-index: 12; display: flex; align-items: center; gap: 10px; transform: translateY(-50%); }
-.outline-toggle { display: inline-flex; align-items: center; justify-content: center; width: 24px; min-height: 112px; padding: 14px 0; border-radius: 999px; opacity: 0.42; background: rgba(20, 24, 31, 0.22); color: rgba(255, 255, 255, 0.22); backdrop-filter: blur(14px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06); }
-.outline-toggle.armed { background: rgba(20, 24, 31, 0.48); color: rgba(255, 255, 255, 0.56); box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14); }
+.outline-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; min-height: 120px; padding: 14px 0; border-radius: 999px; opacity: 0.72; background: rgba(20, 24, 31, 0.58); color: rgba(255, 255, 255, 0.68); backdrop-filter: blur(16px); box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16); }
+.outline-toggle.armed { background: rgba(20, 24, 31, 0.78); color: rgba(255, 255, 255, 0.9); box-shadow: 0 16px 32px rgba(0, 0, 0, 0.22); }
 .outline-toggle.open { opacity: 1; background: rgba(59, 130, 246, 0.2); color: #dbeafe; box-shadow: 0 14px 34px rgba(37, 99, 235, 0.18); }
 .outline-toggle-icon { font-size: 18px; line-height: 1; }
 .outline-pane { width: 240px; max-height: min(66vh, 560px); overflow-y: auto; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; padding: 14px 12px 14px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; background: rgba(20, 24, 31, 0.82); box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24); backdrop-filter: blur(18px); }
@@ -1532,6 +1604,7 @@ onUnmounted(() => {
 .preview-content :deep(blockquote) { margin: 1em 0; padding-left: 16px; border-left: 4px solid rgba(255, 255, 255, 0.18); color: rgba(255, 255, 255, 0.7); }
 .preview-content :deep(ul), .preview-content :deep(ol) { margin: 0.8em 0; padding-left: 1.5em; }
 .preview-content :deep(a) { color: #60a5fa; text-decoration: none; }
+.preview-content :deep(img) { display: block; max-width: min(100%, 760px); width: auto; height: auto; margin: 1em auto; border-radius: 14px; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18); background: rgba(255, 255, 255, 0.03); }
 .preview-content :deep(hr) { margin: 1.5em 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.1); }
 .preview-content :deep(table) { width: 100%; margin: 1em 0; border-collapse: collapse; }
 .preview-content :deep(th), .preview-content :deep(td) { padding: 8px 12px; border: 1px solid rgba(255, 255, 255, 0.1); }
@@ -1612,14 +1685,15 @@ html[data-theme='light'] .type-label, html[data-theme='light'] .editor-textarea,
 html[data-theme='light'] .pane-header, html[data-theme='light'] .preview-stats, html[data-theme='light'] .subtool-label, html[data-theme='light'] .outline-header, html[data-theme='light'] .footer-hint, html[data-theme='light'] .char-count, html[data-theme='light'] .cmd-desc, html[data-theme='light'] .cmd-shortcut, html[data-theme='light'] .slash-menu-header, html[data-theme='light'] .slash-menu-empty { color: rgba(0, 0, 0, 0.48); }
 html[data-theme='light'] .collab-users { border-color: rgba(0, 0, 0, 0.08); }
 html[data-theme='light'] .collab-avatar { border-color: #ffffff; }
-html[data-theme='light'] .close-btn, html[data-theme='light'] .toolbar-button, html[data-theme='light'] .code-language-chip, html[data-theme='light'] .cmd-icon { background: rgba(0, 0, 0, 0.06); color: rgba(0, 0, 0, 0.72); }
+html[data-theme='light'] .header-action-btn, html[data-theme='light'] .close-btn, html[data-theme='light'] .toolbar-button, html[data-theme='light'] .code-language-chip, html[data-theme='light'] .cmd-icon { background: rgba(0, 0, 0, 0.06); color: rgba(0, 0, 0, 0.72); }
+html[data-theme='light'] .header-action-btn.primary { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
 html[data-theme='light'] .toolbar-button:hover, html[data-theme='light'] .code-language-chip:hover, html[data-theme='light'] .outline-item:hover, html[data-theme='light'] .outline-toggle:hover { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
 html[data-theme='light'] .code-language-chip.active { background: rgba(59, 130, 246, 0.16); color: #1d4ed8; }
 html[data-theme='light'] .editor-body.split-view { background: rgba(0, 0, 0, 0.08); }
 html[data-theme='light'] .editor-toolbar { border-color: rgba(0, 0, 0, 0.06); background: linear-gradient(180deg, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.015)); }
 html[data-theme='light'] .editor-textarea::placeholder { color: rgba(0, 0, 0, 0.3); }
-html[data-theme='light'] .outline-toggle { opacity: 0.38; background: rgba(255, 255, 255, 0.54); color: rgba(0, 0, 0, 0.22); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04); }
-html[data-theme='light'] .outline-toggle.armed { background: rgba(255, 255, 255, 0.86); color: rgba(0, 0, 0, 0.56); box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1); }
+html[data-theme='light'] .outline-toggle { opacity: 0.78; background: rgba(255, 255, 255, 0.88); color: rgba(15, 23, 42, 0.62); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08); }
+html[data-theme='light'] .outline-toggle.armed { background: rgba(255, 255, 255, 0.98); color: rgba(15, 23, 42, 0.86); box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12); }
 html[data-theme='light'] .outline-toggle.open { opacity: 1; background: rgba(59, 130, 246, 0.14); color: #1d4ed8; }
 html[data-theme='light'] .outline-pane { border-color: rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.9); }
 html[data-theme='light'] .outline-item { color: rgba(0, 0, 0, 0.72); }
@@ -1647,6 +1721,7 @@ html[data-theme='light'] .preview-content :deep(blockquote) { border-left-color:
 html[data-theme='light'] .preview-content :deep(th), html[data-theme='light'] .preview-content :deep(td) { border-color: rgba(0, 0, 0, 0.1); }
 html[data-theme='light'] .preview-content :deep(th) { background: rgba(0, 0, 0, 0.04); }
 html[data-theme='light'] .preview-content :deep(hr) { border-top-color: rgba(0, 0, 0, 0.1); }
+html[data-theme='light'] .preview-content :deep(img) { background: rgba(0, 0, 0, 0.02); box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08); }
 html[data-theme='light'] .preview-content :deep(.katex-block) { background: rgba(0, 0, 0, 0.03); }
 html[data-theme='light'] .preview-content :deep(.mermaid-wrapper) { background: rgba(0, 0, 0, 0.02); }
 html[data-theme='light'] .preview-content :deep(.mermaid-block-lang) { background: rgba(255, 255, 255, 0.72); color: rgba(15, 23, 42, 0.52); }

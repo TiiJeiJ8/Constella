@@ -20,6 +20,13 @@ interface ElectronBridgeApi {
     close: () => void
     openExternal: (url: string) => void
     discoverLanServers: (timeoutMs?: number) => Promise<ElectronLanServer[]>
+    exportDocumentPdf: (payload: {
+        html: string
+        fileName: string
+    }) => Promise<{
+        canceled?: boolean
+        filePath?: string
+    }>
 }
 
 declare global {

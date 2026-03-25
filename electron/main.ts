@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
@@ -25,6 +25,11 @@ interface LanServerDescriptor {
     version: string
     addresses: string[]
     discoveredAt: string
+}
+
+interface ExportDocumentPdfPayload {
+    html: string
+    fileName: string
 }
 
 let mainWindow: BrowserWindow | null = null
@@ -200,6 +205,64 @@ ipcMain.handle('discover-lan-servers', async (_event, timeoutMs?: number) => {
     } catch (error) {
         console.error('[Electron] Failed to discover LAN servers:', error)
         return []
+    }
+})
+
+ipcMain.handle('export-document-pdf', async (_event, payload: ExportDocumentPdfPayload) => {
+    const ownerWindow = BrowserWindow.fromWebContents(_event.sender) ?? mainWindow
+
+    if (!payload?.html || !payload?.fileName) {
+        throw new Error('Invalid PDF export payload')
+    }
+
+    const saveResult = await dialog.showSaveDialog(ownerWindow ?? undefined, {
+        title: 'Export PDF',
+        defaultPath: payload.fileName,
+        filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    })
+
+    if (saveResult.canceled || !saveResult.filePath) {
+        return { canceled: true }
+    }
+
+    let exportWindow: BrowserWindow | null = null
+
+    try {
+        exportWindow = new BrowserWindow({
+            show: false,
+            backgroundColor: '#ffffff',
+            webPreferences: {
+                sandbox: false
+            }
+        })
+
+        await exportWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(payload.html)}`)
+
+        await new Promise(resolve => setTimeout(resolve, 450))
+
+        await exportWindow.webContents.executeJavaScript(`
+            Promise.all([
+                document.fonts?.ready ?? Promise.resolve(),
+                ...Array.from(document.images || []).map(img => img.complete ? Promise.resolve() : new Promise(done => {
+                    img.addEventListener('load', done, { once: true })
+                    img.addEventListener('error', done, { once: true })
+                }))
+            ]).then(() => true)
+        `)
+
+        const pdfBuffer = await exportWindow.webContents.printToPDF({
+            printBackground: true,
+            preferCSSPageSize: true
+        })
+
+        await fs.promises.writeFile(saveResult.filePath, pdfBuffer)
+
+        return {
+            canceled: false,
+            filePath: saveResult.filePath
+        }
+    } finally {
+        exportWindow?.close()
     }
 })
 
