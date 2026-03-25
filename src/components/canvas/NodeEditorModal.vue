@@ -219,6 +219,7 @@ import DOMPurify from 'dompurify'
 import hljs from 'highlight.js'
 import katex from 'katex'
 import mermaid from 'mermaid'
+import type { MermaidConfig } from 'mermaid'
 // @ts-ignore
 import { pluginRegistry, type NodeContent } from '@/plugins'
 import type { UserState } from '../../composables/useAwareness'
@@ -283,7 +284,7 @@ function getMermaidThemeVariables(mode: MermaidThemeMode) {
     }
 }
 
-function getMermaidConfig(mode: MermaidThemeMode) {
+function getMermaidConfig(mode: MermaidThemeMode): MermaidConfig {
     return {
         startOnLoad: false,
         theme: 'base',

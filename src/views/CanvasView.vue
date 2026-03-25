@@ -76,6 +76,7 @@
                 :width="node.width"
                 :height="node.height"
                 :z-index="node.zIndex || 0"
+                :rotation="node.rotation || 0"
                 :render-order="overlayOrder"
                 :fill="node.rectConfig.fill"
                 :stroke="node.rectConfig.stroke"
@@ -376,8 +377,8 @@ const yjs = useYjs({
         
         // 连接后立即初始化节点和边管理（确保首次进入时能创建示例节点）
         if (yjs.doc) {
-            yjsNodes.initialize()
             yjsEdges.initialize()
+            yjsNodes.initialize()
             // 初始化聊天
             yjsChat.initialize()
         }
@@ -392,8 +393,8 @@ const yjs = useYjs({
         
         // 同步完成后确保初始化已完成（防止连接回调未触发的情况）
         if (synced && yjs.doc) {
-            yjsNodes.initialize()
             yjsEdges.initialize()
+            yjsNodes.initialize()
             yjsChat.initialize()
         }
     },

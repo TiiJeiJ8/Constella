@@ -488,12 +488,14 @@ function showInfo() {
     z-index: 1000;
     -webkit-app-region: no-drag;
     opacity: 0;
+    pointer-events: none;
     transform: translateY(-10px);
     transition: opacity 0.6s ease 0.5s, transform 0.6s ease 0.5s;
 }
 
 .control-buttons.show {
     opacity: 1;
+    pointer-events: auto;
     transform: translateY(0);
 }
 
@@ -543,7 +545,7 @@ function showInfo() {
     align-items: center;
     justify-content: center;
     background: var(--bg-primary);
-    z-index: 999;
+    z-index: 1100;
     transition: opacity 0.8s ease;
 }
 

@@ -54,6 +54,7 @@
                     :config="{
                         x: node.x,
                         y: node.y,
+                        rotation: node.rotation || 0,
                         draggable: true
                     }"
                     @click="handleNodeClick(node, $event)"
