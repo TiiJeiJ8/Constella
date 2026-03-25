@@ -224,12 +224,108 @@ import type { UserState } from '../../composables/useAwareness'
 
 const { t, te } = useI18n()
 
-mermaid.initialize({
-    startOnLoad: false,
-    theme: 'dark',
-    securityLevel: 'loose',
-    fontFamily: 'system-ui, -apple-system, sans-serif'
-})
+type MermaidThemeMode = 'light' | 'dark'
+
+function getMermaidThemeVariables(mode: MermaidThemeMode) {
+    if (mode === 'light') {
+        return {
+            primaryColor: '#e8eef9',
+            primaryTextColor: '#172033',
+            primaryBorderColor: '#9bb2d1',
+            lineColor: '#7a93b8',
+            secondaryColor: '#dfe8f5',
+            tertiaryColor: '#f3f6fb',
+            background: '#ffffff',
+            mainBkg: '#e8eef9',
+            secondBkg: '#dfe8f5',
+            tertiaryBkg: '#f3f6fb',
+            textColor: '#172033',
+            nodeBorder: '#9bb2d1',
+            clusterBkg: '#f5f7fb',
+            clusterBorder: '#c8d4e8',
+            edgeLabelBackground: '#ffffff',
+            cScale0: '#d8e7ff',
+            cScale1: '#dff4ea',
+            cScale2: '#fff1d6',
+            cScale3: '#f4e3ff',
+            cScaleLabel0: '#172033',
+            cScaleLabel1: '',
+            cScaleLabel2: '#4b3200',
+            cScaleLabel3: '#3d1d59'
+        }
+    }
+
+    return {
+        primaryColor: '#1e293b',
+        primaryTextColor: '#e5eefc',
+        primaryBorderColor: '#5f7ba6',
+        lineColor: '#8aa4d0',
+        secondaryColor: '#162132',
+        tertiaryColor: '#111a28',
+        background: '#17181c',
+        mainBkg: '#1e293b',
+        secondBkg: '#162132',
+        tertiaryBkg: '#111a28',
+        textColor: '#e5eefc',
+        nodeBorder: '#5f7ba6',
+        clusterBkg: '#111a28',
+        clusterBorder: '#334155',
+        edgeLabelBackground: '#17181c',
+        cScale0: '#26476b',
+        cScale1: '#173226',
+        cScale2: '#6a4f1f',
+        cScale3: '#4b2e67',
+        cScaleLabel0: '#eff6ff',
+        cScaleLabel1: '#ecfdf5',
+        cScaleLabel2: '#fff7ed',
+        cScaleLabel3: '#faf5ff'
+    }
+}
+
+function getMermaidConfig(mode: MermaidThemeMode) {
+    return {
+        startOnLoad: false,
+        theme: 'base',
+        securityLevel: 'loose',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        themeVariables: getMermaidThemeVariables(mode)
+    }
+}
+
+function getMermaidDiagramLabel(source: string): string {
+    const firstMeaningfulLine = source
+        .split('\n')
+        .map(line => line.trim())
+        .find(line => Boolean(line))
+        ?.toLowerCase() ?? ''
+
+    const labelMap: Array<[RegExp, string]> = [
+        [/^mindmap\b/, 'Mindmap'],
+        [/^(flowchart|graph)\b/, 'Flowchart'],
+        [/^sequencediagram\b/, 'Sequence'],
+        [/^classdiagram\b/, 'Class'],
+        [/^erdiagram\b/, 'ERD'],
+        [/^journey\b/, 'Journey'],
+        [/^gantt\b/, 'Gantt'],
+        [/^statediagram(?:-v2)?\b/, 'State'],
+        [/^pie\b/, 'Pie'],
+        [/^quadrantchart\b/, 'Quadrant'],
+        [/^requirementdiagram\b/, 'Requirement'],
+        [/^gitgraph\b/, 'Git Graph'],
+        [/^timeline\b/, 'Timeline'],
+        [/^c4context\b/, 'C4 Context'],
+        [/^c4container\b/, 'C4 Container'],
+        [/^c4component\b/, 'C4 Component'],
+        [/^c4dynamic\b/, 'C4 Dynamic'],
+        [/^c4deployment\b/, 'C4 Deployment'],
+        [/^block-beta\b/, 'Block']
+    ]
+
+    const matched = labelMap.find(([pattern]) => pattern.test(firstMeaningfulLine))
+    return `Mermaid · ${matched?.[1] ?? 'Diagram'}`
+}
+
+mermaid.initialize(getMermaidConfig('dark'))
 
 interface SlashCommand {
     id: string
@@ -343,7 +439,8 @@ const md = new MarkdownIt({
     highlight(str: string, lang: string): string {
         if (lang === 'mermaid') {
             const id = `mermaid-${mermaidCounter++}`
-            return `<div class="mermaid-wrapper"><pre class="mermaid" id="${id}">${markdownUtils.escapeHtml(str)}</pre></div>`
+            const mermaidLabel = markdownUtils.escapeHtml(getMermaidDiagramLabel(str))
+            return `<div class="mermaid-wrapper"><span class="mermaid-block-lang">${mermaidLabel}</span><pre class="mermaid" id="${id}">${markdownUtils.escapeHtml(str)}</pre></div>`
         }
         const languageLabel = markdownUtils.escapeHtml(lang || 'text')
         if (lang && hljs.getLanguage(lang)) {
@@ -1220,6 +1317,8 @@ async function renderMermaidDiagrams() {
     const mermaidElements = preview.querySelectorAll('.mermaid')
     if (mermaidElements.length === 0) return
     try {
+        const themeMode: MermaidThemeMode = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
+        mermaid.initialize(getMermaidConfig(themeMode))
         await mermaid.run({
             nodes: mermaidElements as NodeListOf<HTMLElement>,
             suppressErrors: true
@@ -1427,8 +1526,56 @@ onUnmounted(() => {
 .preview-content :deep(th) { font-weight: 700; background: rgba(255, 255, 255, 0.04); }
 .preview-content :deep(.katex-block) { display: flex; justify-content: center; margin: 1.2em 0; padding: 1em; border-radius: 12px; background: rgba(255, 255, 255, 0.03); overflow-x: auto; }
 .preview-content :deep(.katex-error) { padding: 2px 6px; border-radius: 6px; color: #fca5a5; background: rgba(239, 68, 68, 0.1); }
-.preview-content :deep(.mermaid-wrapper) { margin: 1.2em 0; padding: 18px; border-radius: 12px; background: rgba(255, 255, 255, 0.02); overflow-x: auto; }
+.preview-content :deep(.mermaid-wrapper) { position: relative; margin: 1.2em 0; padding: 38px 18px 18px; border-radius: 12px; background: rgba(255, 255, 255, 0.02); overflow-x: auto; }
+.preview-content :deep(.mermaid-block-lang) { position: absolute; top: 10px; left: 12px; z-index: 1; display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.68); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .preview-content :deep(.mermaid svg) { max-width: 100%; height: auto; }
+.preview-content :deep(.mermaid text),
+.preview-content :deep(.mermaid .label),
+.preview-content :deep(.mermaid .nodeLabel),
+.preview-content :deep(.mermaid .edgeLabel),
+.preview-content :deep(.mermaid .edgeLabel p),
+.preview-content :deep(.mermaid .edgeLabel span),
+.preview-content :deep(.mermaid .cluster-label text),
+.preview-content :deep(.mermaid .cluster-label span),
+.preview-content :deep(.mermaid .mindmap-node .label),
+.preview-content :deep(.mermaid .mindmap-node text),
+.preview-content :deep(.mermaid .mindmap-node foreignObject),
+.preview-content :deep(.mermaid .mindmap-node foreignObject div) { fill: #e5eefc !important; color: #e5eefc !important; }
+.preview-content :deep(.mermaid .edgeLabel rect),
+.preview-content :deep(.mermaid .labelBkg) { fill: rgba(23, 24, 28, 0.92) !important; }
+.preview-content :deep(.mermaid .edgePath path),
+.preview-content :deep(.mermaid .flowchart-link),
+.preview-content :deep(.mermaid .relationshipLine),
+.preview-content :deep(.mermaid .messageLine0),
+.preview-content :deep(.mermaid .messageLine1),
+.preview-content :deep(.mermaid .mindmap-link),
+.preview-content :deep(.mermaid .section-edge) { stroke: #8aa4d0 !important; }
+.preview-content :deep(.mermaid .arrowheadPath),
+.preview-content :deep(.mermaid marker path) { fill: #8aa4d0 !important; stroke: #8aa4d0 !important; }
+.preview-content :deep(.mermaid .node rect),
+.preview-content :deep(.mermaid .node circle),
+.preview-content :deep(.mermaid .node ellipse),
+.preview-content :deep(.mermaid .node polygon),
+.preview-content :deep(.mermaid .node path),
+.preview-content :deep(.mermaid .cluster rect),
+.preview-content :deep(.mermaid .cluster polygon),
+.preview-content :deep(.mermaid .mindmap-node rect),
+.preview-content :deep(.mermaid .mindmap-node circle),
+.preview-content :deep(.mermaid .mindmap-node path) { stroke: rgba(191, 219, 254, 0.34) !important; }
+.preview-content :deep(.mermaid .cluster rect),
+.preview-content :deep(.mermaid .cluster polygon) { fill: rgba(17, 26, 40, 0.78) !important; }
+.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 1) rect),
+.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 1) circle),
+.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 1) path) { fill: #26476b !important; }
+.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 2) rect),
+.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 2) circle),
+.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 2) path) { fill: #1f5a4c !important; }
+.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 3) rect),
+.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 3) circle),
+.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 3) path) { fill: #6a4f1f !important; }
+.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 4) rect),
+.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 4) circle),
+.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 4) path) { fill: #4b2e67 !important; }
 .preview-content::-webkit-scrollbar, .editor-textarea::-webkit-scrollbar, .slash-menu-scroll::-webkit-scrollbar { width: 8px; }
 .preview-content::-webkit-scrollbar-track, .editor-textarea::-webkit-scrollbar-track, .slash-menu-scroll::-webkit-scrollbar-track { background: transparent; }
 .preview-content::-webkit-scrollbar-thumb, .editor-textarea::-webkit-scrollbar-thumb, .slash-menu-scroll::-webkit-scrollbar-thumb { border-radius: 4px; background: rgba(255, 255, 255, 0.16); }
@@ -1490,6 +1637,54 @@ html[data-theme='light'] .preview-content :deep(th) { background: rgba(0, 0, 0, 
 html[data-theme='light'] .preview-content :deep(hr) { border-top-color: rgba(0, 0, 0, 0.1); }
 html[data-theme='light'] .preview-content :deep(.katex-block) { background: rgba(0, 0, 0, 0.03); }
 html[data-theme='light'] .preview-content :deep(.mermaid-wrapper) { background: rgba(0, 0, 0, 0.02); }
+html[data-theme='light'] .preview-content :deep(.mermaid-block-lang) { background: rgba(255, 255, 255, 0.72); color: rgba(15, 23, 42, 0.52); }
+html[data-theme='light'] .preview-content :deep(.mermaid text),
+html[data-theme='light'] .preview-content :deep(.mermaid .label),
+html[data-theme='light'] .preview-content :deep(.mermaid .nodeLabel),
+html[data-theme='light'] .preview-content :deep(.mermaid .edgeLabel),
+html[data-theme='light'] .preview-content :deep(.mermaid .edgeLabel p),
+html[data-theme='light'] .preview-content :deep(.mermaid .edgeLabel span),
+html[data-theme='light'] .preview-content :deep(.mermaid .cluster-label text),
+html[data-theme='light'] .preview-content :deep(.mermaid .cluster-label span),
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node .label),
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node text),
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node foreignObject),
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node foreignObject div) { fill: #172033 !important; color: #172033 !important; }
+html[data-theme='light'] .preview-content :deep(.mermaid .edgeLabel rect),
+html[data-theme='light'] .preview-content :deep(.mermaid .labelBkg) { fill: rgba(255, 255, 255, 0.96) !important; }
+html[data-theme='light'] .preview-content :deep(.mermaid .edgePath path),
+html[data-theme='light'] .preview-content :deep(.mermaid .flowchart-link),
+html[data-theme='light'] .preview-content :deep(.mermaid .relationshipLine),
+html[data-theme='light'] .preview-content :deep(.mermaid .messageLine0),
+html[data-theme='light'] .preview-content :deep(.mermaid .messageLine1),
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-link),
+html[data-theme='light'] .preview-content :deep(.mermaid .section-edge) { stroke: #7a93b8 !important; }
+html[data-theme='light'] .preview-content :deep(.mermaid .arrowheadPath),
+html[data-theme='light'] .preview-content :deep(.mermaid marker path) { fill: #7a93b8 !important; stroke: #7a93b8 !important; }
+html[data-theme='light'] .preview-content :deep(.mermaid .node rect),
+html[data-theme='light'] .preview-content :deep(.mermaid .node circle),
+html[data-theme='light'] .preview-content :deep(.mermaid .node ellipse),
+html[data-theme='light'] .preview-content :deep(.mermaid .node polygon),
+html[data-theme='light'] .preview-content :deep(.mermaid .node path),
+html[data-theme='light'] .preview-content :deep(.mermaid .cluster rect),
+html[data-theme='light'] .preview-content :deep(.mermaid .cluster polygon),
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node rect),
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node circle),
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node path) { stroke: rgba(122, 147, 184, 0.46) !important; }
+html[data-theme='light'] .preview-content :deep(.mermaid .cluster rect),
+html[data-theme='light'] .preview-content :deep(.mermaid .cluster polygon) { fill: rgba(245, 247, 251, 0.96) !important; }
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 1) rect),
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 1) circle),
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 1) path) { fill: #d8e7ff !important; }
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 2) rect),
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 2) circle),
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 2) path) { fill: #dff4ea !important; }
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 3) rect),
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 3) circle),
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 3) path) { fill: #fff1d6 !important; }
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 4) rect),
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 4) circle),
+html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 4) path) { fill: #f4e3ff !important; }
 html[data-theme='light'] .preview-content::-webkit-scrollbar-thumb, html[data-theme='light'] .editor-textarea::-webkit-scrollbar-thumb, html[data-theme='light'] .slash-menu-scroll::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.14); }
 html[data-theme='light'] .preview-content::-webkit-scrollbar-thumb:hover, html[data-theme='light'] .editor-textarea::-webkit-scrollbar-thumb:hover, html[data-theme='light'] .slash-menu-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.22); }
 </style>
