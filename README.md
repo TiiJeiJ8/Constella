@@ -7,6 +7,10 @@
 
 <br />
 
+[Contributing](./CONTRIBUTING.md) | [Security](./SECURITY.md) | [Code of Conduct](./CODE_OF_CONDUCT.md)
+
+<br />
+
 [![Stars](https://img.shields.io/github/stars/TiiJeiJ8/constella?style=flat)](https://github.com/TiiJeiJ8/constella/stargazers)
 [![Issues](https://img.shields.io/github/issues/TiiJeiJ8/constella)](https://github.com/TiiJeiJ8/constella/issues)
 [![License](https://img.shields.io/github/license/TiiJeiJ8/constella)](./LICENSE)

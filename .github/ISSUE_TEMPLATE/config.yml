@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Policy
+    url: https://github.com/TiiJeiJ8/Constella/blob/main/web/SECURITY.md
+    about: Please report suspected security issues privately using the guidance in SECURITY.md.
