@@ -27,6 +27,7 @@
 > ### Project Scope
 >
 > - This repository is the frontend of Constella (Web + Electron). The backend is [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE)
+> - **The app requires a Node.js environment to run**
 > - Constella focuses on structure-first knowledge expression instead of linear documents
 > - The project is actively evolving; contributions via Issues and PRs are welcome
 

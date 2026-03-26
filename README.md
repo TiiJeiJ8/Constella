@@ -27,6 +27,7 @@
 > ### 项目定位
 >
 > - 本仓库是 Constella 的前端工程（Web + Electron），后端请使用 [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE)
+> - **软件（项目）需要拥有 Node.js 环境才能运行**
 > - Constella 关注“结构化思维表达”，而不是线性文档编辑
 > - 当前项目仍在持续迭代，欢迎通过 Issue 和 PR 参与改进
 
