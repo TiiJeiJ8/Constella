@@ -25,3 +25,7 @@ dist-ssr
 *.sln
 *.sw?
 /tests
+
+#docs
+docs/wiki
+docs/release
