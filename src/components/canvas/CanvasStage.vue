@@ -30,6 +30,7 @@
                     :edge="edge"
                     :source-node="getNodeRect(edge.sourceId)"
                     :target-node="getNodeRect(edge.targetId)"
+                    :stage-scale="stageConfig.scaleX"
                     :is-selected="selectedEdgeIds.has(edge.id)"
                     @click="handleEdgeClick"
                     @dblclick="handleEdgeDblClick"
@@ -182,6 +183,7 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import Konva from 'konva'
 import EdgeRenderer from './EdgeRenderer.vue'
 import { CursorInterpolationManager } from '@/utils/cursorInterpolation'
+import { getAnchorPoint } from '@/utils/edgeAnchors'
 
 const props = defineProps({
     activeTool: {
@@ -305,7 +307,8 @@ const nodeRectMap = computed(() => {
             x: node.x,
             y: node.y,
             width: node.width,
-            height: node.height
+            height: node.height,
+            rotation: node.rotation || 0
         })
     })
     return map
@@ -323,48 +326,6 @@ const displayNodes = computed(() => {
         .filter(node => isNodeInViewport(node, viewport))
         .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
 })
-
-function getAnchorPoint(node, anchor, otherNode) {
-    const cx = node.x + node.width / 2
-    const cy = node.y + node.height / 2
-
-    switch (anchor) {
-        case 'top':
-            return { x: cx, y: node.y }
-        case 'right':
-            return { x: node.x + node.width, y: cy }
-        case 'bottom':
-            return { x: cx, y: node.y + node.height }
-        case 'left':
-            return { x: node.x, y: cy }
-    }
-
-    if (!otherNode) {
-        return { x: cx, y: cy }
-    }
-
-    const otherCx = otherNode.x + otherNode.width / 2
-    const otherCy = otherNode.y + otherNode.height / 2
-    const dx = otherCx - cx
-    const dy = otherCy - cy
-    const halfWidth = node.width / 2
-    const halfHeight = node.height / 2
-
-    if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) {
-        return { x: cx, y: cy }
-    }
-
-    let tX = Infinity
-    let tY = Infinity
-    if (dx !== 0) tX = halfWidth / Math.abs(dx)
-    if (dy !== 0) tY = halfHeight / Math.abs(dy)
-
-    const t = Math.min(tX, tY)
-    return {
-        x: cx + dx * t,
-        y: cy + dy * t
-    }
-}
 
 function getBezierControlPoints(edge, sourcePoint, targetPoint) {
     const sx = sourcePoint.x
@@ -431,8 +392,9 @@ function getEdgePointsForCulling(edge) {
     const targetNode = getNodeRect(edge.targetId)
     if (!sourceNode || !targetNode) return null
 
-    const sourcePoint = getAnchorPoint(sourceNode, edge.sourceAnchor || 'auto', targetNode)
-    const targetPoint = getAnchorPoint(targetNode, edge.targetAnchor || 'auto', sourceNode)
+    const inset = 2 / Math.max(stageConfig.value.scaleX || 1, 0.01)
+    const sourcePoint = getAnchorPoint(sourceNode, edge.sourceAnchor || 'auto', targetNode, { inset })
+    const targetPoint = getAnchorPoint(targetNode, edge.targetAnchor || 'auto', sourceNode, { inset })
 
     if (edge.type === 'step') {
         const midX = (sourcePoint.x + targetPoint.x) / 2
