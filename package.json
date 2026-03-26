@@ -1,7 +1,7 @@
 {
   "name": "web",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Constella - A visual workflow and node-based editing application",
   "author": "Constella Team",
   "type": "module",
@@ -18,6 +18,7 @@
     "prepare:server-runtime": "node scripts/prepare-server-runtime.cjs",
     "build:electron-main": "vite build",
     "build:electron": "npm run build:server && npm run prepare:server-runtime && npm run build && electron-builder",
+    "build:electron:dir": "npm run build:server && npm run prepare:server-runtime && npm run build && electron-builder --dir",
     "preview": "vite preview"
   },
   "build": {
