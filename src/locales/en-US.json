@@ -630,15 +630,12 @@
         "description": "Constella is a secure real-time collaborative infinite canvas application that can be deployed to your own server, designed for connecting notes, graphics, and multimedia.",
         "features": {
             "title": "Features",
-            "crossPlatform": "Cross-platform Desktop App",
-            "infiniteCanvas": "Infinite Canvas",
-            "realtime": "Real-time Collaboration",
-            "offline": "Offline Support",
-            "secure": "Secure Authentication",
-            "easyDeploy": "Easy Deployment",
-            "cardDesign": "Card Design",
-            "mindMap": "Mind Mapping",
-            "mediaSupport": "Multimedia Support"
+            "structuredCanvas": "Structured canvas editing",
+            "collaboration": "Real-time multi-user collaboration",
+            "roomPermissions": "Room and permission control",
+            "lanDiscovery": "LAN server discovery",
+            "assetsSnapshots": "Assets and snapshots workflow",
+            "pluginsExport": "Plugin extensibility and export support"
         },
         "tech": {
             "title": "Tech Stack",
