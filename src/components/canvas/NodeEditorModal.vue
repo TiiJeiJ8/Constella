@@ -230,6 +230,17 @@
                         </aside>
                     </Transition>
                 </div>
+                <div v-if="showBackToTopButton" class="to-top-shell">
+                    <button
+                        type="button"
+                        class="to-top-button"
+                        :title="backToTopTitle"
+                        :aria-label="backToTopTitle"
+                        @click="handleBackToTop"
+                    >
+                        <span class="to-top-icon">Top</span>
+                    </button>
+                </div>
             </div>
         </Transition>
         <DocumentExportPanel
@@ -479,6 +490,8 @@ const visiblePreviewBlockIds = ref<Set<string>>(new Set())
 const outlineOpen = ref(false)
 const activeOutlineId = ref('')
 const outlineHintActive = ref(false)
+const editorScrollTop = ref(0)
+const previewScrollTop = ref(0)
 const isExportPanelOpen = ref(false)
 const viewMode = ref<EditorViewMode>('edit')
 const editorSelectionStart = ref(0)
@@ -501,6 +514,7 @@ let editorLayoutResizeObserver: ResizeObserver | null = null
 
 const VIEW_MODE_STORAGE_KEY = 'constella.node-editor.view-mode'
 const SINGLE_COLUMN_BREAKPOINT = 1180
+const SCROLL_TOP_VISIBILITY_THRESHOLD = 220
 
 const md = new MarkdownIt({
     html: false,
@@ -705,6 +719,29 @@ const editorBodyClass = computed(() => ({
     'edit-only': showEditorPane.value && !showPreviewPane.value,
     'preview-only': showPreviewPane.value && !showEditorPane.value
 }))
+const backToTopTarget = computed<'none' | 'editor' | 'preview' | 'both'>(() => {
+    if (effectiveViewMode.value === 'split') {
+        const shouldTopEditor = showEditorPane.value && editorScrollTop.value > SCROLL_TOP_VISIBILITY_THRESHOLD
+        const shouldTopPreview = showPreviewPane.value && previewScrollTop.value > SCROLL_TOP_VISIBILITY_THRESHOLD
+        if (shouldTopEditor && shouldTopPreview) return 'both'
+        if (shouldTopEditor) return 'editor'
+        if (shouldTopPreview) return 'preview'
+        return 'none'
+    }
+
+    if (effectiveViewMode.value === 'preview') {
+        return showPreviewPane.value && previewScrollTop.value > SCROLL_TOP_VISIBILITY_THRESHOLD ? 'preview' : 'none'
+    }
+
+    return showEditorPane.value && editorScrollTop.value > SCROLL_TOP_VISIBILITY_THRESHOLD ? 'editor' : 'none'
+})
+const showBackToTopButton = computed(() => backToTopTarget.value !== 'none')
+const backToTopTitle = computed(() => {
+    if (backToTopTarget.value === 'both') return 'Back to top'
+    if (backToTopTarget.value === 'preview') return 'Back to top (Preview)'
+    if (backToTopTarget.value === 'editor') return 'Back to top (Editor)'
+    return 'Back to top'
+})
 const placeholder = computed(() => isMarkdown.value ? t('canvas.editor.markdownPlaceholder') : t('canvas.editor.textPlaceholder'))
 const slashMenuStyle = computed(() => ({ top: `${slashMenuPosition.value.top}px`, left: `${slashMenuPosition.value.left}px` }))
 const editingUsers = computed(() => awareness.otherUsers.value.filter(user => user.selection?.includes(props.nodeId)))
@@ -1070,10 +1107,14 @@ function updateActiveOutline() {
 }
 
 function handlePreviewScroll() {
+    const preview = previewRef.value
+    previewScrollTop.value = preview?.scrollTop ?? 0
     updateActiveOutline()
 }
 
 function handleEditorScroll() {
+    const textarea = textareaRef.value
+    editorScrollTop.value = textarea?.scrollTop ?? 0
     syncPreviewFromEditor()
 }
 
@@ -1083,6 +1124,28 @@ function markEditorIntent() {
 
 function markPreviewIntent() {
     // Preview is now read-follow by default; clicking can still trigger explicit jumps.
+}
+
+function handleBackToTop() {
+    const target = backToTopTarget.value
+    if (target === 'none') return
+
+    if (target === 'editor' || target === 'both') {
+        const textarea = textareaRef.value
+        if (textarea) {
+            animateScrollTop(textarea, 0, 260)
+            editorScrollTop.value = 0
+        }
+    }
+
+    if (target === 'preview' || target === 'both') {
+        const preview = previewRef.value
+        if (preview) {
+            animateScrollTop(preview, 0, 260)
+            previewScrollTop.value = 0
+            updateActiveOutline()
+        }
+    }
 }
 
 function createImageFallback(img: HTMLImageElement) {
@@ -1656,6 +1719,8 @@ onMounted(() => {
         overlayRef.value?.focus()
         textareaRef.value?.focus()
         editorSelectionStart.value = textareaRef.value?.selectionStart ?? 0
+        editorScrollTop.value = textareaRef.value?.scrollTop ?? 0
+        previewScrollTop.value = previewRef.value?.scrollTop ?? 0
         updateLayoutMode()
         setupPreviewObserver()
         renderMermaidDiagrams()
@@ -1684,6 +1749,8 @@ watch(() => props.content.data, (newData) => {
 
 watch(() => props.content.kind, (kind) => {
     viewMode.value = kind === 'markdown' ? readStoredViewMode() : 'edit'
+    editorScrollTop.value = textareaRef.value?.scrollTop ?? 0
+    previewScrollTop.value = previewRef.value?.scrollTop ?? 0
 })
 
 watch(viewMode, (mode) => {
@@ -1776,9 +1843,9 @@ onUnmounted(() => {
 .pane-subtools, .preview-stats { flex-wrap: wrap; gap: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.42); }
 .subtool-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.35); }
 .editor-toolbar { gap: 8px; flex-wrap: wrap; padding: 12px 18px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015)); }
-.toolbar-button, .code-language-chip, .outline-item, .outline-toggle { border: none; cursor: pointer; transition: background 0.22s ease, color 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease; }
+.toolbar-button, .code-language-chip, .outline-item, .outline-toggle, .to-top-button { border: none; cursor: pointer; transition: background 0.22s ease, color 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease; }
 .toolbar-button { padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.76); }
-.toolbar-button:hover, .code-language-chip:hover, .outline-item:hover, .outline-toggle:hover { transform: translateY(-1px); background: rgba(96, 165, 250, 0.16); color: #dbeafe; box-shadow: 0 10px 24px rgba(37, 99, 235, 0.16); }
+.toolbar-button:hover, .code-language-chip:hover, .outline-item:hover, .outline-toggle:hover, .to-top-button:hover { transform: translateY(-1px); background: rgba(96, 165, 250, 0.16); color: #dbeafe; box-shadow: 0 10px 24px rgba(37, 99, 235, 0.16); }
 .toolbar-button-label { font-size: 12px; font-weight: 600; }
 .code-language-chip { padding: 3px 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.72); font-size: 10px; line-height: 1.45; text-transform: lowercase; }
 .code-language-chip.active { background: rgba(96, 165, 250, 0.22); color: #dbeafe; }
@@ -1792,6 +1859,12 @@ onUnmounted(() => {
 .outline-toggle.armed { background: rgba(20, 24, 31, 0.78); color: rgba(255, 255, 255, 0.9); box-shadow: 0 16px 32px rgba(0, 0, 0, 0.22); }
 .outline-toggle.open { opacity: 1; background: rgba(59, 130, 246, 0.2); color: #dbeafe; box-shadow: 0 14px 34px rgba(37, 99, 235, 0.18); }
 .outline-toggle-icon { font-size: 18px; line-height: 1; }
+.to-top-shell { position: absolute; right: 24px; bottom: 84px; z-index: 14; }
+.to-top-button { width: 42px; height: 42px; border-radius: 999px; background: rgba(20, 24, 31, 0.72); color: rgba(255, 255, 255, 0.84); backdrop-filter: blur(14px); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24); }
+.to-top-icon { font-size: 11px; line-height: 1; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; }
+@media (max-width: 900px) {
+    .to-top-shell { right: 16px; bottom: 76px; }
+}
 .outline-pane { width: 240px; max-height: min(66vh, 560px); overflow-y: auto; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; padding: 14px 12px 14px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; background: rgba(20, 24, 31, 0.82); box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24); backdrop-filter: blur(18px); }
 .outline-header { margin-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.35); }
 .outline-item { width: 100%; padding: 8px 10px; border-radius: 10px; background: transparent; color: rgba(255, 255, 255, 0.68); text-align: left; font-size: 12px; line-height: 1.4; }
@@ -1968,7 +2041,7 @@ html[data-theme='light'] .collab-users { border-color: rgba(0, 0, 0, 0.08); }
 html[data-theme='light'] .collab-avatar { border-color: #ffffff; }
 html[data-theme='light'] .header-action-btn, html[data-theme='light'] .close-btn, html[data-theme='light'] .toolbar-button, html[data-theme='light'] .code-language-chip, html[data-theme='light'] .cmd-icon { background: rgba(0, 0, 0, 0.06); color: rgba(0, 0, 0, 0.72); }
 html[data-theme='light'] .header-action-btn.primary { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
-html[data-theme='light'] .toolbar-button:hover, html[data-theme='light'] .code-language-chip:hover, html[data-theme='light'] .outline-item:hover, html[data-theme='light'] .outline-toggle:hover { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
+html[data-theme='light'] .toolbar-button:hover, html[data-theme='light'] .code-language-chip:hover, html[data-theme='light'] .outline-item:hover, html[data-theme='light'] .outline-toggle:hover, html[data-theme='light'] .to-top-button:hover { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
 html[data-theme='light'] .code-language-chip.active { background: rgba(59, 130, 246, 0.16); color: #1d4ed8; }
 html[data-theme='light'] .editor-body.split-view { background: rgba(0, 0, 0, 0.08); }
 html[data-theme='light'] .editor-toolbar { border-color: rgba(0, 0, 0, 0.06); background: linear-gradient(180deg, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.015)); }
@@ -1976,6 +2049,7 @@ html[data-theme='light'] .editor-textarea::placeholder { color: rgba(0, 0, 0, 0.
 html[data-theme='light'] .outline-toggle { opacity: 0.78; background: rgba(255, 255, 255, 0.88); color: rgba(15, 23, 42, 0.62); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08); }
 html[data-theme='light'] .outline-toggle.armed { background: rgba(255, 255, 255, 0.98); color: rgba(15, 23, 42, 0.86); box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12); }
 html[data-theme='light'] .outline-toggle.open { opacity: 1; background: rgba(59, 130, 246, 0.14); color: #1d4ed8; }
+html[data-theme='light'] .to-top-button { background: rgba(255, 255, 255, 0.92); color: rgba(15, 23, 42, 0.72); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1); }
 html[data-theme='light'] .outline-pane { border-color: rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.9); }
 html[data-theme='light'] .outline-item { color: rgba(0, 0, 0, 0.72); }
 html[data-theme='light'] .outline-item.active { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.12); }
