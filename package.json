@@ -18,6 +18,10 @@
     "prepare:server-runtime": "node scripts/prepare-server-runtime.cjs",
     "build:electron-main": "vite build",
     "build:electron": "npm run build:server && npm run prepare:server-runtime && npm run build && electron-builder",
+    "build:electron:installer": "npm run build:server && npm run prepare:server-runtime && npm run build && electron-builder --win nsis --x64 --config.artifactName=Constella_${version}_${arch}-setup.${ext}",
+    "build:electron:zip": "npm run build:server && npm run prepare:server-runtime && npm run build && electron-builder --win zip --x64 --config.artifactName=Constella_${version}_${arch}.${ext}",
+    "build:electron:portable": "npm run build:server && npm run prepare:server-runtime && npm run build && electron-builder --win portable --x64 --config.artifactName=Constella_${version}_${arch}-portable.${ext}",
+    "build:electron:release": "npm run build:electron:installer && npm run build:electron:zip",
     "build:electron:dir": "npm run build:server && npm run prepare:server-runtime && npm run build && electron-builder --dir",
     "preview": "vite preview"
   },
