@@ -1859,11 +1859,13 @@ onUnmounted(() => {
 .outline-toggle.armed { background: rgba(20, 24, 31, 0.78); color: rgba(255, 255, 255, 0.9); box-shadow: 0 16px 32px rgba(0, 0, 0, 0.22); }
 .outline-toggle.open { opacity: 1; background: rgba(59, 130, 246, 0.2); color: #dbeafe; box-shadow: 0 14px 34px rgba(37, 99, 235, 0.18); }
 .outline-toggle-icon { font-size: 18px; line-height: 1; }
-.to-top-shell { position: absolute; right: 24px; bottom: 84px; z-index: 14; }
-.to-top-button { width: 42px; height: 42px; border-radius: 999px; background: rgba(20, 24, 31, 0.72); color: rgba(255, 255, 255, 0.84); backdrop-filter: blur(14px); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24); }
+.to-top-shell { position: absolute; right: 34px; bottom: 84px; z-index: 14; }
+.to-top-button { width: 42px; height: 42px; border-radius: 999px; background: rgba(20, 24, 31, 0.72); color: rgba(255, 255, 255, 0.84); backdrop-filter: blur(14px); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24); opacity: 0.58; }
+.to-top-button:hover,
+.to-top-button:focus-visible { opacity: 1; }
 .to-top-icon { font-size: 11px; line-height: 1; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; }
 @media (max-width: 900px) {
-    .to-top-shell { right: 16px; bottom: 76px; }
+    .to-top-shell { right: 22px; bottom: 76px; }
 }
 .outline-pane { width: 240px; max-height: min(66vh, 560px); overflow-y: auto; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; padding: 14px 12px 14px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; background: rgba(20, 24, 31, 0.82); box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24); backdrop-filter: blur(18px); }
 .outline-header { margin-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.35); }
@@ -2049,7 +2051,7 @@ html[data-theme='light'] .editor-textarea::placeholder { color: rgba(0, 0, 0, 0.
 html[data-theme='light'] .outline-toggle { opacity: 0.78; background: rgba(255, 255, 255, 0.88); color: rgba(15, 23, 42, 0.62); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08); }
 html[data-theme='light'] .outline-toggle.armed { background: rgba(255, 255, 255, 0.98); color: rgba(15, 23, 42, 0.86); box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12); }
 html[data-theme='light'] .outline-toggle.open { opacity: 1; background: rgba(59, 130, 246, 0.14); color: #1d4ed8; }
-html[data-theme='light'] .to-top-button { background: rgba(255, 255, 255, 0.92); color: rgba(15, 23, 42, 0.72); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1); }
+html[data-theme='light'] .to-top-button { background: rgba(255, 255, 255, 0.92); color: rgba(15, 23, 42, 0.72); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1); opacity: 0.62; }
 html[data-theme='light'] .outline-pane { border-color: rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.9); }
 html[data-theme='light'] .outline-item { color: rgba(0, 0, 0, 0.72); }
 html[data-theme='light'] .outline-item.active { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.12); }
