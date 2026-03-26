@@ -1,7 +1,7 @@
 {
   "name": "web",
   "private": true,
-  "version": "1.0.0",
+  "version": "v1.0.0",
   "description": "Constella - A visual workflow and node-based editing application",
   "author": "Constella Team",
   "type": "module",
@@ -58,6 +58,10 @@
     "win": {
       "target": "nsis",
       "icon": "public/icon/favicon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
     }
   },
   "dependencies": {
