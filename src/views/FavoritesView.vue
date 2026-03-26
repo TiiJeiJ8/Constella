@@ -88,6 +88,7 @@ import WindowControls from '@/components/base/WindowControls.vue'
 import RoomCard from '@/components/rooms/RoomCard.vue'
 import JoinRoomDialog from '@/components/rooms/JoinRoomDialog.vue'
 import { apiService } from '@/services/api'
+import { parseServerTimestamp } from '@/utils/time'
 
 const { t } = useI18n()
 
@@ -166,7 +167,7 @@ async function loadFavorites() {
             memberCount: Math.max(0, room.member_count || 0),
             isPrivate: Boolean(room.is_private),
             role: room.user_role || null,
-            lastActive: room.updated_at ? new Date(room.updated_at).getTime() : Date.now(),
+            lastActive: parseServerTimestamp(room.updated_at),
             settings: room.settings || {}
         })) : []
 

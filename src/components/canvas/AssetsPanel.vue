@@ -50,6 +50,7 @@
                     <span class="asset-size">{{ formatSize(asset.size) }}</span>
                 </div>
                 <button 
+                    v-if="asset.canDelete !== false"
                     class="delete-btn" 
                     @click.stop="showDeleteConfirm(asset.id)"
                     :title="t('canvas.assets.delete')"

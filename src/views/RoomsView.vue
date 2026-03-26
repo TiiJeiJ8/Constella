@@ -116,6 +116,7 @@ import CreateRoomDialog from '@/components/rooms/CreateRoomDialog.vue'
 import JoinRoomDialog from '@/components/rooms/JoinRoomDialog.vue'
 import DeleteRoomDialog from '@/components/rooms/DeleteRoomDialog.vue'
 import { apiService } from '@/services/api'
+import { parseServerTimestamp } from '@/utils/time'
 
 const { t } = useI18n()
 
@@ -201,7 +202,7 @@ async function loadRooms(silent = false) {
                         memberCount: Math.max(0, room.member_count || 0),
                         isPrivate: Boolean(room.is_private),
                         role: room.user_role || null,  // 不给默认值，未加入的房间角色为 null
-                        lastActive: room.updated_at ? new Date(room.updated_at).getTime() : Date.now(),
+                        lastActive: parseServerTimestamp(room.updated_at),
                         createdAt: room.created_at,
                         settings: room.settings || {}
                     }

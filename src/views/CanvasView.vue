@@ -286,6 +286,7 @@ const editingNodeId = ref(null)
 
 // 房间资源（暂存本地，后续对接 API）
 const roomAssets = ref([])
+let assetsRefreshInterval = null
 
 // 房间快照（暂存本地，后续对接 API）
 const roomSnapshots = ref([])
@@ -758,6 +759,7 @@ async function handleAssetUpload(uploadData) {
 
         roomAssets.value.push(asset)
         console.log('[Canvas] Asset added:', asset.id)
+        await loadRoomAssets()
         toast.success(t('canvas.toast.uploadSuccess'))
         return
     }
@@ -792,6 +794,7 @@ async function handleAssetUpload(uploadData) {
     
     roomAssets.value.push(asset)
     console.log('[Canvas] Asset added:', asset.id)
+    await loadRoomAssets()
     toast.success(t('canvas.toast.uploadSuccess'))
 }
 
@@ -816,6 +819,7 @@ async function handleAssetDelete(assetId) {
         
         roomAssets.value.splice(index, 1)
         console.log('[Canvas] Asset deleted:', assetId)
+        await loadRoomAssets()
     }
 }
 
@@ -1525,6 +1529,9 @@ onMounted(() => {
     updateTheme()
     loadRoomData()
     loadRoomAssets()
+    assetsRefreshInterval = setInterval(() => {
+        loadRoomAssets()
+    }, 4000)
     updateCanvasAreaSize()
     
     // 记录访问历史
@@ -1579,6 +1586,10 @@ function recordVisit(roomId) {
 
 // 组件卸载
 onUnmounted(() => {
+    if (assetsRefreshInterval) {
+        clearInterval(assetsRefreshInterval)
+        assetsRefreshInterval = null
+    }
     if (canvasAreaResizeObserver) {
         canvasAreaResizeObserver.disconnect()
         canvasAreaResizeObserver = null

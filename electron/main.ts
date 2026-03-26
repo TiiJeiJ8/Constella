@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import path from 'path'
 import fs from 'fs'
+import os from 'os'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 import { spawn, ChildProcess } from 'child_process'
@@ -12,6 +13,10 @@ const __dirname = dirname(__filename)
 const DISCOVERY_SERVICE_TYPE = 'constella'
 const DISCOVERY_SERVICE_PROTOCOL = 'tcp'
 const DISCOVERY_SCAN_TIMEOUT_MS = 1800
+const DISCOVERY_FALLBACK_PORTS = [3000]
+const DISCOVERY_FALLBACK_MAX_HOSTS = 256
+const DISCOVERY_FALLBACK_CONCURRENCY = 32
+const DISCOVERY_FALLBACK_TIMEOUT_MS = 220
 
 interface LanServerDescriptor {
     id: string
@@ -112,6 +117,207 @@ function buildServiceUrl(address: string, port: number): string {
     return `http://${host}:${port}`
 }
 
+function isPrivateIpv4Address(value: string): boolean {
+    if (!isIPv4Address(value)) {
+        return false
+    }
+
+    const [a, b] = value.split('.').map(Number)
+
+    if (a === 10) return true
+    if (a === 172 && b >= 16 && b <= 31) return true
+    if (a === 192 && b === 168) return true
+
+    return false
+}
+
+function getLocalPrivateIpv4Addresses(): string[] {
+    const interfaces = os.networkInterfaces()
+    const addresses = new Set<string>()
+    const skipPatterns = ['vmware', 'virtual', 'vbox', 'hyper-v', 'docker', 'loopback', 'tailscale', 'vethernet']
+
+    for (const [name, entries] of Object.entries(interfaces)) {
+        if (!entries) continue
+        const normalizedName = name.toLowerCase()
+        if (skipPatterns.some((pattern) => normalizedName.includes(pattern))) {
+            continue
+        }
+
+        for (const item of entries) {
+            if (!item || item.family !== 'IPv4' || item.internal) continue
+            if (!isPrivateIpv4Address(item.address)) continue
+            if (item.address.startsWith('169.254.')) continue
+            addresses.add(item.address)
+        }
+    }
+
+    return Array.from(addresses)
+}
+
+function buildSubnetCandidates(): string[] {
+    const localAddresses = getLocalPrivateIpv4Addresses()
+    const hosts = new Set<string>()
+    const subnets = Array.from(
+        new Set(
+            localAddresses
+                .map((address) => {
+                    const parts = address.split('.')
+                    return parts.length === 4 ? `${parts[0]}.${parts[1]}.${parts[2]}` : ''
+                })
+                .filter(Boolean)
+        )
+    ).sort((left, right) => {
+        const leftIs192 = left.startsWith('192.168.')
+        const rightIs192 = right.startsWith('192.168.')
+        if (leftIs192 !== rightIs192) return leftIs192 ? -1 : 1
+
+        const leftIs10 = left.startsWith('10.')
+        const rightIs10 = right.startsWith('10.')
+        if (leftIs10 !== rightIs10) return leftIs10 ? -1 : 1
+
+        return left.localeCompare(right)
+    })
+
+    for (const prefix of subnets) {
+        const selfHosts = new Set<number>()
+        for (const address of localAddresses) {
+            if (!address.startsWith(`${prefix}.`)) continue
+            const host = Number(address.split('.')[3])
+            if (Number.isInteger(host) && host >= 1 && host <= 254) {
+                selfHosts.add(host)
+            }
+        }
+
+        for (let i = 1; i <= 254; i += 1) {
+            if (selfHosts.has(i)) continue
+            hosts.add(`${prefix}.${i}`)
+            if (hosts.size >= DISCOVERY_FALLBACK_MAX_HOSTS) {
+                return Array.from(hosts)
+            }
+        }
+    }
+
+    return Array.from(hosts)
+}
+
+function withTimeoutSignal(timeoutMs: number): AbortSignal {
+    const controller = new AbortController()
+    setTimeout(() => controller.abort(), timeoutMs)
+    return controller.signal
+}
+
+function mapHealthPayloadToDiscoveredServer(baseUrl: string, payload: unknown): LanServerDescriptor | null {
+    if (!payload || typeof payload !== 'object') {
+        return null
+    }
+
+    const root = payload as Record<string, unknown>
+    const data = (root.data || {}) as Record<string, unknown>
+    const appName = normalizeTxtValue(data.app, '')
+
+    if (appName !== 'constella') {
+        return null
+    }
+
+    let parsed: URL
+    try {
+        parsed = new URL(baseUrl)
+    } catch {
+        return null
+    }
+
+    const host = parsed.hostname
+    const port = Number(parsed.port || (parsed.protocol === 'https:' ? 443 : 80))
+    const instanceId = normalizeTxtValue(data.instanceId, `${host}:${port}`)
+    const serverName = normalizeTxtValue(data.serverName, host)
+    const apiPrefix = normalizeTxtValue(data.apiPrefix, '/api/v1')
+    const websocketPath = normalizeTxtValue(data.websocketPath, '/ws')
+    const version = normalizeTxtValue(data.version, '')
+
+    return {
+        id: instanceId,
+        name: serverName,
+        url: parsed.origin,
+        host,
+        port,
+        apiPrefix,
+        websocketPath,
+        instanceId,
+        version,
+        addresses: [host],
+        discoveredAt: new Date().toISOString()
+    }
+}
+
+async function probeLanServer(host: string, port: number): Promise<LanServerDescriptor | null> {
+    const baseUrl = `http://${host}:${port}`
+    const healthUrl = `${baseUrl}/api/v1/health`
+
+    try {
+        const response = await fetch(healthUrl, {
+            method: 'GET',
+            signal: withTimeoutSignal(DISCOVERY_FALLBACK_TIMEOUT_MS)
+        })
+
+        if (!response.ok) {
+            return null
+        }
+
+        const payload = await response.json()
+        return mapHealthPayloadToDiscoveredServer(baseUrl, payload)
+    } catch {
+        return null
+    }
+}
+
+async function runWithConcurrency<T>(
+    tasks: Array<() => Promise<T>>,
+    concurrency: number
+): Promise<T[]> {
+    const results: T[] = []
+    let index = 0
+
+    async function worker() {
+        while (index < tasks.length) {
+            const current = index
+            index += 1
+
+            const result = await tasks[current]()
+            results.push(result)
+        }
+    }
+
+    const workers = Array.from({ length: Math.max(1, concurrency) }, () => worker())
+    await Promise.all(workers)
+
+    return results
+}
+
+async function discoverLanServersBySubnetFallback(): Promise<LanServerDescriptor[]> {
+    const candidates = buildSubnetCandidates()
+    if (candidates.length === 0) {
+        return []
+    }
+
+    const tasks: Array<() => Promise<LanServerDescriptor | null>> = []
+
+    for (const host of candidates) {
+        for (const port of DISCOVERY_FALLBACK_PORTS) {
+            tasks.push(() => probeLanServer(host, port))
+        }
+    }
+
+    const probeResults = await runWithConcurrency(tasks, DISCOVERY_FALLBACK_CONCURRENCY)
+    const discovered = new Map<string, LanServerDescriptor>()
+
+    for (const item of probeResults) {
+        if (!item) continue
+        discovered.set(item.id, item)
+    }
+
+    return Array.from(discovered.values())
+}
+
 function mapDiscoveredService(service: Service): LanServerDescriptor | null {
     const addresses = pickServiceAddresses(service)
     const primaryAddress = addresses[0]
@@ -165,6 +371,17 @@ async function discoverLanServers(timeoutMs = DISCOVERY_SCAN_TIMEOUT_MS): Promis
 
     browser.stop()
     bonjour.destroy()
+
+    if (discovered.size <= 1) {
+        try {
+            const fallbackResults = await discoverLanServersBySubnetFallback()
+            for (const item of fallbackResults) {
+                discovered.set(item.id, item)
+            }
+        } catch (error) {
+            console.warn('[Electron] LAN fallback discovery failed:', error)
+        }
+    }
 
     return Array.from(discovered.values()).sort((left, right) => left.name.localeCompare(right.name))
 }
