@@ -1,74 +1,37 @@
 <template>
     <div class="about-view">
-        <!-- 窗口控制组件 -->
         <WindowControls />
 
-        <!-- 返回按钮 -->
         <button class="back-btn" :class="{ 'no-electron': !isElectron }" @click="goBack" :title="t('about.backToHome')">
             <ChevronLeftIcon />
             <span>{{ t('about.backToHome') }}</span>
         </button>
 
-        <!-- 主内容 -->
         <main class="main-content">
             <Transition name="fade-slide" mode="out-in">
                 <div :key="currentLocale" class="content-wrapper">
-                    <!-- 标题区 -->
                     <div class="header-section">
                         <h1 class="title" style="user-select: none;">{{ t('about.title') }}</h1>
                         <p class="subtitle" style="user-select: none;">{{ t('about.subtitle') }}</p>
-                        <p class="version" style="user-select: none;">{{ t('about.version') }}: 0.1.0</p>
+                        <p class="version" style="user-select: none;">{{ t('about.version') }}: 1.0.0</p>
                     </div>
 
-                    <!-- 描述区 -->
                     <div class="description-section">
                         <p class="description">{{ t('about.description') }}</p>
                     </div>
 
-                    <!-- 功能特色区 -->
                     <div class="features-section">
                         <h2 class="section-title">{{ t('about.features.title') }}</h2>
                         <div class="features-grid">
-                            <div class="feature-item">
-                                <span class="feature-icon">🖥️</span>
-                                <span class="feature-text">{{ t('about.features.crossPlatform') }}</span>
-                            </div>
-                            <div class="feature-item">
-                                <span class="feature-icon">🎨</span>
-                                <span class="feature-text">{{ t('about.features.infiniteCanvas') }}</span>
-                            </div>
-                            <div class="feature-item">
-                                <span class="feature-icon">🔄</span>
-                                <span class="feature-text">{{ t('about.features.realtime') }}</span>
-                            </div>
-                            <div class="feature-item">
-                                <span class="feature-icon">💾</span>
-                                <span class="feature-text">{{ t('about.features.offline') }}</span>
-                            </div>
-                            <div class="feature-item">
-                                <span class="feature-icon">🔐</span>
-                                <span class="feature-text">{{ t('about.features.secure') }}</span>
-                            </div>
-                            <div class="feature-item">
-                                <span class="feature-icon">🚀</span>
-                                <span class="feature-text">{{ t('about.features.easyDeploy') }}</span>
-                            </div>
-                            <div class="feature-item">
-                                <span class="feature-icon">📒</span>
-                                <span class="feature-text">{{ t('about.features.cardDesign') }}</span>
-                            </div>
-                            <div class="feature-item">
-                                <span class="feature-icon">🪡</span>
-                                <span class="feature-text">{{ t('about.features.mindMap') }}</span>
-                            </div>
-                            <div class="feature-item">
-                                <span class="feature-icon">📼</span>
-                                <span class="feature-text">{{ t('about.features.mediaSupport') }}</span>
+                            <div v-for="feature in featureItems" :key="feature.title" class="feature-item">
+                                <span class="feature-icon">{{ feature.icon }}</span>
+                                <div class="feature-content">
+                                    <span class="feature-text">{{ feature.title }}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 技术栈区 -->
                     <div class="tech-section">
                         <h2 class="section-title">{{ t('about.tech.title') }}</h2>
                         <div class="tech-list">
@@ -78,7 +41,6 @@
                         </div>
                     </div>
 
-                    <!-- 主要作者区 -->
                     <div class="authors-section">
                         <h2 class="section-title">{{ t('about.authors.title') }}</h2>
                         <div class="authors-container">
@@ -88,8 +50,8 @@
                                 </div>
                                 <span class="author-name">{{ t('about.authors.author1') }}</span>
                             </button>
-                            <span class="author-separator">✖️</span>
-                            <button class="author-item" @click="openAuthorGithub('Author2')">
+                            <span class="author-separator">✦</span>
+                            <button class="author-item" @click="openAuthorGithub('fkj577')">
                                 <div class="author-avatar">
                                     <img src="../assets/IMG/Author_fkj577.jpg" :alt="t('about.authors.author2')" />
                                 </div>
@@ -98,7 +60,6 @@
                         </div>
                     </div>
 
-                    <!-- 链接区 -->
                     <div class="links-section">
                         <button class="link-btn" @click="openGithub">
                             <LogoGithubIcon />
@@ -112,20 +73,43 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import {
-    ChevronLeftIcon,
-    LogoGithubIcon
-} from 'tdesign-icons-vue-next'
+import { ChevronLeftIcon, LogoGithubIcon } from 'tdesign-icons-vue-next'
 import WindowControls from '@/components/base/WindowControls.vue'
+
+interface FeatureItem {
+    icon: string
+    title: string
+    desc: string
+}
 
 const { t, locale } = useI18n()
 const emit = defineEmits(['navigate'])
 
-const isElectron = ref(!!window.electron)
+const isElectron = ref(!!(window as Window & { electron?: unknown }).electron)
 const currentLocale = computed(() => locale.value)
+
+const featureItems = computed<FeatureItem[]>(() =>
+    locale.value === 'zh-CN'
+        ? [
+              { icon: '🧭', title: '结构化画布编辑', desc: '通过节点与连线组织想法，支持缩放、拖拽与关系表达。' },
+              { icon: '🤝', title: '多人实时协作', desc: '基于 Yjs 的协同同步机制，支持多人同时编辑。' },
+              { icon: '🔐', title: '房间与权限控制', desc: '支持公开/私有房间、成员角色与协作边界管理。' },
+              { icon: '🌐', title: '局域网服务发现', desc: '自动发现可用服务器，也支持手动输入地址连接。' },
+              { icon: '🗂️', title: '资源与快照工作流', desc: '支持资源上传管理与快照恢复，便于迭代与回滚。' },
+              { icon: '🧩', title: '插件扩展与导出能力', desc: '支持多类节点扩展，提供 JSON/PNG/SVG 等导出方式。' },
+          ]
+        : [
+              { icon: '🧭', title: 'Structured canvas editing', desc: 'Organize ideas with nodes and edges, including zoom, drag, and relation mapping.' },
+              { icon: '🤝', title: 'Real-time multi-user collaboration', desc: 'Built on Yjs synchronization so multiple users can edit at the same time.' },
+              { icon: '🔐', title: 'Room and permission control', desc: 'Public/private rooms, member roles, and clear collaboration boundaries.' },
+              { icon: '🌐', title: 'LAN server discovery', desc: 'Auto-discover nearby servers with manual URL connection as fallback.' },
+              { icon: '🗂️', title: 'Assets and snapshots workflow', desc: 'Manage uploaded assets and restore snapshots during iterative work.' },
+              { icon: '🧩', title: 'Plugin extensibility and export support', desc: 'Extensible node system with export options like JSON, PNG, and SVG.' },
+          ]
+)
 
 function goBack() {
     emit('navigate', 'home')
@@ -133,17 +117,19 @@ function goBack() {
 
 function openGithub() {
     const url = 'https://github.com/TiiJeiJ8/constella'
-    if (window.electron?.openExternal) {
-        window.electron.openExternal(url)
+    const electron = (window as Window & { electron?: { openExternal?: (u: string) => void } }).electron
+    if (electron?.openExternal) {
+        electron.openExternal(url)
     } else {
         window.open(url, '_blank')
     }
 }
 
-function openAuthorGithub(username) {
+function openAuthorGithub(username: string) {
     const url = `https://github.com/${username}`
-    if (window.electron?.openExternal) {
-        window.electron.openExternal(url)
+    const electron = (window as Window & { electron?: { openExternal?: (u: string) => void } }).electron
+    if (electron?.openExternal) {
+        electron.openExternal(url)
     } else {
         window.open(url, '_blank')
     }
@@ -158,7 +144,6 @@ function openAuthorGithub(username) {
     overflow: hidden;
 }
 
-/* ==================== 返回按钮 ==================== */
 .back-btn {
     position: fixed;
     top: 40px;
@@ -183,10 +168,6 @@ function openAuthorGithub(username) {
     top: 12px;
 }
 
-.back-btn.no-electron {
-    top: 12px;
-}
-
 .back-btn:hover {
     background: var(--accent-primary);
     border-color: var(--accent-primary);
@@ -199,7 +180,6 @@ function openAuthorGithub(username) {
     height: 18px;
 }
 
-/* ==================== 主内容 ==================== */
 .main-content {
     width: 100%;
     height: 100%;
@@ -215,7 +195,6 @@ function openAuthorGithub(username) {
     width: 100%;
 }
 
-/* ==================== 语言切换动画 ==================== */
 .fade-slide-enter-active,
 .fade-slide-leave-active {
     transition: all 0.3s ease;
@@ -231,7 +210,6 @@ function openAuthorGithub(username) {
     transform: translateY(10px);
 }
 
-/* ==================== 标题区 ==================== */
 .header-section {
     text-align: center;
     margin-bottom: 48px;
@@ -258,7 +236,6 @@ function openAuthorGithub(username) {
     font-weight: 500;
 }
 
-/* ==================== 描述区 ==================== */
 .description-section {
     margin-bottom: 48px;
 }
@@ -270,7 +247,6 @@ function openAuthorGithub(username) {
     text-align: center;
 }
 
-/* ==================== 功能特色区 ==================== */
 .features-section {
     margin-bottom: 48px;
 }
@@ -285,13 +261,13 @@ function openAuthorGithub(username) {
 
 .features-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 16px;
 }
 
 .feature-item {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
     padding: 16px;
     background: var(--bg-secondary);
@@ -310,13 +286,18 @@ function openAuthorGithub(username) {
     font-size: 1.5rem;
 }
 
+.feature-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
 .feature-text {
     font-size: 0.9rem;
     color: var(--text-secondary);
-    font-weight: 500;
+    font-weight: 600;
 }
 
-/* ==================== 技术栈区 ==================== */
 .tech-section {
     margin-bottom: 48px;
 }
@@ -337,7 +318,6 @@ function openAuthorGithub(username) {
     font-weight: 500;
 }
 
-/* ==================== 主要作者区 ==================== */
 .authors-section {
     margin-bottom: 48px;
 }
@@ -401,7 +381,6 @@ function openAuthorGithub(username) {
     user-select: none;
 }
 
-/* ==================== 链接区 ==================== */
 .links-section {
     display: flex;
     flex-direction: column;
@@ -439,7 +418,6 @@ function openAuthorGithub(username) {
     font-weight: 500;
 }
 
-/* ==================== 响应式设计 ==================== */
 @media (max-width: 768px) {
     .main-content {
         padding: 60px 20px 40px;
