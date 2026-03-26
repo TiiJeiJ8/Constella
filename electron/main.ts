@@ -280,6 +280,7 @@ function startBackendServer() {
     let command: string
     let args: string[]
     let serverCwd: string
+    let serverEnv: NodeJS.ProcessEnv
 
     if (isDev) {
         const parentDir = path.resolve(__dirname, '../../server')
@@ -287,21 +288,23 @@ function startBackendServer() {
         command = 'node'
         args = [serverPath]
         serverCwd = parentDir
+        serverEnv = {
+            ...process.env,
+            NODE_ENV: 'development'
+        }
     } else {
-        const serverExePath = path.join(process.resourcesPath, 'server', 'constella-server.exe')
-        const serverJsPath = path.join(process.resourcesPath, 'server', 'server.js')
+        const serverJsPath = path.join(process.resourcesPath, 'server', 'dist', 'server.js')
         serverCwd = path.join(process.resourcesPath, 'server')
 
-        if (fs.existsSync(serverExePath)) {
-            serverPath = serverExePath
-            command = serverExePath
-            args = []
-        } else if (fs.existsSync(serverJsPath)) {
+        if (fs.existsSync(serverJsPath)) {
             serverPath = serverJsPath
             command = 'node'
             args = [serverJsPath]
+            serverEnv = {
+                ...process.env,
+                NODE_ENV: 'production'
+            }
         } else {
-            console.error('[Electron] Backend executable not found at:', serverExePath)
             console.error('[Electron] Backend script not found at:', serverJsPath)
             return
         }
@@ -319,10 +322,7 @@ function startBackendServer() {
             stdio: ['ignore', 'pipe', 'pipe'],
             detached: false,
             cwd: serverCwd,
-            env: {
-                ...process.env,
-                NODE_ENV: isDev ? 'development' : 'production'
-            }
+            env: serverEnv
         })
 
         if (!serverProcess || !serverProcess.pid) {

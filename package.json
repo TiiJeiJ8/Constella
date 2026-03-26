@@ -14,8 +14,10 @@
     "dev:electron": "vite",
     "dev:electron-no-backend": "cross-env SKIP_BACKEND=true vite",
     "build": "vue-tsc -b && vite build",
+    "build:server": "npm --prefix ../server run build",
+    "prepare:server-runtime": "node scripts/prepare-server-runtime.cjs",
     "build:electron-main": "vite build",
-    "build:electron": "npm run build && electron-builder",
+    "build:electron": "npm run build:server && npm run prepare:server-runtime && npm run build && electron-builder",
     "preview": "vite preview"
   },
   "build": {
@@ -27,19 +29,25 @@
     "files": [
       "dist/**",
       "dist-electron/**",
-      "electron/**",
-      "../server/build/**"
+      "electron/**"
     ],
     "extraResources": [
       {
-        "from": "../server/build",
-        "to": "server",
+        "from": ".electron-server-runtime/dist",
+        "to": "server/dist",
         "filter": [
-          "!node_modules"
+          "**/*"
         ]
       },
       {
-        "from": "../server/build/node_modules",
+        "from": ".electron-server-runtime/config",
+        "to": "server/config",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": ".electron-server-runtime/node_modules",
         "to": "server/node_modules",
         "filter": [
           "!.bin"
