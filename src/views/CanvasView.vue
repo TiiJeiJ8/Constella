@@ -95,7 +95,7 @@
                 :frame-cost-ms="frameCostMs"
                 :fps="fps"
                 :long-frame-count="longFrameCount"
-                :long-frame-threshold-ms="LONG_FRAME_THRESHOLD_MS"
+                :long-frame-threshold-ms="longFrameThresholdMs"
             />
         </div>
 
@@ -197,6 +197,7 @@ import { useYjsNodes } from '@/composables/useYjsNodes'
 import { useYjsEdges } from '@/composables/useYjsEdges'
 import { useYjsChat } from '@/composables/useYjsChat'
 import { useAwareness } from '@/composables/useAwareness'
+import { useCanvasPerformance } from '@/composables/useCanvasPerformance'
 import { registerPlugins } from '@/plugins/register'
 import { pluginRegistry } from '@/plugins'
 import { exportCanvas } from '@/utils/canvasExport'
@@ -224,34 +225,7 @@ registerPlugins().catch(err => {
 const { t } = useI18n()
 const toast = useToast()
 
-const DEFAULT_MARKDOWN_LOD_SCALE_THRESHOLD = 0.6
-const MIN_MARKDOWN_LOD_SCALE_THRESHOLD = 0.1
-const MAX_MARKDOWN_LOD_SCALE_THRESHOLD = 3
-const LONG_FRAME_THRESHOLD_MS = 32
 const ASSET_DRAG_MIME = 'application/x-constella-asset'
-
-function normalizeMarkdownLodScaleThreshold(value) {
-    const n = Number(value)
-    if (!Number.isFinite(n)) return DEFAULT_MARKDOWN_LOD_SCALE_THRESHOLD
-    return Math.max(MIN_MARKDOWN_LOD_SCALE_THRESHOLD, Math.min(MAX_MARKDOWN_LOD_SCALE_THRESHOLD, n))
-}
-
-function getPerformanceSettings() {
-    try {
-        const settings = JSON.parse(localStorage.getItem('settings') || '{}')
-        const performance = settings.performance || {}
-
-        return {
-            showCanvasPerformancePanel: performance.showCanvasPerformancePanel !== false,
-            markdownLodScaleThreshold: normalizeMarkdownLodScaleThreshold(performance.markdownLodScaleThreshold)
-        }
-    } catch (error) {
-        return {
-            showCanvasPerformancePanel: true,
-            markdownLodScaleThreshold: DEFAULT_MARKDOWN_LOD_SCALE_THRESHOLD
-        }
-    }
-}
 
 const props = defineProps({
     roomId: {
@@ -309,23 +283,6 @@ const canvasAreaRef = ref(null)
 const canvasAreaSize = ref({ width: 0, height: 0 })
 let canvasAreaResizeObserver = null
 const editingNodeId = ref(null)
-const performanceSettings = getPerformanceSettings()
-const showCanvasPerformancePanel = ref(performanceSettings.showCanvasPerformancePanel)
-const markdownLodScaleThreshold = ref(performanceSettings.markdownLodScaleThreshold)
-const isDevPerformancePanelVisible = computed(() => import.meta.env.DEV && showCanvasPerformancePanel.value)
-const visibleNodeCount = ref(0)
-const visibleEdgeCount = ref(0)
-const syncsPerSecond = ref(0)
-const frameCostMs = ref(0)
-const fps = ref(0)
-const longFrameCount = ref(0)
-let performanceSyncTimer = null
-let performanceRafId = null
-let lastSyncTick = 0
-let lastFrameTimestamp = 0
-let frameDurationSum = 0
-let frameSampleCount = 0
-let frameWindowStart = 0
 
 // 房间资源（暂存本地，后续对接 API）
 const roomAssets = ref([])
@@ -490,6 +447,26 @@ const visibleOverlayNodes = computed(() => {
 // 渲染用的边数据（从 Yjs 同步）
 const canvasEdges = computed(() => yjsEdges.edges.value)
 
+const {
+    showCanvasPerformancePanel,
+    markdownLodScaleThreshold,
+    isDevPerformancePanelVisible,
+    visibleNodeCount,
+    visibleEdgeCount,
+    syncsPerSecond,
+    frameCostMs,
+    fps,
+    longFrameCount,
+    longFrameThresholdMs,
+    handleRenderStats: updatePerformanceRenderStats,
+    applyPerformanceSettings,
+    startPerformanceMonitor,
+    stopPerformanceMonitor,
+} = useCanvasPerformance({
+    getVisibleNodeCount: () => visibleOverlayNodes.value.length,
+    getCurrentSyncTick: () => (yjsNodes.syncTick?.value || 0) + (yjsEdges.syncTick?.value || 0),
+})
+
 // Undo/Redo 状态
 const canUndo = computed(() => yjsNodes.canUndo.value)
 const canRedo = computed(() => yjsNodes.canRedo.value)
@@ -524,14 +501,10 @@ function handleSettingsUpdated(e) {
         userShortcuts.value = settings.shortcuts || getShortcutMap()
 
         const performance = settings.performance || {}
-        showCanvasPerformancePanel.value = performance.showCanvasPerformancePanel !== false
-        markdownLodScaleThreshold.value = normalizeMarkdownLodScaleThreshold(performance.markdownLodScaleThreshold)
+        applyPerformanceSettings(performance)
     } catch (err) {
         userShortcuts.value = getShortcutMap()
-
-        const fallback = getPerformanceSettings()
-        showCanvasPerformancePanel.value = fallback.showCanvasPerformancePanel
-        markdownLodScaleThreshold.value = fallback.markdownLodScaleThreshold
+        applyPerformanceSettings()
     }
 }
 
@@ -1297,8 +1270,7 @@ function handleStageTransform(transform) {
 }
 
 function handleRenderStats(stats) {
-    visibleNodeCount.value = Number(stats?.visibleNodes) || 0
-    visibleEdgeCount.value = Number(stats?.visibleEdges) || 0
+    updatePerformanceRenderStats(stats)
 }
 
 // 节点内容更新
@@ -1464,78 +1436,6 @@ function updateCanvasAreaSize() {
     }
 }
 
-function startPerformanceMonitor() {
-    if (!isDevPerformancePanelVisible.value) return
-
-    stopPerformanceMonitor()
-
-    visibleNodeCount.value = visibleOverlayNodes.value.length
-    visibleEdgeCount.value = 0
-    longFrameCount.value = 0
-
-    const getCurrentSyncTick = () => {
-        return (yjsNodes.syncTick?.value || 0) + (yjsEdges.syncTick?.value || 0)
-    }
-
-    lastSyncTick = getCurrentSyncTick()
-    performanceSyncTimer = setInterval(() => {
-        const current = getCurrentSyncTick()
-        const delta = current - lastSyncTick
-        syncsPerSecond.value = delta >= 0 ? delta : current
-        lastSyncTick = current
-    }, 1000)
-
-    const updateFrameStats = (timestamp) => {
-        if (!lastFrameTimestamp) {
-            lastFrameTimestamp = timestamp
-            frameWindowStart = timestamp
-        }
-
-        const frameCost = timestamp - lastFrameTimestamp
-        lastFrameTimestamp = timestamp
-
-        if (frameCost > 0 && frameCost < 1000) {
-            frameDurationSum += frameCost
-            frameSampleCount += 1
-
-            if (frameCost > LONG_FRAME_THRESHOLD_MS) {
-                longFrameCount.value += 1
-            }
-        }
-
-        if (timestamp - frameWindowStart >= 1000) {
-            const avgCost = frameSampleCount > 0 ? frameDurationSum / frameSampleCount : 0
-            frameCostMs.value = Number(avgCost.toFixed(1))
-            fps.value = avgCost > 0 ? Math.round(1000 / avgCost) : 0
-
-            frameDurationSum = 0
-            frameSampleCount = 0
-            frameWindowStart = timestamp
-        }
-
-        performanceRafId = requestAnimationFrame(updateFrameStats)
-    }
-
-    performanceRafId = requestAnimationFrame(updateFrameStats)
-}
-
-function stopPerformanceMonitor() {
-    if (performanceSyncTimer) {
-        clearInterval(performanceSyncTimer)
-        performanceSyncTimer = null
-    }
-
-    if (performanceRafId !== null) {
-        cancelAnimationFrame(performanceRafId)
-        performanceRafId = null
-    }
-
-    lastFrameTimestamp = 0
-    frameDurationSum = 0
-    frameSampleCount = 0
-    frameWindowStart = 0
-}
-
 watch(
     isDevPerformancePanelVisible,
     (visible) => {
@@ -1685,8 +1585,6 @@ onUnmounted(() => {
     } else {
         window.removeEventListener('resize', updateCanvasAreaSize)
     }
-
-    stopPerformanceMonitor()
 
     console.log('[Canvas] CanvasView unmounted')
 })

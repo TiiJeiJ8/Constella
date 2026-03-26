@@ -25,7 +25,7 @@
             <v-layer ref="mainLayerRef">
                 <!-- 连线 -->
                 <EdgeRenderer
-                    v-for="edge in displayEdges"
+                    v-for="edge in staticDisplayEdges"
                     :key="edge.id"
                     :edge="edge"
                     :source-node="getNodeRect(edge.sourceId)"
@@ -37,6 +37,18 @@
                 />
                 
                 <!-- 正在创建的连线预览 -->
+                <EdgeRenderer
+                    v-for="edge in dynamicDisplayEdges"
+                    :key="`dynamic-${edge.id}`"
+                    :edge="edge"
+                    :source-node="getNodeRect(edge.sourceId)"
+                    :target-node="getNodeRect(edge.targetId)"
+                    :stage-scale="stageConfig.scaleX"
+                    :is-selected="selectedEdgeIds.has(edge.id)"
+                    @click="handleEdgeClick"
+                    @dblclick="handleEdgeDblClick"
+                />
+
                 <v-line
                     v-if="edgeCreation.active"
                     :config="{
@@ -184,6 +196,11 @@ import Konva from 'konva'
 import EdgeRenderer from './EdgeRenderer.vue'
 import { CursorInterpolationManager } from '@/utils/cursorInterpolation'
 import { getAnchorPoint } from '@/utils/edgeAnchors'
+import {
+    useUnifiedRafScheduler,
+    createEdgeBoundsCache,
+    createNodePositionHash
+} from '@/composables/useCanvasStagePerformance'
 
 const props = defineProps({
     activeTool: {
@@ -231,7 +248,11 @@ const containerRef = ref(null)
 const stageRef = ref(null)
 const gridLayerRef = ref(null)
 const mainLayerRef = ref(null)
+const cursorLayerRef = ref(null)
 const transformerRef = ref(null)
+const draggingNodeIds = ref(new Set())
+const frameScheduler = useUnifiedRafScheduler()
+const edgeBoundsCache = createEdgeBoundsCache()
 
 // 状态
 const stageConfig = ref({
@@ -310,6 +331,14 @@ const nodeRectMap = computed(() => {
             height: node.height,
             rotation: node.rotation || 0
         })
+    })
+    return map
+})
+
+const nodePositionHashMap = computed(() => {
+    const map = new Map()
+    ;(props.yjsNodes || []).forEach(node => {
+        map.set(node.id, createNodePositionHash(node))
     })
     return map
 })
@@ -415,40 +444,70 @@ function getEdgePointsForCulling(edge) {
 }
 
 function isEdgeInViewport(edge, viewport) {
-    const points = getEdgePointsForCulling(edge)
-    if (!points || points.length === 0) return false
+    const sourceHash = nodePositionHashMap.value.get(edge.sourceId) || 'missing-source'
+    const targetHash = nodePositionHashMap.value.get(edge.targetId) || 'missing-target'
+    const hash = [
+        sourceHash,
+        targetHash,
+        edge.sourceAnchor || 'auto',
+        edge.targetAnchor || 'auto',
+        edge.type || 'bezier',
+        Number(edge.strokeWidth || 2).toFixed(2),
+        Number(stageConfig.value.scaleX || 1).toFixed(3)
+    ].join('|')
 
-    let minX = Infinity
-    let minY = Infinity
-    let maxX = -Infinity
-    let maxY = -Infinity
+    const bounds = edgeBoundsCache.getOrCompute(edge.id, hash, () => {
+        const points = getEdgePointsForCulling(edge)
+        if (!points || points.length === 0) return null
 
-    points.forEach(point => {
-        minX = Math.min(minX, point.x)
-        minY = Math.min(minY, point.y)
-        maxX = Math.max(maxX, point.x)
-        maxY = Math.max(maxY, point.y)
+        let minX = Infinity
+        let minY = Infinity
+        let maxX = -Infinity
+        let maxY = -Infinity
+
+        points.forEach(point => {
+            minX = Math.min(minX, point.x)
+            minY = Math.min(minY, point.y)
+            maxX = Math.max(maxX, point.x)
+            maxY = Math.max(maxY, point.y)
+        })
+
+        const padding = Math.max(20, (edge.strokeWidth || 2) * 6)
+        return {
+            x: minX - padding,
+            y: minY - padding,
+            width: maxX - minX + padding * 2,
+            height: maxY - minY + padding * 2
+        }
     })
 
-    const padding = Math.max(20, (edge.strokeWidth || 2) * 6)
-
-    return isRectInViewport(
-        minX - padding,
-        minY - padding,
-        maxX - minX + padding * 2,
-        maxY - minY + padding * 2,
-        viewport
-    )
+    if (!bounds) return false
+    return isRectInViewport(bounds.x, bounds.y, bounds.width, bounds.height, viewport)
 }
 
 // 连线数据（按线段包围盒进行视口裁剪）
 const displayEdges = computed(() => {
     const edges = props.yjsEdges || []
     const viewport = viewportRect.value
+    edgeBoundsCache.prune(new Set(edges.map(edge => edge.id)))
 
     return edges
         .filter(edge => isEdgeInViewport(edge, viewport))
         .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
+})
+
+const dynamicDisplayEdges = computed(() => {
+    const draggingIds = draggingNodeIds.value
+    return displayEdges.value.filter(edge =>
+        selectedEdgeIds.value.has(edge.id) ||
+        draggingIds.has(edge.sourceId) ||
+        draggingIds.has(edge.targetId)
+    )
+})
+
+const staticDisplayEdges = computed(() => {
+    const dynamicIds = new Set(dynamicDisplayEdges.value.map(edge => edge.id))
+    return displayEdges.value.filter(edge => !dynamicIds.has(edge.id))
 })
 
 function emitRenderStats() {
@@ -948,17 +1007,13 @@ function cancelEdgeCreation() {
 }
 
 // 节流函数：限制函数执行频率
-const throttleTimers = new Map()
 function throttle(key, fn, delay = 16) {
-    if (throttleTimers.has(key)) return
-    fn()
-    throttleTimers.set(key, setTimeout(() => {
-        throttleTimers.delete(key)
-    }, delay))
+    frameScheduler.schedule(key, fn, { minInterval: delay, trailing: true })
 }
 
 // 节点拖拽开始
 function handleNodeDragStart(node) {
+    draggingNodeIds.value.add(node.id)
     // 如果拖拽的节点不在选中列表中，则单选它
     if (!selectedNodeIds.value.has(node.id)) {
         selectedNodeIds.value.clear()
@@ -1000,6 +1055,7 @@ function handleNodeDragMove(node, e) {
 
 // 节点拖拽结束
 function handleNodeDragEnd(node, e) {
+    draggingNodeIds.value.delete(node.id)
     const group = e.target
     const newX = group.x()
     const newY = group.y()
@@ -1073,16 +1129,11 @@ function emitZoomChange() {
     emit('zoom-change', zoom)
 }
 
-let stageTransformRafId = null
-
 function scheduleStageTransformEmit() {
-    if (stageTransformRafId !== null) return
-
-    stageTransformRafId = requestAnimationFrame(() => {
-        stageTransformRafId = null
+    frameScheduler.schedule('stage-transform', () => {
         emitPositionChange()
         emitStageTransform()
-    })
+    }, { minInterval: 16, trailing: true })
 }
 
 // 发送位置变化事件
@@ -1268,10 +1319,8 @@ onUnmounted(() => {
     window.removeEventListener('keydown', handleKeyDown)
     window.removeEventListener('keyup', handleKeyUp)
 
-    if (stageTransformRafId !== null) {
-        cancelAnimationFrame(stageTransformRafId)
-        stageTransformRafId = null
-    }
+    frameScheduler.cancelAll()
+    edgeBoundsCache.clear()
     
     // 销毁光标插帧管理器
     cursorManager.destroy()
