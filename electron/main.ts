@@ -74,6 +74,20 @@ function isIPv4Address(value: string): boolean {
     return /^(\d{1,3}\.){3}\d{1,3}$/.test(value)
 }
 
+function getAddressPreferenceScore(value: string): number {
+    if (isIPv4Address(value)) return 2
+    if (value.includes(':')) return 1
+    return 0
+}
+
+function sortAddressesByPreference(addresses: string[]): string[] {
+    return [...addresses].sort((left, right) => {
+        const scoreDiff = getAddressPreferenceScore(right) - getAddressPreferenceScore(left)
+        if (scoreDiff !== 0) return scoreDiff
+        return left.localeCompare(right)
+    })
+}
+
 function isUsableAddress(value: string): boolean {
     if (!value) {
         return false
@@ -109,7 +123,7 @@ function pickServiceAddresses(service: Service): string[] {
         addresses.push(service.referer.address)
     }
 
-    return Array.from(new Set(addresses.filter(isUsableAddress)))
+    return sortAddressesByPreference(Array.from(new Set(addresses.filter(isUsableAddress))))
 }
 
 function buildServiceUrl(address: string, port: number): string {
@@ -347,6 +361,24 @@ function mapDiscoveredService(service: Service): LanServerDescriptor | null {
     }
 }
 
+function mergeDiscoveredServer(
+    current: LanServerDescriptor,
+    next: LanServerDescriptor
+): LanServerDescriptor {
+    const currentScore = getAddressPreferenceScore(current.host)
+    const nextScore = getAddressPreferenceScore(next.host)
+    const preferred = nextScore > currentScore ? next : current
+    const mergedAddresses = sortAddressesByPreference(
+        Array.from(new Set([...(current.addresses || []), ...(next.addresses || [])]))
+    )
+
+    return {
+        ...preferred,
+        addresses: mergedAddresses,
+        discoveredAt: next.discoveredAt
+    }
+}
+
 async function discoverLanServers(timeoutMs = DISCOVERY_SCAN_TIMEOUT_MS): Promise<LanServerDescriptor[]> {
     const bonjour = new Bonjour()
     const discovered = new Map<string, LanServerDescriptor>()
@@ -360,7 +392,12 @@ async function discoverLanServers(timeoutMs = DISCOVERY_SCAN_TIMEOUT_MS): Promis
             const mapped = mapDiscoveredService(service)
 
             if (mapped) {
-                discovered.set(mapped.id, mapped)
+                const existing = discovered.get(mapped.id)
+                if (!existing) {
+                    discovered.set(mapped.id, mapped)
+                } else {
+                    discovered.set(mapped.id, mergeDiscoveredServer(existing, mapped))
+                }
             }
         }
     )
