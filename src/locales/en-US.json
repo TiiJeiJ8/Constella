@@ -613,13 +613,19 @@
         "serverConnected": "Connected to",
         "password": "Password",
         "passwordPlaceholder": "Enter your password",
-        "hint": "If this is your first time, an account will be created automatically",
+        "confirmPassword": "Confirm Password",
+        "confirmPasswordPlaceholder": "Re-enter your password",
+        "hint": "Sign in with your account password.",
+        "hintConfirm": "Account not found. Confirm password to create a new account.",
         "submit": "Login / Register",
         "success": "Login successful!",
         "controls": {
             "back": "Back"
         },
         "errors": {
+            "confirmPasswordRequired": "Please confirm your password",
+            "confirmPasswordToRegister": "Account may not exist yet. Please confirm password to register",
+            "passwordMismatch": "Passwords do not match",
             "unknown": "Login failed, please try again"
         }
     },

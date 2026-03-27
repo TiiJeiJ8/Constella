@@ -1,9 +1,7 @@
 <template>
     <div class="login-view">
-        <!-- 窗口控制组件 -->
         <WindowControls />
 
-        <!-- 功能按钮组 -->
         <div class="control-buttons" :class="{ 'no-electron': !isElectron }">
             <button class="ctrl-btn" @click="toggleLanguage" :title="t('home.controls.language')">
                 <span class="lang-text">{{ currentLocale === 'zh-CN' ? '中' : 'EN' }}</span>
@@ -17,10 +15,8 @@
             </button>
         </div>
 
-        <!-- 主内容 -->
         <main class="main-content">
             <div class="content-wrapper">
-                <!-- 头部信息 -->
                 <div class="header-section">
                     <Transition name="lang-fade" mode="out-in">
                         <h1 :key="currentLocale" class="title">{{ t('login.title') }}</h1>
@@ -32,9 +28,7 @@
                     </div>
                 </div>
 
-                <!-- 登录表单卡片 -->
                 <div class="login-card">
-                    <!-- 用户头像 -->
                     <div class="avatar-section">
                         <div class="avatar-wrapper">
                             <img :src="userAvatar" :alt="userIdValue" class="avatar-image" />
@@ -45,15 +39,14 @@
                         </div>
                     </div>
 
-                    <!-- 密码输入 -->
                     <div class="form-section">
                         <div class="input-group">
                             <label class="input-label">{{ t('login.password') }}</label>
-                            <input 
+                            <input
                                 v-model="password"
                                 type="password"
                                 class="password-input"
-                                :class="{ 'error': loginError }"
+                                :class="{ error: loginError }"
                                 :placeholder="t('login.passwordPlaceholder')"
                                 @keyup.enter="handleLogin"
                                 :disabled="isLoading"
@@ -61,25 +54,33 @@
                             />
                         </div>
 
-                        <!-- 错误提示 -->
+                        <div v-if="needsRegistrationConfirm" class="input-group">
+                            <label class="input-label">{{ confirmPasswordLabel }}</label>
+                            <input
+                                v-model="confirmPassword"
+                                type="password"
+                                class="password-input"
+                                :class="{ error: loginError }"
+                                :placeholder="confirmPasswordPlaceholder"
+                                @keyup.enter="handleLogin"
+                                :disabled="isLoading"
+                            />
+                        </div>
+
                         <Transition name="fade">
                             <div v-if="loginError" class="error-message">
                                 {{ loginError }}
                             </div>
                         </Transition>
 
-                        <!-- 提示信息 -->
-                        <div class="hint-text">
-                            {{ t('login.hint') }}
-                        </div>
+                        <div class="hint-text">{{ loginHintText }}</div>
                     </div>
 
-                    <!-- 登录按钮 -->
-                    <button 
+                    <button
                         class="login-btn"
-                        :class="{ 'loading': isLoading, 'success': loginSuccess }"
+                        :class="{ loading: isLoading, success: loginSuccess }"
                         @click="handleLogin"
-                        :disabled="isLoading || !password || loginSuccess"
+                        :disabled="isLoading || !password || (needsRegistrationConfirm && !confirmPassword) || loginSuccess"
                     >
                         <div v-if="isLoading" class="loading-spinner"></div>
                         <span v-else-if="loginSuccess">{{ t('login.success') }}</span>
@@ -92,55 +93,71 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import {
-    MoonIcon,
-    SunnyIcon,
-    ChevronLeftIcon
-} from 'tdesign-icons-vue-next'
+import { ChevronLeftIcon, MoonIcon, SunnyIcon } from 'tdesign-icons-vue-next'
 import WindowControls from '@/components/base/WindowControls.vue'
 import { apiService } from '@/services/api'
 import { handleApiError } from '@/utils/errorHandler'
 
-const { t, locale } = useI18n()
+const { t, te, locale } = useI18n()
 const emit = defineEmits(['navigate'])
 
 const isElectron = ref(!!window.electron)
 const isDark = ref(false)
 const password = ref('')
+const confirmPassword = ref('')
 const isLoading = ref(false)
 const loginError = ref('')
 const loginSuccess = ref(false)
+const needsRegistrationConfirm = ref(false)
 
-// 从 localStorage 读取用户信息
 const settings = JSON.parse(localStorage.getItem('settings') || '{}')
 const userIdValue = ref(settings.userId || '')
 const userAvatar = ref(settings.avatar || '')
+const serverUrl = ref(localStorage.getItem('serverUrl') || apiService.getBaseUrl())
+const currentLocale = computed(() => locale.value)
+const confirmPasswordLabel = computed(() => (
+    te('login.confirmPassword')
+        ? t('login.confirmPassword')
+        : (locale.value === 'zh-CN' ? '确认密码' : 'Confirm Password')
+))
+const confirmPasswordPlaceholder = computed(() => (
+    te('login.confirmPasswordPlaceholder')
+        ? t('login.confirmPasswordPlaceholder')
+        : (locale.value === 'zh-CN' ? '请再次输入密码' : 'Re-enter your password')
+))
+
 const userName = computed(() => {
     if (settings.lastName && settings.firstName) {
-        return locale.value === 'zh-CN' 
+        return locale.value === 'zh-CN'
             ? `${settings.lastName}${settings.firstName}`
             : `${settings.firstName} ${settings.lastName}`
     }
     return userIdValue.value
 })
 
-// 获取服务器地址
-const serverUrl = ref(localStorage.getItem('serverUrl') || apiService.getBaseUrl())
-
-const currentLocale = computed(() => locale.value)
+const loginHintText = computed(() => (
+    needsRegistrationConfirm.value
+        ? (
+            te('login.hintConfirm')
+                ? t('login.hintConfirm')
+                : (locale.value === 'zh-CN'
+                    ? '未检测到该账户，请确认密码以创建新账户。'
+                    : 'Account not found. Confirm password to create a new account.')
+        )
+        : t('login.hint')
+))
 
 onMounted(() => {
-    // 读取主题设置状态
     const savedTheme = localStorage.getItem('theme') || 'light'
     isDark.value = savedTheme === 'dark'
 })
 
 function toggleLanguage() {
-    const newLocale = locale.value === 'zh-CN' ? 'en-US' : 'zh-CN'
-    locale.value = newLocale
-    localStorage.setItem('locale', newLocale)
+    const nextLocale = locale.value === 'zh-CN' ? 'en-US' : 'zh-CN'
+    locale.value = nextLocale
+    localStorage.setItem('locale', nextLocale)
 }
 
 function toggleTheme() {
@@ -148,11 +165,10 @@ function toggleTheme() {
     const theme = isDark.value ? 'dark' : 'light'
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
-    
-    // 同步更新 settings 中的主题设置
-    const settings = JSON.parse(localStorage.getItem('settings') || '{}')
-    settings.theme = theme
-    localStorage.setItem('settings', JSON.stringify(settings))
+
+    const nextSettings = JSON.parse(localStorage.getItem('settings') || '{}')
+    nextSettings.theme = theme
+    localStorage.setItem('settings', JSON.stringify(nextSettings))
 }
 
 function goBack() {
@@ -160,7 +176,12 @@ function goBack() {
 }
 
 async function handleLogin() {
-    if (!password.value || isLoading.value || loginSuccess.value) {
+    if (!password.value || isLoading.value || loginSuccess.value) return
+
+    if (needsRegistrationConfirm.value && !confirmPassword.value) {
+        loginError.value = te('login.errors.confirmPasswordRequired')
+            ? t('login.errors.confirmPasswordRequired')
+            : (locale.value === 'zh-CN' ? '请先确认密码' : 'Please confirm your password')
         return
     }
 
@@ -168,62 +189,74 @@ async function handleLogin() {
     isLoading.value = true
 
     try {
-        // 构建用户数据
         const userData = {
             username: userIdValue.value,
             email: settings.email || `${userIdValue.value}@constella.local`,
             password: password.value
         }
 
-        // 先尝试登录（使用 username 作为 email 字段）
         let result = await apiService.login(userData.username, userData.password)
 
-        // 如果登录失败且错误码为用户不存在，则自动注册
         if (!result.success && result.errorCode === 'AUTH_INVALID_CREDENTIALS') {
-            console.log('Login failed, attempting auto-registration...')
-            const registerResult = await apiService.register(userData.username, userData.email, userData.password)
-            
-            if (!registerResult.success) {
-                // 如果注册失败是因为用户名已存在，说明是密码错误
-                if (registerResult.errorCode === 'AUTH_USERNAME_EXISTS') {
-                    throw new Error(handleApiError(result)) // 显示登录错误：用户ID或密码错误
-                } else {
-                    throw new Error(handleApiError(registerResult)) // 显示注册错误
-                }
+            if (!needsRegistrationConfirm.value) {
+                needsRegistrationConfirm.value = true
+                confirmPassword.value = ''
+                loginError.value = te('login.errors.confirmPasswordToRegister')
+                    ? t('login.errors.confirmPasswordToRegister')
+                    : (locale.value === 'zh-CN'
+                        ? '该账户可能尚未创建，请确认密码后注册'
+                        : 'Account may not exist yet. Please confirm password to register')
+                return
             }
+
+            if (password.value !== confirmPassword.value) {
+                throw new Error(
+                    te('login.errors.passwordMismatch')
+                        ? t('login.errors.passwordMismatch')
+                        : (locale.value === 'zh-CN' ? '两次密码输入不一致' : 'Passwords do not match')
+                )
+            }
+
+            const registerResult = await apiService.register(userData.username, userData.email, userData.password)
+            if (!registerResult.success) {
+                if (registerResult.errorCode === 'AUTH_USERNAME_EXISTS') {
+                    needsRegistrationConfirm.value = false
+                    confirmPassword.value = ''
+                    throw new Error(handleApiError(result))
+                }
+                throw new Error(handleApiError(registerResult))
+            }
+
             result = registerResult
         } else if (!result.success) {
             throw new Error(handleApiError(result))
         }
 
-        // 保存登录状态
-        if (result.data?.access_token) {
-            localStorage.setItem('access_token', result.data.access_token)
-        }
-        if (result.data?.refresh_token) {
-            localStorage.setItem('refresh_token', result.data.refresh_token)
-        }
-        
-        // 保存用户信息
+        if (result.data?.access_token) localStorage.setItem('access_token', result.data.access_token)
+        if (result.data?.refresh_token) localStorage.setItem('refresh_token', result.data.refresh_token)
         if (result.data?.user) {
             localStorage.setItem('user', JSON.stringify(result.data.user))
-            // 单独保存 user_id 方便快速访问
             localStorage.setItem('user_id', result.data.user.id.toString())
         }
 
         loginSuccess.value = true
+        needsRegistrationConfirm.value = false
+        confirmPassword.value = ''
 
-        // 延迟跳转到房间列表
         setTimeout(() => {
             emit('navigate', 'rooms')
         }, 1000)
-
     } catch (error) {
-        loginError.value = error.message || t('login.errors.unknown')
+        loginError.value = error?.message || t('login.errors.unknown')
     } finally {
         isLoading.value = false
     }
 }
+
+watch(password, () => {
+    if (!needsRegistrationConfirm.value) return
+    loginError.value = ''
+})
 </script>
 
 <style scoped>
@@ -235,7 +268,6 @@ async function handleLogin() {
     border-radius: 12px;
 }
 
-/* ==================== 功能按钮区 ==================== */
 .control-buttons {
     position: fixed;
     top: 40px;
@@ -285,7 +317,6 @@ async function handleLogin() {
     color: #fff;
 }
 
-/* ==================== 主内容 ==================== */
 .main-content {
     width: 100%;
     height: 100%;
@@ -304,7 +335,6 @@ async function handleLogin() {
     max-width: 480px;
 }
 
-/* ==================== 语言切换动画 ==================== */
 .lang-fade-enter-active,
 .lang-fade-leave-active {
     transition: all 0.3s ease;
@@ -320,7 +350,6 @@ async function handleLogin() {
     transform: translateY(10px);
 }
 
-/* ==================== 头部区域 ==================== */
 .header-section {
     text-align: center;
     margin-bottom: 40px;
@@ -360,7 +389,6 @@ async function handleLogin() {
     font-weight: 600;
 }
 
-/* ==================== 登录卡片 ==================== */
 .login-card {
     width: 100%;
     padding: 40px;
@@ -371,7 +399,6 @@ async function handleLogin() {
     transition: all 0.3s ease;
 }
 
-/* ==================== 头像区域 ==================== */
 .avatar-section {
     display: flex;
     flex-direction: column;
@@ -411,7 +438,6 @@ async function handleLogin() {
     color: var(--text-secondary);
 }
 
-/* ==================== 表单区域 ==================== */
 .form-section {
     margin-bottom: 24px;
 }
@@ -463,7 +489,6 @@ async function handleLogin() {
     margin-top: 8px;
 }
 
-/* ==================== 错误消息 ==================== */
 .error-message {
     margin-top: 8px;
     padding: 10px 14px;
@@ -475,7 +500,6 @@ async function handleLogin() {
     border: 1px solid rgba(229, 57, 53, 0.3);
 }
 
-/* ==================== 登录按钮 ==================== */
 .login-btn {
     width: 100%;
     padding: 14px 28px;
@@ -516,7 +540,6 @@ async function handleLogin() {
     cursor: not-allowed;
 }
 
-/* ==================== 加载动画 ==================== */
 .loading-spinner {
     width: 20px;
     height: 20px;
@@ -532,7 +555,6 @@ async function handleLogin() {
     }
 }
 
-/* ==================== 淡入淡出动画 ==================== */
 .fade-enter-active,
 .fade-leave-active {
     transition: all 0.3s ease;
@@ -544,7 +566,6 @@ async function handleLogin() {
     transform: translateY(-5px);
 }
 
-/* ==================== 响应式设计 ==================== */
 @media (max-width: 768px) {
     .title {
         font-size: 2rem;
