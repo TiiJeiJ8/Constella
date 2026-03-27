@@ -1,75 +1,195 @@
-# Constella Markdown 编辑器使用指南
+# Constella 编辑器使用指南
 
-本指南介绍 Constella 画布中 Markdown 编辑器的各种功能和快捷操作。
+本指南覆盖 Constella 画布中编辑器的当前能力，重点包括：
+
+- Markdown / Text 编辑
+- 快捷命令与结构化插入
+- 预览渲染与大文档体验
+- 数学公式、Mermaid 与代码高亮
+- 协作光标、导出与高频快捷键
 
 ---
 
 ## 目录
 
+- [编辑器界面与工作模式](#编辑器界面与工作模式)
+- [输入体验与智能编辑](#输入体验与智能编辑)
 - [快捷命令 (/)](#快捷命令-)
+- [工具栏与结构化编辑](#工具栏与结构化编辑)
+- [预览渲染与联动](#预览渲染与联动)
 - [数学公式](#数学公式)
 - [Mermaid 图表](#mermaid-图表)
 - [代码高亮](#代码高亮)
+- [协作编辑](#协作编辑)
+- [导出与键盘快捷键](#导出与键盘快捷键)
+- [实践建议](#实践建议)
+
+---
+
+## 编辑器界面与工作模式
+
+编辑器提供三种视图模式（Markdown 节点可用）：
+
+- `Edit`：仅编辑区
+- `Split`：编辑区 + 预览区
+- `Preview`：仅预览区
+
+核心界面元素：
+
+- 顶部模式切换按钮（Edit/Split/Preview）
+- 轻量工具栏（标题、列表、引用、代码块、数学公式、表格、链接、Mermaid）
+- 代码块语言胶囊（光标位于 fenced code block 内时显示）
+- 预览区统计（blocks / headings）
+- 预览区左侧悬浮 Outline 收纳条
+- 右下角 Back to Top（根据当前模式作用于编辑区、预览区或两者）
+
+说明：
+
+- Text 节点使用纯文本编辑能力，不显示 Markdown 相关预览组件。
+- Markdown 节点默认支持渲染与结构化导航。
+
+---
+
+## 输入体验与智能编辑
+
+编辑器支持以下高频输入增强：
+
+### 成对符号与包裹
+
+- 自动补全常见成对符号：`()`, `{}`, `""`, `''`, `` `...` ``, `$...$`
+- 当有选中文本时，可直接使用以下按键包裹：
+  - `*`（加粗包裹）
+  - `` ` ``（行内代码）
+  - `$`（行内数学）
+  - `[`（快速链接包裹）
+
+### 列表与引用自动续写
+
+按 `Enter` 时会根据当前行自动续写结构：
+
+- 无序列表：`- ` / `* ` / `+ `
+- 有序列表：`1. `（自动递增）
+- Todo：`- [ ] `
+- 引用：`> `
+
+### 缩进与反缩进
+
+- `Tab`：当前行或选中多行缩进
+- `Shift + Tab`：当前行或选中多行反缩进
+
+### 智能粘贴
+
+- 选中文本后粘贴 URL：自动生成 Markdown 链接
+- 粘贴多行代码样式文本：自动包裹为 fenced code block
 
 ---
 
 ## 快捷命令 (/)
 
-在编辑器中输入 `/` 可唤出命令菜单，支持搜索和键盘导航。
+在编辑器中输入 `/` 可唤出命令菜单，支持搜索与键盘导航。
 
 ### 基础命令
 
-| 命令 | 快捷输入 | 说明 |
-|------|----------|------|
-| 一级标题 | `/h1` | `# 标题` |
-| 二级标题 | `/h2` | `## 标题` |
-| 三级标题 | `/h3` | `### 标题` |
-| 无序列表 | `/bullet` | `- 列表项` |
-| 有序列表 | `/numbered` | `1. 列表项` |
-| 待办事项 | `/todo` | `- [ ] 任务` |
-| 引用 | `/quote` | `> 引用文本` |
-| 分割线 | `/divider` | `---` |
+| 命令     | 快捷输入    | 说明         |
+| -------- | ----------- | ------------ |
+| 一级标题 | `/h1`       | `# 标题`     |
+| 二级标题 | `/h2`       | `## 标题`    |
+| 三级标题 | `/h3`       | `### 标题`   |
+| 无序列表 | `/bullet`   | `- 列表项`   |
+| 有序列表 | `/numbered` | `1. 列表项`  |
+| 待办事项 | `/todo`     | `- [ ] 任务` |
+| 引用     | `/quote`    | `> 引用文本` |
+| 分割线   | `/divider`  | `---`        |
 
 ### 文本格式
 
-| 命令 | 快捷输入 | 效果 |
-|------|----------|------|
-| 粗体 | `/bold` | **粗体文本** |
-| 斜体 | `/italic` | *斜体文本* |
-| 删除线 | `/strike` | ~~删除线~~ |
-| 链接 | `/link` | `[文本](url)` |
-| 图片 | `/image` | `![描述](url)` |
-| 表格 | `/table` | 插入表格模板 |
+| 命令   | 快捷输入  | 效果           |
+| ------ | --------- | -------------- |
+| 粗体   | `/bold`   | `**粗体文本**` |
+| 斜体   | `/italic` | `*斜体文本*`   |
+| 删除线 | `/strike` | `~~删除线~~`   |
+| 链接   | `/link`   | `[文本](url)`  |
+| 图片   | `/image`  | `![描述](url)` |
+| 表格   | `/table`  | 插入表格模板   |
 
 ### 代码块
 
-| 命令 | 快捷输入 | 语言 |
-|------|----------|------|
-| 代码块 | `/code` | 通用代码块 |
-| JavaScript | `/code-js` | JavaScript |
-| TypeScript | `/code-ts` | TypeScript |
-| Python | `/code-py` | Python |
-| Java | `/code-java` | Java |
-| CSS | `/code-css` | CSS |
-| HTML | `/code-html` | HTML |
-| SQL | `/code-sql` | SQL |
-| Shell | `/code-sh` | Bash/Shell |
-| JSON | `/code-json` | JSON |
+| 命令       | 快捷输入     | 语言       |
+| ---------- | ------------ | ---------- |
+| 代码块     | `/code`      | 通用       |
+| JavaScript | `/code-js`   | JavaScript |
+| TypeScript | `/code-ts`   | TypeScript |
+| Python     | `/code-py`   | Python     |
+| Java       | `/code-java` | Java       |
+| CSS        | `/code-css`  | CSS        |
+| HTML       | `/code-html` | HTML       |
+| SQL        | `/code-sql`  | SQL        |
+| Shell      | `/code-sh`   | Bash/Shell |
+| JSON       | `/code-json` | JSON       |
 
 ### 数学公式
 
-| 命令 | 快捷输入 | 说明 |
-|------|----------|------|
-| 行内公式 | `/math` | `$E = mc^2$` |
-| 块级公式 | `/math-block` | `$$...$$` |
+| 命令     | 快捷输入      | 说明         |
+| -------- | ------------- | ------------ |
+| 行内公式 | `/math`       | `$E = mc^2$` |
+| 块级公式 | `/math-block` | `$$...$$`    |
 
-### 图表
+### Mermaid 命令
 
-| 命令 | 快捷输入 | 说明 |
-|------|----------|------|
-| 流程图 | `/mermaid-flow` | Mermaid 流程图 |
-| 时序图 | `/mermaid-seq` | Mermaid 时序图 |
-| 思维导图 | `/mermaid-mindmap` | Mermaid 思维导图 |
+| 命令     | 快捷输入               | 说明               |
+| -------- | ---------------------- | ------------------ |
+| 流程图   | `/mermaid-flow`        | Flowchart 模板     |
+| 时序图   | `/mermaid-seq`         | Sequence 模板      |
+| 思维导图 | `/mermaid-mindmap`     | Mindmap 模板       |
+| 类图     | `/mermaid-class`       | Class Diagram 模板 |
+| 状态图   | `/mermaid-state`       | State Diagram 模板 |
+| ER 图    | `/mermaid-er`          | ER Diagram 模板    |
+| 甘特图   | `/mermaid-gantt`       | Gantt 模板         |
+| 用户旅程 | `/mermaid-journey`     | Journey 模板       |
+| 饼图     | `/mermaid-pie`         | Pie 模板           |
+| Git 图   | `/mermaid-gitgraph`    | GitGraph 模板      |
+| 时间线   | `/mermaid-timeline`    | Timeline 模板      |
+| 象限图   | `/mermaid-quadrant`    | Quadrant 模板      |
+| 需求图   | `/mermaid-requirement` | Requirement 模板   |
+
+---
+
+## 工具栏与结构化编辑
+
+除 `/` 命令外，Markdown 编辑器顶部工具栏也可快速插入结构：
+
+- 标题（H1/H2）
+- 列表（无序 / Todo）
+- 引用
+- 代码块
+- 数学公式
+- 表格
+- 链接
+- Mermaid Flow 模板
+
+当光标位于 fenced code block 内部时，会出现代码语言胶囊（如 `javascript`、`typescript`、`python` 等），可一键修改当前代码块语言。
+
+---
+
+## 预览渲染与联动
+
+### 预览渲染策略
+
+- Markdown 按块切分渲染，而不是始终整篇重渲染。
+- 代码块、表格、Mermaid、数学公式等重块支持延迟渲染（Lazy Render）。
+- Mermaid 与 KaTeX 会在预览区自动渲染。
+
+### 编辑区与预览区联动
+
+- 编辑区滚动时，预览区按文档块位置同步跟随。
+- 点击预览区中的内容块，可回定位到编辑区对应位置。
+- Outline 根据当前预览位置自动高亮，并支持点击跳转。
+
+### 链接与图片行为
+
+- 预览区超链接优先在外部浏览器打开。
+- 图片支持点击放大预览。
+- 图片加载失败时会显示可读的降级提示。
 
 ---
 
@@ -88,115 +208,23 @@ $$
 $$
 ```
 
-### 常用符号速查表
-
-#### 希腊字母
-
-| 符号 | 代码 | 符号 | 代码 |
-|------|------|------|------|
-| α | `\alpha` | β | `\beta` |
-| γ | `\gamma` | δ | `\delta` |
-| ε | `\epsilon` | ζ | `\zeta` |
-| η | `\eta` | θ | `\theta` |
-| ι | `\iota` | κ | `\kappa` |
-| λ | `\lambda` | μ | `\mu` |
-| ν | `\nu` | ξ | `\xi` |
-| π | `\pi` | ρ | `\rho` |
-| σ | `\sigma` | τ | `\tau` |
-| υ | `\upsilon` | φ | `\phi` |
-| χ | `\chi` | ψ | `\psi` |
-| ω | `\omega` | Φ | `\Phi` |
-| Ψ | `\Psi` | Ω | `\Omega` |
-
-#### 运算符
-
-| 符号 | 代码 | 说明 |
-|------|------|------|
-| ± | `\pm` | 加减 |
-| × | `\times` | 乘号 |
-| ÷ | `\div` | 除号 |
-| · | `\cdot` | 点乘 |
-| ∑ | `\sum` | 求和 |
-| ∏ | `\prod` | 求积 |
-| ∫ | `\int` | 积分 |
-| ∬ | `\iint` | 二重积分 |
-| ∮ | `\oint` | 环路积分 |
-| ∂ | `\partial` | 偏导数 |
-| ∇ | `\nabla` | 梯度 |
-| √ | `\sqrt{}` | 平方根 |
-| ∛ | `\sqrt[3]{}` | 立方根 |
-
-#### 关系符号
-
-| 符号 | 代码 | 说明 |
-|------|------|------|
-| ≤ | `\le` 或 `\leq` | 小于等于 |
-| ≥ | `\ge` 或 `\geq` | 大于等于 |
-| ≠ | `\ne` 或 `\neq` | 不等于 |
-| ≈ | `\approx` | 约等于 |
-| ≡ | `\equiv` | 恒等于 |
-| ∝ | `\propto` | 正比于 |
-| ∈ | `\in` | 属于 |
-| ∉ | `\notin` | 不属于 |
-| ⊂ | `\subset` | 真子集 |
-| ⊆ | `\subseteq` | 子集 |
-| ∪ | `\cup` | 并集 |
-| ∩ | `\cap` | 交集 |
-| ∅ | `\emptyset` | 空集 |
-
-#### 箭头
-
-| 符号 | 代码 | 符号 | 代码 |
-|------|------|------|------|
-| → | `\to` 或 `\rightarrow` | ← | `\leftarrow` |
-| ⇒ | `\Rightarrow` | ⇐ | `\Leftarrow` |
-| ↔ | `\leftrightarrow` | ⇔ | `\Leftrightarrow` |
-| ↑ | `\uparrow` | ↓ | `\downarrow` |
-| ↦ | `\mapsto` | ∞ | `\infty` |
-
-#### 特殊符号
-
-| 符号 | 代码 | 说明 |
-|------|------|------|
-| ∀ | `\forall` | 任意 |
-| ∃ | `\exists` | 存在 |
-| ∄ | `\nexists` | 不存在 |
-| ℕ | `\mathbb{N}` | 自然数集 |
-| ℤ | `\mathbb{Z}` | 整数集 |
-| ℚ | `\mathbb{Q}` | 有理数集 |
-| ℝ | `\mathbb{R}` | 实数集 |
-| ℂ | `\mathbb{C}` | 复数集 |
-
 ### 常用结构
 
 #### 分数
 
 ```latex
-$\frac{a}{b}$           % 普通分数
-$\dfrac{a}{b}$          % 大分数（display style）
-$\tfrac{a}{b}$          % 小分数（text style）
+$\frac{a}{b}$
+$\dfrac{a}{b}$
+$\tfrac{a}{b}$
 ```
 
 #### 上下标
 
 ```latex
-$x^2$                   % 上标
-$x_i$                   % 下标
-$x_i^2$                 % 同时使用
-$x^{2n}$                % 多字符上标
-${}_a^b X$              % 左侧上下标
-```
-
-#### 括号
-
-```latex
-$(a+b)$                 % 小括号
-$[a+b]$                 % 中括号
-$\{a+b\}$               % 大括号
-$\left(\frac{a}{b}\right)$  % 自适应大小
-$\langle a \rangle$     % 尖括号
-$|x|$                   % 绝对值
-$\|x\|$                 % 范数
+$x^2$
+$x_i$
+$x_i^2$
+$x^{2n}$
 ```
 
 #### 矩阵
@@ -207,24 +235,6 @@ $$
 a & b \\
 c & d
 \end{pmatrix}
-$$
-
-$$
-\begin{bmatrix}
-1 & 2 & 3 \\
-4 & 5 & 6
-\end{bmatrix}
-$$
-```
-
-#### 多行公式
-
-```latex
-$$
-\begin{aligned}
-f(x) &= x^2 + 2x + 1 \\
-     &= (x+1)^2
-\end{aligned}
 $$
 ```
 
@@ -239,39 +249,11 @@ x^2 & x \geq 0 \\
 $$
 ```
 
-### 常用公式示例
-
-```latex
-% 二次公式
-$x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}$
-
-% 欧拉公式
-$e^{i\pi} + 1 = 0$
-
-% 极限
-$\lim_{n \to \infty} \frac{1}{n} = 0$
-
-% 求和
-$\sum_{i=1}^{n} i = \frac{n(n+1)}{2}$
-
-% 积分
-$\int_0^{\infty} e^{-x^2} dx = \frac{\sqrt{\pi}}{2}$
-
-% 偏导数
-$\frac{\partial f}{\partial x}$
-
-% 向量
-$\vec{v} = \langle x, y, z \rangle$
-
-% 矩阵乘法
-$\mathbf{A} \cdot \mathbf{B}$
-```
-
 ---
 
 ## Mermaid 图表
 
-使用 [Mermaid](https://mermaid.js.org/) 创建各种图表。
+使用 [Mermaid](https://mermaid.js.org/) 创建图表。
 
 ### 流程图 (Flowchart)
 
@@ -286,33 +268,6 @@ flowchart TD
 ```
 ````
 
-#### 节点形状
-
-```
-[矩形]      ([圆角矩形])    ((圆形))
-{菱形}      {{六边形}}      [/平行四边形/]
-[\梯形/]    [(圆柱)]        [[子程序]]
-```
-
-#### 连线样式
-
-```
-A --> B     % 实线箭头
-A --- B     % 实线无箭头
-A -.-> B    % 虚线箭头
-A ==> B     % 粗线箭头
-A --文字--> B   % 带文字
-```
-
-#### 方向
-
-```
-TB/TD   % 从上到下
-BT      % 从下到上
-LR      % 从左到右
-RL      % 从右到左
-```
-
 ### 时序图 (Sequence Diagram)
 
 ````markdown
@@ -320,33 +275,10 @@ RL      % 从右到左
 sequenceDiagram
     participant A as 客户端
     participant B as 服务器
-    participant C as 数据库
-    
-    A->>B: 请求数据
-    B->>C: 查询
-    C-->>B: 返回结果
+    A->>B: 请求
     B-->>A: 响应
-    
-    Note over A,B: 这是一个注释
-    
-    alt 成功
-        B->>A: 返回数据
-    else 失败
-        B->>A: 返回错误
-    end
 ```
 ````
-
-#### 消息类型
-
-```
-->>     % 实线箭头
--->>    % 虚线箭头
--x      % 实线叉号
---x     % 虚线叉号
--)      % 实线开放箭头
---)     % 虚线开放箭头
-```
 
 ### 思维导图 (Mindmap)
 
@@ -356,180 +288,108 @@ mindmap
   root((中心主题))
     分支1
       子项A
-      子项B
-        详细内容
     分支2
-      子项C
-      子项D
-    分支3
-      子项E
+      子项B
 ```
 ````
 
-### 类图 (Class Diagram)
+### 其他常用类型
 
-````markdown
-```mermaid
-classDiagram
-    class Animal {
-        +String name
-        +int age
-        +makeSound()
-    }
-    class Dog {
-        +bark()
-    }
-    class Cat {
-        +meow()
-    }
-    Animal <|-- Dog
-    Animal <|-- Cat
-```
-````
+- Class Diagram
+- State Diagram
+- ER Diagram
+- Gantt
+- Journey
+- Pie
+- GitGraph
+- Timeline
+- Quadrant
+- Requirement Diagram
 
-### 状态图 (State Diagram)
-
-````markdown
-```mermaid
-stateDiagram-v2
-    [*] --> 待机
-    待机 --> 运行: 启动
-    运行 --> 暂停: 暂停
-    暂停 --> 运行: 继续
-    运行 --> [*]: 停止
-```
-````
-
-### 饼图 (Pie Chart)
-
-````markdown
-```mermaid
-pie title 项目时间分配
-    "开发" : 45
-    "测试" : 25
-    "文档" : 15
-    "会议" : 15
-```
-````
-
-### 甘特图 (Gantt)
-
-````markdown
-```mermaid
-gantt
-    title 项目计划
-    dateFormat YYYY-MM-DD
-    section 阶段1
-    任务1: 2024-01-01, 30d
-    任务2: after 任务1, 20d
-    section 阶段2
-    任务3: 2024-02-01, 25d
-```
-````
+建议优先通过 `/mermaid-*` 命令插入模板，再按业务内容修改。
 
 ---
 
 ## 代码高亮
 
-支持多种编程语言的语法高亮。
+编辑器支持多语言语法高亮，并在预览代码块顶部显示语言标签。
 
 ### 使用方法
 
 ````markdown
-```javascript
-function hello() {
-    console.log("Hello, World!");
+```typescript
+function hello(name: string) {
+    console.log(`Hello, ${name}`)
 }
 ```
 ````
 
-### 支持的语言
+### 常用语言标识
 
-| 语言标识 | 语言 |
-|----------|------|
-| `javascript` / `js` | JavaScript |
-| `typescript` / `ts` | TypeScript |
-| `python` / `py` | Python |
-| `java` | Java |
-| `c` / `cpp` | C/C++ |
-| `csharp` / `cs` | C# |
-| `go` | Go |
-| `rust` | Rust |
-| `php` | PHP |
-| `ruby` | Ruby |
-| `swift` | Swift |
-| `kotlin` | Kotlin |
-| `html` | HTML |
-| `css` | CSS |
-| `scss` / `sass` | SCSS/Sass |
-| `sql` | SQL |
-| `bash` / `shell` | Bash/Shell |
-| `json` | JSON |
-| `yaml` | YAML |
-| `xml` | XML |
-| `markdown` / `md` | Markdown |
+| 语言标识            | 语言         |
+| ------------------- | ------------ |
+| `javascript` / `js` | JavaScript   |
+| `typescript` / `ts` | TypeScript   |
+| `python` / `py`     | Python       |
+| `java`              | Java         |
+| `go`                | Go           |
+| `rust`              | Rust         |
+| `html`              | HTML         |
+| `css` / `scss`      | CSS / SCSS   |
+| `sql`               | SQL          |
+| `bash` / `shell`    | Bash / Shell |
+| `json`              | JSON         |
+| `yaml`              | YAML         |
+
+说明：浅色与深色主题下代码块会自动使用对应样式。
 
 ---
 
-## 键盘快捷键
+## 协作编辑
 
-| 快捷键 | 功能 |
-|--------|------|
-| `/` | 打开命令菜单 |
-| `↑` / `↓` | 命令菜单导航 |
-| `Enter` / `Tab` | 执行选中命令 |
-| `Esc` | 关闭菜单/编辑器 |
+在多人协作场景下，编辑器支持：
+
+- 远端协作者光标实时显示
+- 远端协作者选区高亮
+- 编辑器顶部显示当前协作用户头像标识
+
+这有助于降低同一区域同时编辑时的冲突成本。
 
 ---
 
-## 提示
+## 导出与键盘快捷键
 
-1. **公式预览**: 编辑器右侧会实时预览渲染效果
-2. **命令搜索**: 输入 `/` 后可继续输入关键词搜索命令
-3. **智能光标**: 插入代码块或公式块后，光标会自动定位到内容区域
-4. **协作编辑**: 可以看到其他用户的光标位置和选区
+### 导出
+
+编辑器支持文档导出面板：
+
+- Markdown：`PDF` / `Markdown` / `Text`
+- Text：`Text`（以及支持环境下的 PDF 流程）
+
+可配置导出文件名、主题、方向等参数（按运行环境可用性显示）。
+
+### 键盘快捷键
+
+| 快捷键          | 功能                     |
+| --------------- | ------------------------ |
+| `/`             | 打开命令菜单             |
+| `↑` / `↓`       | 命令菜单导航             |
+| `Enter` / `Tab` | 执行当前命令             |
+| `Esc`           | 关闭命令菜单或关闭编辑器 |
+| `Tab`           | 当前行/多行缩进          |
+| `Shift + Tab`   | 当前行/多行反缩进        |
+| `Enter`         | 在列表/引用中自动续写    |
+
+---
+
+## 实践建议
+
+1. 先用工具栏搭结构，再补正文内容，效率更高。
+2. 复杂文档优先使用 `Split` 模式，便于边写边核对渲染结果。
+3. Mermaid 建议从模板命令插入，减少语法错误。
+4. 大文档编辑时，多利用 Outline 快速定位章节。
+5. 协作场景下先观察远端光标区域，减少覆盖修改。
 
 ---
 
 *Constella Team © 2026*
-## 2026 编辑体验更新
-
-以下能力已在新版 Markdown 编辑器中默认启用：
-
-### 输入体验
-
-- 自动补全常用成对符号：`()`, `{}`, `""`, `''`, `` ` ``, `$...$`
-- 选中文本时，可直接用 `*`、`` ` ``、`$`、`[` 等按键进行包裹
-- `Enter` 会自动续写常见结构：
-  - 无序列表 `- `
-  - 有序列表 `1. `
-  - Todo 列表 `- [ ] `
-  - 引用 `> `
-- `Tab` / `Shift + Tab` 支持当前行或多行缩进/反缩进
-- 粘贴链接时，如果当前有选中文本，会自动生成 Markdown 链接
-- 粘贴多行代码时，会自动包裹为代码块
-
-### 结构化编辑
-
-- 顶部提供轻量工具栏，可快速插入标题、列表、引用、代码块、数学公式、表格、链接和 Mermaid
-- 当光标位于 fenced code block 内部时，顶部会显示语言切换胶囊，可快速修改代码块语言
-- 预览区提供左侧悬浮式 Outline 收纳条，展开后可快速跳转到当前文档标题
-- Outline 会根据当前预览滚动位置自动高亮所在标题
-
-### 预览与联动
-
-- Markdown 预览会按块切分，不再总是整篇重渲染
-- 代码块、表格、Mermaid、数学公式等较重内容会按需延迟渲染
-- 编辑区与预览区支持双向滚动联动
-- 编辑区滚动时，预览区会按文档块位置进行跟随，而不是简单比例映射
-
-### 链接与代码块
-
-- 预览区中的超链接会优先在外部浏览器中打开，而不是在应用内部跳转
-- 代码块预览左上角会显示语言标签
-- 浅色 / 深色主题下的代码块样式会分别做适配
-
-### 协作与可视化
-
-- 远端协作者光标与选区会在编辑区内实时显示
-- Mermaid 图表与 KaTeX 公式会在预览区自动渲染
