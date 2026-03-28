@@ -1,4 +1,5 @@
 /// <reference types="vite/web" />
+import type { InstalledPluginRecord } from './plugins/package'
 
 interface ElectronLanServer {
     id: string
@@ -28,6 +29,10 @@ interface ElectronBridgeApi {
         canceled?: boolean
         filePath?: string
     }>
+    installPluginPackage: (sourcePath?: string) => Promise<InstalledPluginRecord>
+    listInstalledPlugins: () => Promise<InstalledPluginRecord[]>
+    setInstalledPluginEnabled: (pluginId: string, enabled: boolean) => Promise<InstalledPluginRecord>
+    removeInstalledPlugin: (pluginId: string) => Promise<void>
 }
 
 declare global {

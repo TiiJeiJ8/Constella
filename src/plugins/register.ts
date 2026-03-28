@@ -10,6 +10,8 @@
  */
 import { i18n } from '@/locales'
 import { pluginRegistry, type PluginI18nMessages } from './index'
+import { refreshInstalledPluginsCatalog } from './installed'
+import { registerInstalledPluginsRuntime } from './runtime'
 
 let hasRegistered = false
 
@@ -21,10 +23,7 @@ function registerPluginI18n(messages?: PluginI18nMessages) {
     }
 }
 
-export async function registerPlugins() {
-    if (hasRegistered) return
-    hasRegistered = true
-
+async function performPluginRegistration() {
     console.log('[Plugins] Starting auto-discovery...')
 
     // 动态导入所有插件，使用 eager: true 在同步函数中加载
@@ -48,5 +47,20 @@ export async function registerPlugins() {
         pluginRegistry.setFallback(blankPlugin)
     }
 
+    const installedPlugins = await refreshInstalledPluginsCatalog()
+    await registerInstalledPluginsRuntime(installedPlugins)
+
     console.log('[Plugins] Auto-registered:', pluginRegistry.getRegisteredKinds())
+}
+
+export async function registerPlugins() {
+    if (hasRegistered) return
+    hasRegistered = true
+    await performPluginRegistration()
+}
+
+export async function reloadPlugins() {
+    pluginRegistry.clear()
+    hasRegistered = false
+    await registerPlugins()
 }

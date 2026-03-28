@@ -25,7 +25,7 @@
                             @click="activeCategory = category.key"
                         >
                             <component :is="category.icon" class="nav-icon" />
-                            <span class="nav-text">{{ t(`settings.categories.${category.key}`) }}</span>
+                            <span class="nav-text">{{ getCategoryLabel(category.key) }}</span>
                         </button>
                     </div>
 
@@ -221,6 +221,10 @@
                         </div>
 
                         <!-- 快捷键设置 -->
+                        <div v-show="activeCategory === 'plugins'" class="settings-section">
+                            <PluginCatalogPane />
+                        </div>
+
                         <div v-show="activeCategory === 'shortcuts'" class="settings-section">
                             <h3 class="section-title">{{ t('settings.shortcuts.title') }}</h3>
 
@@ -266,6 +270,7 @@ import {
     HelpCircleIcon,
     RefreshIcon
 } from 'tdesign-icons-vue-next'
+import PluginCatalogPane from '@/components/plugins/PluginCatalogPane.vue'
 import {
     generateUserId,
     generateChineseName,
@@ -273,6 +278,12 @@ import {
     generateAvatar,
     validateUserId
 } from '@/utils/accountHelper'
+import {
+    installPluginPackage,
+    refreshInstalledPluginsCatalog,
+    removeInstalledPlugin,
+    setInstalledPluginEnabled
+} from '@/plugins/installed'
 
 const { t, locale } = useI18n()
 
@@ -293,6 +304,7 @@ const categories = [
     { key: 'account', icon: UserIcon },
     { key: 'general', icon: SettingIcon },
     { key: 'appearance', icon: ViewListIcon },
+    { key: 'plugins', icon: SettingIcon },
     { key: 'shortcuts', icon: SettingIcon }
 ]
 
@@ -334,6 +346,45 @@ const settingsData = reactive({
 
 // 验证错误
 const userIdError = ref('')
+const installedPlugins = ref([])
+const pluginBusy = ref(false)
+const pluginError = ref('')
+const supportsPluginManagement = computed(() => Boolean(window.electron?.listInstalledPlugins))
+const pluginText = computed(() => {
+    if (locale.value === 'zh-CN') {
+        return {
+            title: '插件管理',
+            description: '可在此安装、启用、停用与删除运行时插件。变更后会重载应用，以刷新节点类型列表。',
+            install: '安装插件',
+            refresh: '刷新',
+            reloadApp: '重载应用',
+            desktopOnly: '插件管理仅在 Electron 桌面版中可用。',
+            empty: '尚未安装任何插件。',
+            installedCount: (count) => `已安装 ${count} 个插件`,
+            remove: '删除',
+            author: '作者',
+            source: '来源',
+            installedAt: '安装时间',
+            nodeKinds: '节点类型'
+        }
+    }
+
+    return {
+        title: 'Plugin Management',
+        description: 'Install, enable, disable, and remove runtime plugins. Changes reload the app to refresh the active node catalog.',
+        install: 'Install Plugin',
+        refresh: 'Refresh',
+        reloadApp: 'Reload App',
+        desktopOnly: 'Plugin management is only available in the Electron desktop app.',
+        empty: 'No plugins installed yet.',
+        installedCount: (count) => `${count} plugin(s) installed`,
+        remove: 'Remove',
+        author: 'Author',
+        source: 'Source',
+        installedAt: 'Installed',
+        nodeKinds: 'Node kinds'
+    }
+})
 
 // 监听 modelValue 变化
 watch(() => props.modelValue, (newVal) => {
@@ -341,6 +392,7 @@ watch(() => props.modelValue, (newVal) => {
     // 面板打开时重新加载设置，确保同步外部更改
     if (newVal) {
         loadSettings()
+        void refreshPluginCatalog()
     }
 })
 
@@ -451,6 +503,95 @@ const applySettings = () => {
 // 关闭面板
 const closePanel = () => {
     isOpen.value = false
+}
+const refreshPluginCatalog = async () => {
+    if (!supportsPluginManagement.value) {
+        installedPlugins.value = []
+        return
+    }
+
+    pluginError.value = ''
+    try {
+        installedPlugins.value = await refreshInstalledPluginsCatalog()
+    } catch (error) {
+        console.error('[Plugins] Failed to refresh plugin catalog:', error)
+        pluginError.value = error instanceof Error ? error.message : String(error)
+    }
+}
+
+function formatInstalledTime(value) {
+    if (!value) return '-'
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
+}
+
+function reloadApplication() {
+    window.location.reload()
+}
+
+async function handleInstallPlugin() {
+    if (!supportsPluginManagement.value) return
+
+    pluginBusy.value = true
+    pluginError.value = ''
+    try {
+        await installPluginPackage()
+        await refreshPluginCatalog()
+        reloadApplication()
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        if (!/cancel/i.test(message)) {
+            pluginError.value = message
+        }
+    } finally {
+        pluginBusy.value = false
+    }
+}
+
+async function handleTogglePlugin(pluginId, enabled) {
+    if (!supportsPluginManagement.value) return
+
+    pluginBusy.value = true
+    pluginError.value = ''
+    try {
+        await setInstalledPluginEnabled(pluginId, enabled)
+        await refreshPluginCatalog()
+        reloadApplication()
+    } catch (error) {
+        pluginError.value = error instanceof Error ? error.message : String(error)
+    } finally {
+        pluginBusy.value = false
+    }
+}
+
+async function handleRemovePlugin(pluginId, pluginName) {
+    const confirmed = confirm(
+        locale.value === 'zh-CN'
+            ? `确定删除插件“${pluginName}”吗？`
+            : `Remove plugin "${pluginName}"?`
+    )
+
+    if (!confirmed) return
+
+    pluginBusy.value = true
+    pluginError.value = ''
+    try {
+        await removeInstalledPlugin(pluginId)
+        await refreshPluginCatalog()
+        reloadApplication()
+    } catch (error) {
+        pluginError.value = error instanceof Error ? error.message : String(error)
+    } finally {
+        pluginBusy.value = false
+    }
+}
+
+function getCategoryLabel(categoryKey) {
+    if (categoryKey === 'plugins') {
+        return locale.value === 'zh-CN' ? '插件' : 'Plugins'
+    }
+
+    return t(`settings.categories.${categoryKey}`)
 }
 
 // 点击遮罩层关闭
@@ -664,6 +805,133 @@ applySettings()
     justify-content: space-between;
     padding: 16px 0;
     border-bottom: 1px solid var(--border-light);
+}
+
+.section-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.plugin-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.primary-btn,
+.secondary-btn,
+.link-btn {
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.primary-btn,
+.secondary-btn {
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.primary-btn {
+    background: #111827;
+    color: #ffffff;
+}
+
+.secondary-btn {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.link-btn {
+    background: transparent;
+    color: var(--primary-color, #2563eb);
+    padding: 0;
+    font-size: 13px;
+}
+
+.plugin-summary-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 0 14px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.plugin-list {
+    display: grid;
+    gap: 14px;
+}
+
+.plugin-card {
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 16px;
+    background: var(--bg-secondary);
+    display: grid;
+    gap: 14px;
+}
+
+.plugin-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.plugin-name-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.plugin-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.plugin-version {
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--bg-tertiary);
+}
+
+.plugin-id {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    word-break: break-all;
+}
+
+.plugin-description {
+    margin: 12px 0 0;
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+.plugin-meta-grid {
+    margin-top: 12px;
+    display: grid;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.plugin-card-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.plugin-error {
+    margin-top: 12px;
 }
 
 .setting-item.userid-item {

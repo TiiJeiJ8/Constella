@@ -388,7 +388,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { getPluginsMeta } from '@/plugins'
+import { getPluginsMeta, pluginCatalogVersion } from '@/plugins'
 import AssetsPanel from './AssetsPanel.vue'
 import HistoryPanel from './HistoryPanel.vue'
 
@@ -470,10 +470,14 @@ const edgeTypes = computed(() => [
 ])
 
 // 可用的节点类型（自动获取所有已注册插件，无需白名单）
-const availableKinds = computed(() => getPluginsMeta())
+const availableKinds = computed(() => {
+    pluginCatalogVersion.value
+    return getPluginsMeta()
+})
 
 // 当前选中节点的插件元信息（用于显示模式切换等动态功能）
 const currentNodeMeta = computed(() => {
+    pluginCatalogVersion.value
     if (props.selectedNodes?.length !== 1) return null
     const kind = props.selectedNodes[0].content?.kind
     return kind ? getPluginsMeta().find(m => m.kind === kind) || null : null
@@ -491,6 +495,7 @@ function isNodeSelected(nodeId) {
 
 // 获取节点图标
 function getNodeIcon(node) {
+    pluginCatalogVersion.value
     const kind = node.content?.kind || 'blank'
     const meta = getPluginsMeta().find(m => m.kind === kind)
     return meta?.icon || '📦'

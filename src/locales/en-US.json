@@ -553,6 +553,7 @@
             "account": "Account",
             "general": "General",
             "appearance": "Appearance",
+            "plugins": "Plugins",
             "editor": "Editor",
             "collaboration": "Collaboration",
             "advanced": "Advanced",
@@ -616,6 +617,21 @@
             "title": "Advanced Settings",
             "debugMode": "Debug Mode",
             "clearCache": "Clear Cache"
+        },
+        "plugins": {
+            "title": "Plugin Management",
+            "description": "Install, enable, disable, and remove runtime plugins. Changes reload the app to refresh the active node catalog.",
+            "install": "Install Plugin",
+            "refresh": "Refresh",
+            "reloadApp": "Reload App",
+            "desktopOnly": "Plugin management is only available in the Electron desktop app.",
+            "empty": "No plugins installed yet.",
+            "installedCount": "{count} plugin(s) installed",
+            "remove": "Remove",
+            "author": "Author",
+            "source": "Source",
+            "installedAt": "Installed",
+            "nodeKinds": "Node kinds"
         },
         "shortcuts": {
             "title": "Keyboard Shortcuts",

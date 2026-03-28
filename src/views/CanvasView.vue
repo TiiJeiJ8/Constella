@@ -199,7 +199,7 @@ import { useYjsChat } from '@/composables/useYjsChat'
 import { useAwareness } from '@/composables/useAwareness'
 import { useCanvasPerformance } from '@/composables/useCanvasPerformance'
 import { registerPlugins } from '@/plugins/register'
-import { pluginRegistry } from '@/plugins'
+import { pluginCatalogVersion, pluginRegistry } from '@/plugins'
 import { exportCanvas } from '@/utils/canvasExport'
 import { useToast } from '@/utils/useToast'
 import { apiService } from '@/services/api'
@@ -298,6 +298,7 @@ const editingCustomNode = computed(() => {
     return yjsNodes.nodes.value.find(n => n.id === editingCustomNodeId.value)
 })
 const editingCustomPlugin = computed(() => {
+    pluginCatalogVersion.value
     if (!editingCustomNode.value) return null
     return pluginRegistry.get(editingCustomNode.value.content?.kind)
 })

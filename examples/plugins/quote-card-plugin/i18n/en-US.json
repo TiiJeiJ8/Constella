@@ -1,0 +1,10 @@
+{
+  "canvas": {
+    "nodeTypes": {
+      "quote-card": "Quote Card"
+    },
+    "nodeTypeDesc": {
+      "quote-card": "Display a quote with an author footer"
+    }
+  }
+}

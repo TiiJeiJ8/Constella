@@ -1,0 +1,26 @@
+{
+  "id": "dev.constella.quote-card",
+  "name": "Quote Card Plugin",
+  "version": "1.0.0",
+  "description": "A simple installable example plugin that renders short quote cards.",
+  "author": "Constella Example",
+  "engine": {
+    "constella": "^1.0.0"
+  },
+  "nodes": [
+    {
+      "kind": "quote-card",
+      "label": "Quote Card",
+      "description": "Highlight a quote with an author footer",
+      "renderer": "dist/renderer.js",
+      "editor": "dist/editor.js",
+      "editable": true,
+      "supportsCardMode": true
+    }
+  ],
+  "i18n": {
+    "zh-CN": "i18n/zh-CN.json",
+    "en-US": "i18n/en-US.json"
+  },
+  "permissions": []
+}

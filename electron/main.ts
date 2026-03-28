@@ -6,6 +6,12 @@ import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 import { spawn, ChildProcess } from 'child_process'
 import Bonjour, { Service } from 'bonjour-service'
+import type { InstalledPluginRecord, PluginPackageManifest } from '../src/plugins/package'
+import {
+    PLUGIN_ARCHIVE_EXTENSION,
+    PLUGIN_INSTALLATION_FILE,
+    PLUGIN_MANIFEST_FILE
+} from '../src/plugins/package'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -17,6 +23,9 @@ const DISCOVERY_FALLBACK_PORTS = [3000]
 const DISCOVERY_FALLBACK_MAX_HOSTS = 256
 const DISCOVERY_FALLBACK_CONCURRENCY = 32
 const DISCOVERY_FALLBACK_TIMEOUT_MS = 220
+const PLUGIN_SCAN_DIR = 'plugins'
+const PLUGIN_INSTALL_DIR = 'installed'
+const PLUGIN_ARCHIVE_DIR = 'archives'
 
 interface LanServerDescriptor {
     id: string
@@ -38,8 +47,355 @@ interface ExportDocumentPdfPayload {
     orientation?: 'portrait' | 'landscape'
 }
 
+interface PluginInstallationPayload {
+    installedAt: string
+    enabled: boolean
+    source: 'directory' | 'archive'
+    installDir: string
+    archivePath?: string
+}
+
 let mainWindow: BrowserWindow | null = null
 let serverProcess: ChildProcess | null = null
+
+function ensureDir(targetPath: string): string {
+    if (!fs.existsSync(targetPath)) {
+        fs.mkdirSync(targetPath, { recursive: true })
+    }
+    return targetPath
+}
+
+function getPluginRootDir(): string {
+    return ensureDir(path.join(app.getPath('userData'), PLUGIN_SCAN_DIR))
+}
+
+function getInstalledPluginRootDir(): string {
+    return ensureDir(path.join(getPluginRootDir(), PLUGIN_INSTALL_DIR))
+}
+
+function getPluginArchiveRootDir(): string {
+    return ensureDir(path.join(getPluginRootDir(), PLUGIN_ARCHIVE_DIR))
+}
+
+function sanitizeSegment(value: string): string {
+    return value.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'plugin'
+}
+
+function buildInstalledPluginFolderName(manifest: PluginPackageManifest): string {
+    return `${sanitizeSegment(manifest.id)}__${sanitizeSegment(manifest.version)}`
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function parsePluginManifest(raw: unknown): PluginPackageManifest {
+    if (!isPlainObject(raw)) {
+        throw new Error('Plugin manifest must be an object')
+    }
+
+    const nodes = raw.nodes
+    if (!Array.isArray(nodes) || nodes.length === 0) {
+        throw new Error('Plugin manifest must include at least one node definition')
+    }
+
+    const manifest: PluginPackageManifest = {
+        id: String(raw.id || '').trim(),
+        name: String(raw.name || '').trim(),
+        version: String(raw.version || '').trim(),
+        description: typeof raw.description === 'string' ? raw.description : undefined,
+        author: typeof raw.author === 'string' ? raw.author : undefined,
+        homepage: typeof raw.homepage === 'string' ? raw.homepage : undefined,
+        engine: isPlainObject(raw.engine) && typeof raw.engine.constella === 'string'
+            ? { constella: raw.engine.constella }
+            : undefined,
+        nodes: nodes.map((node, index) => {
+            if (!isPlainObject(node)) {
+                throw new Error(`Plugin node #${index + 1} must be an object`)
+            }
+
+            const kind = String(node.kind || '').trim()
+            const label = String(node.label || '').trim()
+            const description = String(node.description || '').trim()
+            const renderer = String(node.renderer || '').trim()
+
+            if (!kind || !label || !description || !renderer) {
+                throw new Error(`Plugin node #${index + 1} is missing required fields`)
+            }
+
+            return {
+                kind,
+                label,
+                description,
+                icon: typeof node.icon === 'string' ? node.icon : undefined,
+                renderer,
+                editor: typeof node.editor === 'string' ? node.editor : undefined,
+                editable: typeof node.editable === 'boolean' ? node.editable : undefined,
+                supportsCardMode: typeof node.supportsCardMode === 'boolean' ? node.supportsCardMode : undefined,
+                supportsFontSizeControl: typeof node.supportsFontSizeControl === 'boolean'
+                    ? node.supportsFontSizeControl
+                    : undefined
+            }
+        }),
+        i18n: isPlainObject(raw.i18n)
+            ? Object.fromEntries(
+                Object.entries(raw.i18n)
+                    .filter(([, value]) => typeof value === 'string')
+                    .map(([locale, filePath]) => [locale, filePath as string])
+            )
+            : undefined,
+        permissions: Array.isArray(raw.permissions)
+            ? raw.permissions.map(permission => String(permission))
+            : undefined
+    }
+
+    if (!manifest.id || !manifest.name || !manifest.version) {
+        throw new Error('Plugin manifest must include id, name, and version')
+    }
+
+    return manifest
+}
+
+async function readPluginManifest(manifestPath: string): Promise<PluginPackageManifest> {
+    const raw = JSON.parse(await fs.promises.readFile(manifestPath, 'utf8'))
+    return parsePluginManifest(raw)
+}
+
+async function readInstalledPluginRecord(installDir: string): Promise<InstalledPluginRecord | null> {
+    const manifestPath = path.join(installDir, PLUGIN_MANIFEST_FILE)
+    const installationPath = path.join(installDir, PLUGIN_INSTALLATION_FILE)
+
+    if (!fs.existsSync(manifestPath) || !fs.existsSync(installationPath)) {
+        return null
+    }
+
+    const manifest = await readPluginManifest(manifestPath)
+    const installationRaw = JSON.parse(await fs.promises.readFile(installationPath, 'utf8')) as PluginInstallationPayload
+
+    return {
+        id: manifest.id,
+        name: manifest.name,
+        version: manifest.version,
+        description: manifest.description,
+        author: manifest.author,
+        homepage: manifest.homepage,
+        installedAt: installationRaw.installedAt,
+        enabled: installationRaw.enabled,
+        source: installationRaw.source,
+        installDir,
+        archivePath: installationRaw.archivePath,
+        manifest
+    }
+}
+
+async function writeInstalledPluginRecord(
+    installDir: string,
+    manifest: PluginPackageManifest,
+    installation: PluginInstallationPayload
+): Promise<InstalledPluginRecord> {
+    await fs.promises.writeFile(
+        path.join(installDir, PLUGIN_INSTALLATION_FILE),
+        JSON.stringify(installation, null, 2),
+        'utf8'
+    )
+
+    return {
+        id: manifest.id,
+        name: manifest.name,
+        version: manifest.version,
+        description: manifest.description,
+        author: manifest.author,
+        homepage: manifest.homepage,
+        installedAt: installation.installedAt,
+        enabled: installation.enabled,
+        source: installation.source,
+        installDir,
+        archivePath: installation.archivePath,
+        manifest
+    }
+}
+
+async function listInstalledPluginsInternal(): Promise<InstalledPluginRecord[]> {
+    const rootDir = getInstalledPluginRootDir()
+    const entries = await fs.promises.readdir(rootDir, { withFileTypes: true })
+    const installedPlugins = await Promise.all(
+        entries
+            .filter(entry => entry.isDirectory())
+            .map(entry => readInstalledPluginRecord(path.join(rootDir, entry.name)))
+    )
+
+    return installedPlugins
+        .filter((plugin): plugin is InstalledPluginRecord => Boolean(plugin))
+        .sort((left, right) => left.name.localeCompare(right.name))
+}
+
+async function extractArchiveToDirectory(archivePath: string, destinationDir: string): Promise<void> {
+    if (process.platform !== 'win32') {
+        throw new Error('Archive installation is currently supported on Windows only')
+    }
+
+    await fs.promises.rm(destinationDir, { recursive: true, force: true })
+    await fs.promises.mkdir(destinationDir, { recursive: true })
+
+    await new Promise<void>((resolve, reject) => {
+        const command = [
+            'Expand-Archive',
+            '-LiteralPath',
+            `'${archivePath.replace(/'/g, "''")}'`,
+            '-DestinationPath',
+            `'${destinationDir.replace(/'/g, "''")}'`,
+            '-Force'
+        ].join(' ')
+
+        const child = spawn('powershell', ['-NoProfile', '-Command', command], {
+            windowsHide: true
+        })
+
+        let stderr = ''
+        child.stderr.on('data', chunk => {
+            stderr += chunk.toString()
+        })
+
+        child.on('error', reject)
+        child.on('exit', code => {
+            if (code === 0) {
+                resolve()
+                return
+            }
+            reject(new Error(stderr || `Expand-Archive failed with exit code ${code}`))
+        })
+    })
+}
+
+async function resolvePluginSourceSelection(ownerWindow: BrowserWindow | null): Promise<{
+    sourcePath: string
+    sourceType: 'directory' | 'archive' | 'manifest'
+}> {
+    const result = await dialog.showOpenDialog(ownerWindow ?? undefined, {
+        title: 'Install Constella Plugin',
+        buttonLabel: 'Install',
+        filters: [
+            { name: 'Constella Plugin Archive', extensions: [PLUGIN_ARCHIVE_EXTENSION.slice(1), 'zip'] },
+            { name: 'Plugin Manifest', extensions: ['json'] }
+        ],
+        properties: ['openFile', 'openDirectory']
+    })
+
+    if (result.canceled || result.filePaths.length === 0) {
+        throw new Error('Plugin installation cancelled')
+    }
+
+    const selectedPath = result.filePaths[0]
+    const stats = await fs.promises.stat(selectedPath)
+
+    return {
+        sourcePath: selectedPath,
+        sourceType: stats.isDirectory()
+            ? 'directory'
+            : path.basename(selectedPath).toLowerCase() === PLUGIN_MANIFEST_FILE
+                ? 'manifest'
+                : 'archive'
+    }
+}
+
+async function resolvePluginSourceByPath(sourcePath: string): Promise<{
+    sourcePath: string
+    sourceType: 'directory' | 'archive' | 'manifest'
+}> {
+    const stats = await fs.promises.stat(sourcePath)
+
+    return {
+        sourcePath,
+        sourceType: stats.isDirectory()
+            ? 'directory'
+            : path.basename(sourcePath).toLowerCase() === PLUGIN_MANIFEST_FILE
+                ? 'manifest'
+                : 'archive'
+    }
+}
+
+async function installPluginPackageInternal(ownerWindow: BrowserWindow | null, explicitSourcePath?: string): Promise<InstalledPluginRecord> {
+    const { sourcePath, sourceType } = explicitSourcePath
+        ? await resolvePluginSourceByPath(explicitSourcePath)
+        : await resolvePluginSourceSelection(ownerWindow)
+    const tempRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'constella-plugin-'))
+
+    let workingDir = sourceType === 'directory' ? sourcePath : sourceType === 'manifest' ? path.dirname(sourcePath) : tempRoot
+    let archiveTargetPath: string | undefined
+
+    try {
+        if (sourceType === 'archive') {
+            archiveTargetPath = path.join(
+                getPluginArchiveRootDir(),
+                `${Date.now()}-${sanitizeSegment(path.basename(sourcePath))}`
+            )
+            await fs.promises.copyFile(sourcePath, archiveTargetPath)
+            await extractArchiveToDirectory(sourcePath, tempRoot)
+        }
+
+        const manifestPath = fs.existsSync(path.join(workingDir, PLUGIN_MANIFEST_FILE))
+            ? path.join(workingDir, PLUGIN_MANIFEST_FILE)
+            : sourceType === 'manifest'
+                ? sourcePath
+                : ''
+
+        const pluginDir = manifestPath
+            ? path.dirname(manifestPath)
+            : workingDir
+
+        const finalManifestPath = path.join(pluginDir, PLUGIN_MANIFEST_FILE)
+        if (!fs.existsSync(finalManifestPath)) {
+            throw new Error(`Missing ${PLUGIN_MANIFEST_FILE} in plugin package`)
+        }
+
+        const manifest = await readPluginManifest(finalManifestPath)
+        const installDir = path.join(getInstalledPluginRootDir(), buildInstalledPluginFolderName(manifest))
+
+        await fs.promises.rm(installDir, { recursive: true, force: true })
+        await fs.promises.mkdir(path.dirname(installDir), { recursive: true })
+        await fs.promises.cp(pluginDir, installDir, { recursive: true, force: true })
+
+        const installation: PluginInstallationPayload = {
+            installedAt: new Date().toISOString(),
+            enabled: true,
+            source: sourceType === 'archive' ? 'archive' : 'directory',
+            installDir,
+            archivePath: archiveTargetPath
+        }
+
+        return await writeInstalledPluginRecord(installDir, manifest, installation)
+    } finally {
+        await fs.promises.rm(tempRoot, { recursive: true, force: true })
+    }
+}
+
+async function updateInstalledPluginEnabledState(pluginId: string, enabled: boolean): Promise<InstalledPluginRecord> {
+    const installedPlugins = await listInstalledPluginsInternal()
+    const targetPlugin = installedPlugins.find(plugin => plugin.id === pluginId)
+
+    if (!targetPlugin) {
+        throw new Error(`Plugin not found: ${pluginId}`)
+    }
+
+    return await writeInstalledPluginRecord(targetPlugin.installDir, targetPlugin.manifest, {
+        installedAt: targetPlugin.installedAt,
+        enabled,
+        source: targetPlugin.source,
+        installDir: targetPlugin.installDir,
+        archivePath: targetPlugin.archivePath
+    })
+}
+
+async function removeInstalledPluginInternal(pluginId: string): Promise<void> {
+    const installedPlugins = await listInstalledPluginsInternal()
+    const targetPlugin = installedPlugins.find(plugin => plugin.id === pluginId)
+
+    if (!targetPlugin) {
+        throw new Error(`Plugin not found: ${pluginId}`)
+    }
+
+    await fs.promises.rm(targetPlugin.installDir, { recursive: true, force: true })
+}
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -519,6 +875,43 @@ ipcMain.handle('export-document-pdf', async (_event, payload: ExportDocumentPdfP
         }
     } finally {
         exportWindow?.close()
+    }
+})
+
+ipcMain.handle('install-plugin-package', async (event, sourcePath?: string) => {
+    try {
+        const ownerWindow = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
+        return await installPluginPackageInternal(ownerWindow, sourcePath)
+    } catch (error) {
+        console.error('[Electron] Failed to install plugin package:', error)
+        throw error
+    }
+})
+
+ipcMain.handle('list-installed-plugins', async () => {
+    try {
+        return await listInstalledPluginsInternal()
+    } catch (error) {
+        console.error('[Electron] Failed to list installed plugins:', error)
+        return []
+    }
+})
+
+ipcMain.handle('set-installed-plugin-enabled', async (_event, pluginId: string, enabled: boolean) => {
+    try {
+        return await updateInstalledPluginEnabledState(pluginId, enabled)
+    } catch (error) {
+        console.error('[Electron] Failed to update plugin enabled state:', error)
+        throw error
+    }
+})
+
+ipcMain.handle('remove-installed-plugin', async (_event, pluginId: string) => {
+    try {
+        await removeInstalledPluginInternal(pluginId)
+    } catch (error) {
+        console.error('[Electron] Failed to remove plugin:', error)
+        throw error
     }
 })
 

@@ -5,7 +5,7 @@
 
 [中文](./README.md) | [English](./README-en.md)
 
-[Backend Core](https://github.com/TiiJeiJ8/Constella_CORE) | [User Guide](docs/USER_GUIDE-en.md) | [Editor Guide](docs/EDITOR_GUIDE.md) | [Plugin Development](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_3.0.md)
+[Backend Core](https://github.com/TiiJeiJ8/Constella_CORE) | [User Guide](docs/USER_GUIDE-en.md) | [Editor Guide](docs/EDITOR_GUIDE.md) | [Plugin Development](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_4.0.md)
 
 <br />
 
@@ -67,10 +67,25 @@
 
 - 🧭 Infinite canvas: nodes, edges, free dragging, zooming
 - 🤝 Real-time collaboration: multi-user synchronous editing
-- 🧩 Plugin-based node system: Text / Markdown / Image / Hyperlink and more
+- 🧩 Plugin-based node system: Text / Markdown / Image / Hyperlink and more. Installing Node Plugin is available now.
 - 🔐 Room model: public/private rooms foundation
 - 🌍 i18n and theming: Chinese/English + light/dark
 - 💾 Persistence: IndexedDB (Web) + electron-store (desktop)
+
+## Plugin Development and Installation
+
+Constella now supports both built-in node plugins and installable runtime plugins.
+
+- Built-in plugins live in `src/plugins/`
+- Runtime plugins can be imported from a plugin folder during development
+- Distribution packages can use `.constella-plugin` or `.zip`
+- `manifest.json` is the entry file of a plugin folder, not a standalone plugin package
+- The plugin panel in Electron supports drag-and-drop import and click-to-pick fallback
+
+See:
+
+- [Plugin Package Format](docs/PLUGIN_PACKAGE_FORMAT.md)
+- [Plugin Development Architecture 4.0](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_4.0.md)
 
 ## 🖼️ Screenshots
 
@@ -107,6 +122,14 @@
 <summary> Editor Demo </summary>
 
 ![Editor Demo](IMG/editorwindow.jpg)
+
+</details>
+
+<details>
+<summary> Plugin Panel </summary>
+
+![Plugin Panel](IMG/plugin_panel.jpg)
+![Plugin Setting Panel](IMG/plugin_panel_setting_panel.jpg)
 
 </details>
 

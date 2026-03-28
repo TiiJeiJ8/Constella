@@ -19,7 +19,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 // @ts-ignore
-import { pluginRegistry, type NodeContent, type ContentKind } from '@/plugins'
+import { pluginCatalogVersion, pluginRegistry, type NodeContent, type ContentKind } from '@/plugins'
 
 const props = defineProps<{
     nodeId: string
@@ -71,6 +71,7 @@ const overlayStyle = computed(() => {
 
 // 获取渲染器组件
 const rendererComponent = computed(() => {
+    pluginCatalogVersion.value
     const kind = props.content?.kind || 'blank'
     return pluginRegistry.getRenderer(kind as ContentKind)
 })

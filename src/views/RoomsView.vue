@@ -5,6 +5,7 @@
         
         <!-- 设置面板 -->
         <SettingsPanel v-model="showSettings" />
+        <PluginPanel v-model="showPlugins" />
 
         <!-- 退出登录确认对话框 -->
         <ConfirmDialog
@@ -52,6 +53,7 @@
                 current-view="rooms"
                 @navigate="handleNavigate"
                 @openSettings="showSettings = true"
+                @openPlugins="showPlugins = true"
                 @logout="handleLogout"
                 @disconnect="handleDisconnect"
             />
@@ -109,6 +111,7 @@ import Dock from '@/components/base/Dock.vue'
 import TopBar from '@/components/base/TopBar.vue'
 import RoomCardSkeleton from '@/components/rooms/RoomCardSkeleton.vue'
 import SettingsPanel from '@/components/base/SettingsPanel.vue'
+import PluginPanel from '@/components/plugins/PluginPanel.vue'
 import WindowControls from '@/components/base/WindowControls.vue'
 import ConfirmDialog from '@/components/base/ConfirmDialog.vue'
 import RoomCard from '@/components/rooms/RoomCard.vue'
@@ -127,6 +130,7 @@ const rooms = ref([])
 const loading = ref(false)
 const error = ref('')
 const showSettings = ref(false)
+const showPlugins = ref(false)
 const showCreateDialog = ref(false)
 const showJoinDialog = ref(false)
 const showDeleteDialog = ref(false)

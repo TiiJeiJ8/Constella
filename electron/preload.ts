@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { InstalledPluginRecord } from '../src/plugins/package'
 
 interface LanServerDescriptor {
     id: string
@@ -33,7 +34,15 @@ contextBridge.exposeInMainWorld('electron', {
     discoverLanServers: (timeoutMs?: number): Promise<LanServerDescriptor[]> =>
         ipcRenderer.invoke('discover-lan-servers', timeoutMs),
     exportDocumentPdf: (payload: ExportPdfPayload): Promise<ExportPdfResult> =>
-        ipcRenderer.invoke('export-document-pdf', payload)
+        ipcRenderer.invoke('export-document-pdf', payload),
+    installPluginPackage: (sourcePath?: string): Promise<InstalledPluginRecord> =>
+        ipcRenderer.invoke('install-plugin-package', sourcePath),
+    listInstalledPlugins: (): Promise<InstalledPluginRecord[]> =>
+        ipcRenderer.invoke('list-installed-plugins'),
+    setInstalledPluginEnabled: (pluginId: string, enabled: boolean): Promise<InstalledPluginRecord> =>
+        ipcRenderer.invoke('set-installed-plugin-enabled', pluginId, enabled),
+    removeInstalledPlugin: (pluginId: string): Promise<void> =>
+        ipcRenderer.invoke('remove-installed-plugin', pluginId)
 })
 
 declare global {
@@ -45,6 +54,10 @@ declare global {
             openExternal: (url: string) => void
             discoverLanServers: (timeoutMs?: number) => Promise<LanServerDescriptor[]>
             exportDocumentPdf: (payload: ExportPdfPayload) => Promise<ExportPdfResult>
+            installPluginPackage: (sourcePath?: string) => Promise<InstalledPluginRecord>
+            listInstalledPlugins: () => Promise<InstalledPluginRecord[]>
+            setInstalledPluginEnabled: (pluginId: string, enabled: boolean) => Promise<InstalledPluginRecord>
+            removeInstalledPlugin: (pluginId: string) => Promise<void>
         }
     }
 }

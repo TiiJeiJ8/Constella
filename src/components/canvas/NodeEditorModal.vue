@@ -281,7 +281,7 @@ import katex from 'katex'
 import mermaid from 'mermaid'
 import type { MermaidConfig } from 'mermaid'
 // @ts-ignore
-import { pluginRegistry, type NodeContent } from '@/plugins'
+import { pluginCatalogVersion, pluginRegistry, type NodeContent } from '@/plugins'
 import DocumentExportPanel from '@/components/canvas/DocumentExportPanel.vue'
 import {
     exportDocument,
@@ -698,7 +698,10 @@ function isHeavyBlock(text: string): boolean {
     return /```|^\$\$|^\|.*\|$/m.test(text) || text.length > 600
 }
 
-const pluginMeta = computed(() => pluginRegistry.getMeta(props.content.kind))
+const pluginMeta = computed(() => {
+    pluginCatalogVersion.value
+    return pluginRegistry.getMeta(props.content.kind)
+})
 const isMarkdown = computed(() => props.content.kind === 'markdown')
 const effectiveViewMode = computed<EditorViewMode>(() => {
     if (!isMarkdown.value) return 'edit'

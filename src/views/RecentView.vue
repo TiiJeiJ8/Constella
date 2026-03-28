@@ -5,6 +5,7 @@
         
         <!-- 设置面板 -->
         <SettingsPanel v-model="showSettings" />
+        <PluginPanel v-model="showPlugins" />
 
         <!-- 加入房间对话框 -->
         <JoinRoomDialog
@@ -19,6 +20,7 @@
                 current-view="recent"
                 @navigate="handleNavigate"
                 @openSettings="showSettings = true"
+                @openPlugins="showPlugins = true"
             />
         </div>
 
@@ -85,6 +87,7 @@ import { useI18n } from 'vue-i18n'
 import Dock from '@/components/base/Dock.vue'
 import RoomCardSkeleton from '@/components/rooms/RoomCardSkeleton.vue'
 import SettingsPanel from '@/components/base/SettingsPanel.vue'
+import PluginPanel from '@/components/plugins/PluginPanel.vue'
 import WindowControls from '@/components/base/WindowControls.vue'
 import RoomCard from '@/components/rooms/RoomCard.vue'
 import JoinRoomDialog from '@/components/rooms/JoinRoomDialog.vue'
@@ -101,6 +104,7 @@ const error = ref(null)
 const recentRooms = ref([])
 const searchQuery = ref('')
 const showSettings = ref(false)
+const showPlugins = ref(false)
 const showJoinDialog = ref(false)
 const selectedRoom = ref(null)
 

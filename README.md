@@ -5,7 +5,7 @@
 
 [中文](./README.md) | [English](./README-en.md)
 
-[后端核心服务](https://github.com/TiiJeiJ8/Constella_CORE) | [用户指南](docs/USER_GUIDE.md) | [编辑器指南](docs/EDITOR_GUIDE.md) | [插件开发](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_3.0.md)
+[后端核心服务](https://github.com/TiiJeiJ8/Constella_CORE) | [用户指南](docs/USER_GUIDE.md) | [编辑器指南](docs/EDITOR_GUIDE.md) | [插件开发](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_4.0.md)
 
 <br />
 
@@ -67,10 +67,25 @@
 
 - 🧭 无限画布：节点、连线、拖拽、缩放
 - 🤝 实时协作：多人同步编辑与状态共享
-- 🧩 插件化节点系统：Text / Markdown / Image / Hyperlink 等
+- 🧩 插件化节点系统：Text / Markdown / Image / Hyperlink 等，支持节点插件导入
 - 🔐 房间机制：公开 / 私有房间基础能力
 - 🌍 国际化与主题：中英文切换、亮色 / 暗色
 - 💾 数据持久化：IndexedDB（Web）+ electron-store（桌面端）
+
+## 插件开发与导入安装
+
+Constella 现已同时支持内置节点插件与可安装运行时插件。
+
+- 内置插件位于 `src/plugins/`
+- 开发阶段推荐直接导入完整插件文件夹
+- 分发阶段推荐使用 `.constella-plugin` 安装包，也兼容 `.zip`
+- `manifest.json` 是插件目录入口文件，不是独立插件包
+- Electron 中的插件面板支持拖拽导入，也支持点击拖拽区打开选择器
+
+相关文档：
+
+- [插件安装包格式](docs/PLUGIN_PACKAGE_FORMAT.md)
+- [插件开发架构 4.0](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_4.0.md)
 
 ## 🖼️ 界面展示
 
@@ -107,6 +122,14 @@
 <summary> 编辑器演示 </summary>
 
 ![Editor Demo](IMG/editorwindow.jpg)
+
+</details>
+
+<details>
+<summary> 插件面板 </summary>
+
+![Plugin Panel](IMG/plugin_panel.jpg)
+![Plugin Setting Panel](IMG/plugin_panel_setting_panel.jpg)
 
 </details>
 

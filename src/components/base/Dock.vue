@@ -44,6 +44,13 @@
             </button>
             <button
                 class="dock-item"
+                :title="locale.value === 'zh-CN' ? '插件' : 'Plugins'"
+                @click="openPlugins"
+            >
+                <span class="dock-icon">🏪</span>
+            </button>
+            <button
+                class="dock-item"
                 :title="t('dock.settings')"
                 @click="openSettings"
             >
@@ -91,7 +98,7 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['navigate', 'openSettings', 'logout', 'disconnect'])
+const emit = defineEmits(['navigate', 'openSettings', 'openPlugins', 'logout', 'disconnect'])
 
 // 从 localStorage 读取用户信息
 const settings = JSON.parse(localStorage.getItem('settings') || '{}')
@@ -174,6 +181,10 @@ function toggleTheme() {
 // 打开设置面板
 function openSettings() {
     emit('openSettings')
+}
+
+function openPlugins() {
+    emit('openPlugins')
 }
 
 // 切换退出菜单
