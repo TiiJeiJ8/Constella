@@ -13,7 +13,7 @@
                     <div class="header-section">
                         <h1 class="title" style="user-select: none;">{{ t('about.title') }}</h1>
                         <p class="subtitle" style="user-select: none;">{{ t('about.subtitle') }}</p>
-                        <p class="version" style="user-select: none;">{{ t('about.version') }}: 1.0.1</p>
+                        <p class="version" style="user-select: none;">{{ t('about.version') }}: 1.1.0</p>
                     </div>
 
                     <div class="description-section">
