@@ -1,0 +1,10 @@
+{
+  "canvas": {
+    "nodeTypes": {
+      "notice-card": "Notice Card"
+    },
+    "nodeTypeDesc": {
+      "notice-card": "A card node for title-and-message notices"
+    }
+  }
+}

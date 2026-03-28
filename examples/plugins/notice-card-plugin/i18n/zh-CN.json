@@ -1,0 +1,10 @@
+{
+  "canvas": {
+    "nodeTypes": {
+      "notice-card": "通知卡片"
+    },
+    "nodeTypeDesc": {
+      "notice-card": "用于展示标题与正文提示信息的卡片节点"
+    }
+  }
+}

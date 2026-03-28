@@ -325,34 +325,49 @@ async function extractArchiveToDirectory(archivePath: string, destinationDir: st
     await fs.promises.rm(destinationDir, { recursive: true, force: true })
     await fs.promises.mkdir(destinationDir, { recursive: true })
 
-    await new Promise<void>((resolve, reject) => {
-        const command = [
-            'Expand-Archive',
-            '-LiteralPath',
-            `'${archivePath.replace(/'/g, "''")}'`,
-            '-DestinationPath',
-            `'${destinationDir.replace(/'/g, "''")}'`,
-            '-Force'
-        ].join(' ')
+    const needsZipAlias = path.extname(archivePath).toLowerCase() !== '.zip'
+    const extractionArchivePath = needsZipAlias
+        ? path.join(path.dirname(destinationDir), `${path.basename(destinationDir)}.zip`)
+        : archivePath
 
-        const child = spawn('powershell', ['-NoProfile', '-Command', command], {
-            windowsHide: true
-        })
+    if (needsZipAlias) {
+        await fs.promises.copyFile(archivePath, extractionArchivePath)
+    }
 
-        let stderr = ''
-        child.stderr.on('data', chunk => {
-            stderr += chunk.toString()
-        })
+    try {
+        await new Promise<void>((resolve, reject) => {
+            const command = [
+                'Expand-Archive',
+                '-LiteralPath',
+                `'${extractionArchivePath.replace(/'/g, "''")}'`,
+                '-DestinationPath',
+                `'${destinationDir.replace(/'/g, "''")}'`,
+                '-Force'
+            ].join(' ')
 
-        child.on('error', reject)
-        child.on('exit', code => {
-            if (code === 0) {
-                resolve()
-                return
-            }
-            reject(new Error(stderr || `Expand-Archive failed with exit code ${code}`))
+            const child = spawn('powershell', ['-NoProfile', '-Command', command], {
+                windowsHide: true
+            })
+
+            let stderr = ''
+            child.stderr.on('data', chunk => {
+                stderr += chunk.toString()
+            })
+
+            child.on('error', reject)
+            child.on('exit', code => {
+                if (code === 0) {
+                    resolve()
+                    return
+                }
+                reject(new Error(stderr || `Expand-Archive failed with exit code ${code}`))
+            })
         })
-    })
+    } finally {
+        if (needsZipAlias) {
+            await fs.promises.rm(extractionArchivePath, { force: true })
+        }
+    }
 }
 
 async function resolvePluginSourceSelection(ownerWindow: BrowserWindow | null): Promise<{

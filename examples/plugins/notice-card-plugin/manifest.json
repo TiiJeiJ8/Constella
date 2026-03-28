@@ -1,0 +1,26 @@
+{
+  "id": "dev.constella.notice-card",
+  "name": "Notice Card Plugin",
+  "version": "1.0.0",
+  "description": "A simple installable example plugin that renders a notice card with title and message.",
+  "author": "Constella Example",
+  "engine": {
+    "constella": "^1.1.0"
+  },
+  "nodes": [
+    {
+      "kind": "notice-card",
+      "label": "Notice Card",
+      "description": "Display a title and message inside a highlighted notice panel",
+      "renderer": "dist/renderer.js",
+      "editor": "dist/editor.js",
+      "editable": true,
+      "supportsCardMode": true
+    }
+  ],
+  "i18n": {
+    "zh-CN": "i18n/zh-CN.json",
+    "en-US": "i18n/en-US.json"
+  },
+  "permissions": []
+}
