@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { InstalledPluginRecord } from '../src/plugins/package'
+import type { DevelopmentPluginRecord, InstalledPluginRecord } from '../src/plugins/package'
 
 interface LanServerDescriptor {
     id: string
@@ -37,12 +37,20 @@ contextBridge.exposeInMainWorld('electron', {
         ipcRenderer.invoke('export-document-pdf', payload),
     installPluginPackage: (sourcePath?: string): Promise<InstalledPluginRecord> =>
         ipcRenderer.invoke('install-plugin-package', sourcePath),
+    addDevelopmentPlugin: (sourcePath?: string): Promise<DevelopmentPluginRecord> =>
+        ipcRenderer.invoke('add-development-plugin', sourcePath),
     listInstalledPlugins: (): Promise<InstalledPluginRecord[]> =>
         ipcRenderer.invoke('list-installed-plugins'),
+    listDevelopmentPlugins: (): Promise<DevelopmentPluginRecord[]> =>
+        ipcRenderer.invoke('list-development-plugins'),
     setInstalledPluginEnabled: (pluginId: string, enabled: boolean): Promise<InstalledPluginRecord> =>
         ipcRenderer.invoke('set-installed-plugin-enabled', pluginId, enabled),
+    setDevelopmentPluginEnabled: (pluginId: string, enabled: boolean): Promise<DevelopmentPluginRecord> =>
+        ipcRenderer.invoke('set-development-plugin-enabled', pluginId, enabled),
     removeInstalledPlugin: (pluginId: string): Promise<void> =>
-        ipcRenderer.invoke('remove-installed-plugin', pluginId)
+        ipcRenderer.invoke('remove-installed-plugin', pluginId),
+    removeDevelopmentPlugin: (pluginId: string): Promise<void> =>
+        ipcRenderer.invoke('remove-development-plugin', pluginId)
 })
 
 declare global {
@@ -55,9 +63,13 @@ declare global {
             discoverLanServers: (timeoutMs?: number) => Promise<LanServerDescriptor[]>
             exportDocumentPdf: (payload: ExportPdfPayload) => Promise<ExportPdfResult>
             installPluginPackage: (sourcePath?: string) => Promise<InstalledPluginRecord>
+            addDevelopmentPlugin: (sourcePath?: string) => Promise<DevelopmentPluginRecord>
             listInstalledPlugins: () => Promise<InstalledPluginRecord[]>
+            listDevelopmentPlugins: () => Promise<DevelopmentPluginRecord[]>
             setInstalledPluginEnabled: (pluginId: string, enabled: boolean) => Promise<InstalledPluginRecord>
+            setDevelopmentPluginEnabled: (pluginId: string, enabled: boolean) => Promise<DevelopmentPluginRecord>
             removeInstalledPlugin: (pluginId: string) => Promise<void>
+            removeDevelopmentPlugin: (pluginId: string) => Promise<void>
         }
     }
 }

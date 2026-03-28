@@ -3,7 +3,7 @@
  * 管理节点类型插件的注册和获取
  */
 import { markRaw, ref, type Component } from 'vue'
-import type { InstalledPluginRecord } from './package'
+import type { DevelopmentPluginRecord, InstalledPluginRecord } from './package'
 
 /**
  * 节点内容类型 - 支持动态扩展
@@ -91,6 +91,8 @@ class PluginRegistry {
     private plugins: Map<string, NodePlugin> = new Map()
     private fallbackPlugin: NodePlugin | null = null
     private installedPlugins: InstalledPluginRecord[] = []
+    private developmentPlugins: DevelopmentPluginRecord[] = []
+    private builtinKinds: Set<string> = new Set()
 
     /**
      * 注册插件
@@ -169,6 +171,17 @@ class PluginRegistry {
         return Array.from(this.plugins.values()).map(p => p.meta)
     }
 
+    setBuiltinKinds(kinds: string[]): void {
+        this.builtinKinds = new Set(kinds)
+        pluginCatalogVersion.value += 1
+    }
+
+    getBuiltinMeta(): PluginMeta[] {
+        return Array.from(this.plugins.values())
+            .filter(plugin => this.builtinKinds.has(plugin.meta.kind))
+            .map(plugin => plugin.meta)
+    }
+
     /**
      * 缓存已安装插件目录信息，供后续市集/运行时加载使用
      */
@@ -184,6 +197,15 @@ class PluginRegistry {
         return [...this.installedPlugins]
     }
 
+    setDevelopmentPlugins(plugins: DevelopmentPluginRecord[]): void {
+        this.developmentPlugins = [...plugins]
+        pluginCatalogVersion.value += 1
+    }
+
+    getDevelopmentPlugins(): DevelopmentPluginRecord[] {
+        return [...this.developmentPlugins]
+    }
+
     /**
      * 清空所有已注册的插件（用于测试或重新加载）
      */
@@ -191,6 +213,8 @@ class PluginRegistry {
         this.plugins.clear()
         this.fallbackPlugin = null
         this.installedPlugins = []
+        this.developmentPlugins = []
+        this.builtinKinds.clear()
         pluginCatalogVersion.value += 1
     }
 }

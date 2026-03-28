@@ -1,7 +1,12 @@
 import { computed, defineAsyncComponent, h, ref, type Component } from 'vue'
 import { i18n } from '@/locales'
 import { pluginRegistry, type NodePlugin, type PluginI18nMessages } from './index'
-import type { InstalledPluginRecord, PluginPackageNodeManifest } from './package'
+import type {
+    DevelopmentPluginRecord,
+    InstalledPluginRecord,
+    PluginPackageManifest,
+    PluginPackageNodeManifest
+} from './package'
 
 declare global {
     interface Window {
@@ -95,6 +100,33 @@ async function loadPluginI18nBundle(installedPlugin: InstalledPluginRecord): Pro
     return Object.keys(messages).length > 0 ? messages : undefined
 }
 
+async function loadExternalPluginI18nBundle(
+    pluginId: string,
+    baseDir: string,
+    manifest: PluginPackageManifest
+): Promise<PluginI18nMessages | undefined> {
+    const manifestI18n = manifest.i18n
+    if (!manifestI18n) return undefined
+
+    const localeEntries = await Promise.all(
+        Object.entries(manifestI18n).map(async ([locale, relativePath]) => {
+            try {
+                const response = await fetch(pathToFileUrl(joinPluginFilePath(baseDir, relativePath)))
+                if (!response.ok) {
+                    throw new Error(`Failed to load i18n file: ${relativePath}`)
+                }
+                return [locale, await response.json()] as const
+            } catch (error) {
+                console.warn(`[Plugins] Failed to load plugin i18n ${pluginId}:${locale}`, error)
+                return null
+            }
+        })
+    )
+
+    const messages = Object.fromEntries(localeEntries.filter((entry): entry is readonly [string, Record<string, any>] => Boolean(entry)))
+    return Object.keys(messages).length > 0 ? messages : undefined
+}
+
 function mergePluginI18n(messages?: PluginI18nMessages) {
     if (!messages) return
 
@@ -144,6 +176,58 @@ export async function registerInstalledPluginsRuntime(installedPlugins: Installe
             }
 
             pluginRegistry.register(buildRuntimePlugin(installedPlugin, nodeManifest))
+        }
+    }
+}
+
+function buildDevelopmentRuntimePlugin(
+    developmentPlugin: DevelopmentPluginRecord,
+    nodeManifest: PluginPackageNodeManifest
+): NodePlugin {
+    return {
+        meta: {
+            kind: nodeManifest.kind,
+            label: nodeManifest.label,
+            icon: nodeManifest.icon || 'D',
+            description: nodeManifest.description,
+            editable: nodeManifest.editable ?? Boolean(nodeManifest.editor),
+            supportsCardMode: nodeManifest.supportsCardMode ?? false,
+            supportsFontSizeControl: nodeManifest.supportsFontSizeControl
+        },
+        renderer: createAsyncPluginComponent(
+            joinPluginFilePath(developmentPlugin.sourcePath, nodeManifest.renderer),
+            ['renderer', 'RendererComponent', 'default']
+        ),
+        editor: nodeManifest.editor
+            ? createAsyncPluginComponent(
+                joinPluginFilePath(developmentPlugin.sourcePath, nodeManifest.editor),
+                ['editor', 'EditorComponent', 'default']
+            )
+            : undefined
+    }
+}
+
+export async function registerDevelopmentPluginsRuntime(developmentPlugins: DevelopmentPluginRecord[]): Promise<void> {
+    ensureRuntimePluginGlobals()
+    const enabledPlugins = developmentPlugins.filter(plugin => plugin.enabled)
+
+    for (const developmentPlugin of enabledPlugins) {
+        const pluginI18n = await loadExternalPluginI18nBundle(
+            developmentPlugin.id,
+            developmentPlugin.sourcePath,
+            developmentPlugin.manifest
+        )
+        mergePluginI18n(pluginI18n)
+
+        for (const nodeManifest of developmentPlugin.manifest.nodes) {
+            if (pluginRegistry.has(nodeManifest.kind)) {
+                console.warn(
+                    `[Plugins] Skipping development plugin kind "${nodeManifest.kind}" from ${developmentPlugin.id} because it is already registered`
+                )
+                continue
+            }
+
+            pluginRegistry.register(buildDevelopmentRuntimePlugin(developmentPlugin, nodeManifest))
         }
     }
 }

@@ -6,9 +6,10 @@ import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 import { spawn, ChildProcess } from 'child_process'
 import Bonjour, { Service } from 'bonjour-service'
-import type { InstalledPluginRecord, PluginPackageManifest } from '../src/plugins/package'
+import type { DevelopmentPluginRecord, InstalledPluginRecord, PluginPackageManifest } from '../src/plugins/package'
 import {
     PLUGIN_ARCHIVE_EXTENSION,
+    PLUGIN_DEVELOPMENT_FILE,
     PLUGIN_INSTALLATION_FILE,
     PLUGIN_MANIFEST_FILE
 } from '../src/plugins/package'
@@ -55,6 +56,13 @@ interface PluginInstallationPayload {
     archivePath?: string
 }
 
+interface DevelopmentPluginPayload {
+    id: string
+    sourcePath: string
+    addedAt: string
+    enabled: boolean
+}
+
 let mainWindow: BrowserWindow | null = null
 let serverProcess: ChildProcess | null = null
 
@@ -75,6 +83,10 @@ function getInstalledPluginRootDir(): string {
 
 function getPluginArchiveRootDir(): string {
     return ensureDir(path.join(getPluginRootDir(), PLUGIN_ARCHIVE_DIR))
+}
+
+function getDevelopmentPluginStatePath(): string {
+    return path.join(getPluginRootDir(), PLUGIN_DEVELOPMENT_FILE)
 }
 
 function sanitizeSegment(value: string): string {
@@ -215,6 +227,82 @@ async function writeInstalledPluginRecord(
     }
 }
 
+async function readDevelopmentPluginState(): Promise<DevelopmentPluginPayload[]> {
+    const statePath = getDevelopmentPluginStatePath()
+    if (!fs.existsSync(statePath)) {
+        return []
+    }
+
+    try {
+        const raw = JSON.parse(await fs.promises.readFile(statePath, 'utf8'))
+        if (!Array.isArray(raw)) {
+            return []
+        }
+
+        return raw
+            .filter((entry): entry is DevelopmentPluginPayload => isPlainObject(entry))
+            .map((entry) => ({
+                id: String(entry.id || '').trim(),
+                sourcePath: String(entry.sourcePath || '').trim(),
+                addedAt: String(entry.addedAt || '').trim(),
+                enabled: entry.enabled !== false
+            }))
+            .filter(entry => Boolean(entry.id && entry.sourcePath))
+    } catch (error) {
+        console.warn('[Electron] Failed to read development plugin state:', error)
+        return []
+    }
+}
+
+async function writeDevelopmentPluginState(entries: DevelopmentPluginPayload[]): Promise<void> {
+    const statePath = getDevelopmentPluginStatePath()
+    await fs.promises.writeFile(statePath, JSON.stringify(entries, null, 2), 'utf8')
+}
+
+async function createDevelopmentPluginRecord(payload: DevelopmentPluginPayload): Promise<DevelopmentPluginRecord> {
+    const manifestPath = path.join(payload.sourcePath, PLUGIN_MANIFEST_FILE)
+    if (!fs.existsSync(manifestPath)) {
+        throw new Error(`Missing ${PLUGIN_MANIFEST_FILE} in development plugin directory`)
+    }
+
+    const manifest = await readPluginManifest(manifestPath)
+
+    if (manifest.id !== payload.id) {
+        throw new Error(`Development plugin id mismatch for ${payload.sourcePath}`)
+    }
+
+    return {
+        id: manifest.id,
+        name: manifest.name,
+        version: manifest.version,
+        description: manifest.description,
+        author: manifest.author,
+        homepage: manifest.homepage,
+        enabled: payload.enabled,
+        addedAt: payload.addedAt,
+        sourcePath: payload.sourcePath,
+        manifest
+    }
+}
+
+async function listDevelopmentPluginsInternal(): Promise<DevelopmentPluginRecord[]> {
+    const state = await readDevelopmentPluginState()
+    const developmentPlugins = await Promise.all(
+        state.map(async (entry) => {
+            try {
+                return await createDevelopmentPluginRecord(entry)
+            } catch (error) {
+                console.warn(`[Electron] Failed to load development plugin ${entry.sourcePath}:`, error)
+                return null
+            }
+        })
+    )
+
+    return developmentPlugins
+        .filter((plugin): plugin is DevelopmentPluginRecord => Boolean(plugin))
+        .sort((left, right) => left.name.localeCompare(right.name))
+}
+
 async function listInstalledPluginsInternal(): Promise<InstalledPluginRecord[]> {
     const rootDir = getInstalledPluginRootDir()
     const entries = await fs.promises.readdir(rootDir, { withFileTypes: true })
@@ -275,10 +363,9 @@ async function resolvePluginSourceSelection(ownerWindow: BrowserWindow | null): 
         title: 'Install Constella Plugin',
         buttonLabel: 'Install',
         filters: [
-            { name: 'Constella Plugin Archive', extensions: [PLUGIN_ARCHIVE_EXTENSION.slice(1), 'zip'] },
-            { name: 'Plugin Manifest', extensions: ['json'] }
+            { name: 'Constella Plugin Archive', extensions: [PLUGIN_ARCHIVE_EXTENSION.slice(1), 'zip'] }
         ],
-        properties: ['openFile', 'openDirectory']
+        properties: ['openFile']
     })
 
     if (result.canceled || result.filePaths.length === 0) {
@@ -296,6 +383,20 @@ async function resolvePluginSourceSelection(ownerWindow: BrowserWindow | null): 
                 ? 'manifest'
                 : 'archive'
     }
+}
+
+async function resolveDevelopmentPluginSelection(ownerWindow: BrowserWindow | null): Promise<string> {
+    const result = await dialog.showOpenDialog(ownerWindow ?? undefined, {
+        title: 'Load Development Plugin',
+        buttonLabel: 'Load',
+        properties: ['openDirectory']
+    })
+
+    if (result.canceled || result.filePaths.length === 0) {
+        throw new Error('Development plugin loading cancelled')
+    }
+
+    return result.filePaths[0]
 }
 
 async function resolvePluginSourceByPath(sourcePath: string): Promise<{
@@ -395,6 +496,64 @@ async function removeInstalledPluginInternal(pluginId: string): Promise<void> {
     }
 
     await fs.promises.rm(targetPlugin.installDir, { recursive: true, force: true })
+}
+
+async function addDevelopmentPluginInternal(ownerWindow: BrowserWindow | null, explicitSourcePath?: string): Promise<DevelopmentPluginRecord> {
+    const sourcePath = explicitSourcePath || await resolveDevelopmentPluginSelection(ownerWindow)
+    const stats = await fs.promises.stat(sourcePath)
+
+    if (!stats.isDirectory()) {
+        throw new Error('Development plugin source must be a directory')
+    }
+
+    const manifestPath = path.join(sourcePath, PLUGIN_MANIFEST_FILE)
+    if (!fs.existsSync(manifestPath)) {
+        throw new Error(`Missing ${PLUGIN_MANIFEST_FILE} in development plugin directory`)
+    }
+
+    const manifest = await readPluginManifest(manifestPath)
+    const state = await readDevelopmentPluginState()
+    const nextEntry: DevelopmentPluginPayload = {
+        id: manifest.id,
+        sourcePath,
+        addedAt: new Date().toISOString(),
+        enabled: true
+    }
+
+    const filteredState = state.filter(entry => entry.id !== manifest.id)
+    filteredState.push(nextEntry)
+    await writeDevelopmentPluginState(filteredState)
+
+    return await createDevelopmentPluginRecord(nextEntry)
+}
+
+async function updateDevelopmentPluginEnabledState(pluginId: string, enabled: boolean): Promise<DevelopmentPluginRecord> {
+    const state = await readDevelopmentPluginState()
+    const targetIndex = state.findIndex(entry => entry.id === pluginId)
+
+    if (targetIndex < 0) {
+        throw new Error(`Development plugin not found: ${pluginId}`)
+    }
+
+    const nextEntry: DevelopmentPluginPayload = {
+        ...state[targetIndex],
+        enabled
+    }
+
+    state[targetIndex] = nextEntry
+    await writeDevelopmentPluginState(state)
+    return await createDevelopmentPluginRecord(nextEntry)
+}
+
+async function removeDevelopmentPluginInternal(pluginId: string): Promise<void> {
+    const state = await readDevelopmentPluginState()
+    const nextState = state.filter(entry => entry.id !== pluginId)
+
+    if (nextState.length === state.length) {
+        throw new Error(`Development plugin not found: ${pluginId}`)
+    }
+
+    await writeDevelopmentPluginState(nextState)
 }
 
 function createWindow() {
@@ -888,11 +1047,30 @@ ipcMain.handle('install-plugin-package', async (event, sourcePath?: string) => {
     }
 })
 
+ipcMain.handle('add-development-plugin', async (event, sourcePath?: string) => {
+    try {
+        const ownerWindow = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
+        return await addDevelopmentPluginInternal(ownerWindow, sourcePath)
+    } catch (error) {
+        console.error('[Electron] Failed to add development plugin:', error)
+        throw error
+    }
+})
+
 ipcMain.handle('list-installed-plugins', async () => {
     try {
         return await listInstalledPluginsInternal()
     } catch (error) {
         console.error('[Electron] Failed to list installed plugins:', error)
+        return []
+    }
+})
+
+ipcMain.handle('list-development-plugins', async () => {
+    try {
+        return await listDevelopmentPluginsInternal()
+    } catch (error) {
+        console.error('[Electron] Failed to list development plugins:', error)
         return []
     }
 })
@@ -906,11 +1084,29 @@ ipcMain.handle('set-installed-plugin-enabled', async (_event, pluginId: string, 
     }
 })
 
+ipcMain.handle('set-development-plugin-enabled', async (_event, pluginId: string, enabled: boolean) => {
+    try {
+        return await updateDevelopmentPluginEnabledState(pluginId, enabled)
+    } catch (error) {
+        console.error('[Electron] Failed to update development plugin enabled state:', error)
+        throw error
+    }
+})
+
 ipcMain.handle('remove-installed-plugin', async (_event, pluginId: string) => {
     try {
         await removeInstalledPluginInternal(pluginId)
     } catch (error) {
         console.error('[Electron] Failed to remove plugin:', error)
+        throw error
+    }
+})
+
+ipcMain.handle('remove-development-plugin', async (_event, pluginId: string) => {
+    try {
+        await removeDevelopmentPluginInternal(pluginId)
+    } catch (error) {
+        console.error('[Electron] Failed to remove development plugin:', error)
         throw error
     }
 })

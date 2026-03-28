@@ -5,41 +5,68 @@
                 <h3 class="plugin-pane-title">{{ text.title }}</h3>
                 <p class="plugin-pane-subtitle">{{ text.description }}</p>
             </div>
-            <button class="plugin-btn plugin-btn-muted plugin-refresh-btn" :disabled="busy" @click="refreshCatalog">
+            <button class="plugin-btn plugin-btn-muted plugin-refresh-btn" :disabled="busy" @click="syncPluginRuntime">
                 {{ text.refresh }}
             </button>
         </div>
 
-        <div
-            v-if="supportsPluginManagement"
-            class="plugin-dropzone"
-            :class="dropzoneClass"
-            @click="openPicker"
-            @dragenter.prevent="handleDragEnter"
-            @dragover.prevent="handleDragOver"
-            @dragleave.prevent="handleDragLeave"
-            @drop.prevent="handleDrop"
-        >
-            <div class="plugin-dropzone-sidebar">
-                <div class="plugin-dropzone-badge">{{ dropzoneBadge }}</div>
-                <div class="plugin-dropzone-emblem">
-                    <div class="plugin-dropzone-emblem-core">
-                        <span class="plugin-dropzone-emblem-line plugin-dropzone-emblem-line-v"></span>
-                        <span class="plugin-dropzone-emblem-line plugin-dropzone-emblem-line-h"></span>
+        <div v-if="supportsPluginManagement" class="plugin-actions-grid">
+            <button
+                type="button"
+                class="plugin-import-panel"
+                :class="{ 'is-busy': busy }"
+                :disabled="busy"
+                @click="openPackagePicker"
+            >
+                <div class="plugin-import-sidebar">
+                    <div class="plugin-import-badge">{{ text.packageBadge }}</div>
+                    <div class="plugin-import-emblem">
+                        <div class="plugin-import-emblem-core">
+                            <span class="plugin-import-emblem-line plugin-import-emblem-line-v"></span>
+                            <span class="plugin-import-emblem-line plugin-import-emblem-line-h"></span>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="plugin-dropzone-main">
-                <div class="plugin-dropzone-title">{{ dropzoneTitle }}</div>
-                <div class="plugin-dropzone-description">{{ text.dropDescription }}</div>
-                <div class="plugin-dropzone-pills">
-                    <span class="plugin-drop-pill">{{ text.dropPillFolder }}</span>
-                    <span class="plugin-drop-pill">{{ text.dropPillArchive }}</span>
-                    <span class="plugin-drop-pill">{{ text.dropPillClick }}</span>
+                <div class="plugin-import-main">
+                    <div class="plugin-import-title">{{ busy ? text.packageTitleBusy : text.packageTitle }}</div>
+                    <div class="plugin-import-description">{{ text.packageDescription }}</div>
+                    <div class="plugin-import-pills">
+                        <span class="plugin-import-pill">{{ text.packagePillPrimary }}</span>
+                        <span class="plugin-import-pill">{{ text.packagePillCompat }}</span>
+                    </div>
+                    <div class="plugin-import-hint">{{ text.packageHint }}</div>
                 </div>
-                <div class="plugin-dropzone-hint">{{ dropzoneHint }}</div>
-            </div>
+            </button>
+
+            <button
+                v-if="developerMode"
+                type="button"
+                class="plugin-import-panel plugin-import-panel-dev"
+                :class="{ 'is-busy': busy }"
+                :disabled="busy"
+                @click="openDevelopmentPicker"
+            >
+                <div class="plugin-import-sidebar">
+                    <div class="plugin-import-badge plugin-import-badge-dev">{{ text.developmentBadge }}</div>
+                    <div class="plugin-import-emblem plugin-import-emblem-dev">
+                        <div class="plugin-import-emblem-core">
+                            <span class="plugin-import-emblem-line plugin-import-emblem-line-v"></span>
+                            <span class="plugin-import-emblem-line plugin-import-emblem-line-h"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="plugin-import-main">
+                    <div class="plugin-import-title">{{ busy ? text.developmentTitleBusy : text.developmentTitle }}</div>
+                    <div class="plugin-import-description">{{ text.developmentDescription }}</div>
+                    <div class="plugin-import-pills">
+                        <span class="plugin-import-pill">{{ text.developmentPillFolder }}</span>
+                        <span class="plugin-import-pill">{{ text.developmentPillManifest }}</span>
+                    </div>
+                    <div class="plugin-import-hint">{{ text.developmentHint }}</div>
+                </div>
+            </button>
         </div>
 
         <div v-if="errorMessage" class="plugin-callout plugin-callout-error">{{ errorMessage }}</div>
@@ -78,6 +105,53 @@
             </div>
         </div>
 
+        <div v-if="developerMode" class="plugin-section">
+            <div class="plugin-section-head">
+                <h4>{{ text.developmentListTitle }}</h4>
+                <span class="plugin-count">{{ developmentPlugins.length }}</span>
+            </div>
+
+            <div v-if="developmentPlugins.length > 0" class="plugin-grid">
+                <article v-for="plugin in developmentPlugins" :key="`${plugin.id}:${plugin.sourcePath}`" class="plugin-card plugin-card-dev">
+                    <div class="plugin-card-row plugin-card-row-top">
+                        <div>
+                            <div class="plugin-name">{{ plugin.name }}</div>
+                            <div class="plugin-kind">{{ plugin.id }}</div>
+                        </div>
+                        <label class="plugin-toggle">
+                            <input
+                                type="checkbox"
+                                :checked="plugin.enabled"
+                                :disabled="busy"
+                                @change="toggleDevelopmentPlugin(plugin.id, ($event.target as HTMLInputElement).checked)"
+                            />
+                            <span class="plugin-toggle-track"></span>
+                        </label>
+                    </div>
+
+                    <div class="plugin-meta-line">
+                        <span>v{{ plugin.version }}</span>
+                        <span>{{ text.source }}: {{ text.developmentSource }}</span>
+                    </div>
+
+                    <p v-if="plugin.description" class="plugin-description">{{ plugin.description }}</p>
+
+                    <div class="plugin-meta-stack">
+                        <div>{{ text.author }}: {{ plugin.author || '-' }}</div>
+                        <div>{{ text.addedAt }}: {{ formatInstalledTime(plugin.addedAt) }}</div>
+                        <div>{{ text.path }}: {{ plugin.sourcePath }}</div>
+                        <div>{{ text.nodeKinds }}: {{ plugin.manifest.nodes.map(node => node.kind).join(', ') }}</div>
+                    </div>
+
+                    <div class="plugin-card-actions">
+                        <button class="plugin-btn plugin-btn-danger" :disabled="busy" @click="removeDevelopment(plugin.id, plugin.name)">
+                            {{ text.remove }}
+                        </button>
+                    </div>
+                </article>
+            </div>
+        </div>
+
         <div class="plugin-section">
             <div class="plugin-section-head">
                 <h4>{{ text.installedTitle }}</h4>
@@ -96,7 +170,7 @@
                                 type="checkbox"
                                 :checked="plugin.enabled"
                                 :disabled="busy"
-                                @change="togglePlugin(plugin.id, ($event.target as HTMLInputElement).checked)"
+                                @change="toggleInstalledPlugin(plugin.id, ($event.target as HTMLInputElement).checked)"
                             />
                             <span class="plugin-toggle-track"></span>
                         </label>
@@ -104,7 +178,7 @@
 
                     <div class="plugin-meta-line">
                         <span>v{{ plugin.version }}</span>
-                        <span>{{ text.source }}: {{ plugin.source }}</span>
+                        <span>{{ text.source }}: {{ plugin.source === 'archive' ? text.packageSource : text.directorySource }}</span>
                     </div>
 
                     <p v-if="plugin.description" class="plugin-description">{{ plugin.description }}</p>
@@ -116,7 +190,7 @@
                     </div>
 
                     <div class="plugin-card-actions">
-                        <button class="plugin-btn plugin-btn-danger" :disabled="busy" @click="removePlugin(plugin.id, plugin.name)">
+                        <button class="plugin-btn plugin-btn-danger" :disabled="busy" @click="removeInstalled(plugin.id, plugin.name)">
                             {{ text.remove }}
                         </button>
                     </div>
@@ -127,150 +201,121 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { getPluginsMeta, pluginCatalogVersion, type PluginMeta } from '@/plugins'
+import { pluginCatalogVersion, pluginRegistry, type PluginMeta } from '@/plugins'
 import { reloadPlugins } from '@/plugins/register'
 import {
+    addDevelopmentPlugin,
     installPluginPackage,
+    refreshDevelopmentPluginsCatalog,
     refreshInstalledPluginsCatalog,
+    removeDevelopmentPlugin,
     removeInstalledPlugin,
+    setDevelopmentPluginEnabled,
     setInstalledPluginEnabled
 } from '@/plugins/installed'
-import type { InstalledPluginRecord } from '@/plugins/package'
-
-type DroppedFile = File & { path?: string }
-type DropFeedback = 'idle' | 'valid' | 'invalid'
+import type { DevelopmentPluginRecord, InstalledPluginRecord } from '@/plugins/package'
 
 const { locale, t, te } = useI18n()
 
 const installedPlugins = ref<InstalledPluginRecord[]>([])
+const developmentPlugins = ref<DevelopmentPluginRecord[]>([])
 const errorMessage = ref('')
 const busy = ref(false)
-const isDragging = ref(false)
-const dragDepth = ref(0)
-const dropFeedback = ref<DropFeedback>('idle')
+const developerMode = ref(false)
 
-const supportsPluginManagement = computed(() => Boolean(window.electron?.listInstalledPlugins))
-const installedKinds = computed(() => {
-    const kinds = new Set<string>()
-    for (const plugin of installedPlugins.value) {
-        for (const node of plugin.manifest?.nodes || []) {
-            kinds.add(node.kind)
-        }
-    }
-    return kinds
-})
+const supportsPluginManagement = computed(() =>
+    Boolean(window.electron?.listInstalledPlugins && window.electron?.listDevelopmentPlugins)
+)
 
 const builtinPlugins = computed(() => {
     pluginCatalogVersion.value
-    return getPluginsMeta().filter(plugin => !installedKinds.value.has(plugin.kind))
+    return pluginRegistry.getBuiltinMeta()
 })
 
-const text = computed(() => {
-    if (locale.value === 'zh-CN') {
-        return {
-            title: '插件',
-            description: '这里展示内置节点与已安装插件，并为后续插件市场预留界面位置。',
-            refresh: '刷新',
-            remove: '卸载',
-            desktopOnly: '仅 Electron 桌面端支持插件安装与管理。',
-            builtinTitle: '内置节点',
-            installedTitle: '已安装插件',
-            builtinTag: '内置',
-            editableTag: '可编辑',
-            cardTag: '卡片模式',
-            author: '作者',
-            source: '来源',
-            installedAt: '安装时间',
-            nodeKinds: '节点类型',
-            dropTitle: '拖拽插件到这里',
-            dropTitleActive: '松手即可导入',
-            dropTitleInvalid: '当前内容不可导入',
-            dropTitleBusy: '正在导入插件…',
-            dropDescription: '支持插件文件夹、manifest.json，以及 zip / .constella-plugin 安装包。',
-            dropHint: '也可以点击这里打开选择器。',
-            dropHintActive: '已识别到可安装内容，释放鼠标后立即开始导入。',
-            dropHintInvalid: '请拖入插件文件夹、manifest.json，或插件压缩包。',
-            dropHintBusy: '导入完成后会自动刷新插件列表。',
-            dropBadgeIdle: 'Import',
-            dropBadgeValid: 'Ready',
-            dropBadgeInvalid: 'Unsupported',
-            dropBadgeBusy: 'Importing',
-            dropPillFolder: '文件夹',
-            dropPillArchive: 'ZIP / 插件包',
-            dropPillClick: '点击选择',
-            marketEyebrow: 'Plugin Market',
-            marketTitle: '插件市场',
-            marketDescription: '后续这里可以承载精选插件、分类、评分、更新与在线安装等市场能力。',
-            marketSoon: '即将到来'
-        }
+const text = computed(() => locale.value === 'zh-CN'
+    ? {
+        title: '插件',
+        description: '这里展示内置正式节点、开发插件与已安装插件，并为未来插件市场预留界面。',
+        refresh: '刷新',
+        remove: '移除',
+        desktopOnly: '插件安装与开发加载仅在 Electron 桌面端可用。',
+        builtinTitle: '正式节点',
+        developmentListTitle: '开发插件',
+        installedTitle: '已安装插件',
+        builtinTag: '内置',
+        editableTag: '可编辑',
+        cardTag: '卡片模式',
+        author: '作者',
+        source: '来源',
+        path: '路径',
+        addedAt: '加载时间',
+        installedAt: '安装时间',
+        nodeKinds: '节点类型',
+        packageTitle: '导入插件安装包',
+        packageTitleBusy: '正在导入安装包…',
+        packageDescription: '面向普通用户，推荐导入 `.constella-plugin` 安装包，也兼容 `.zip`。',
+        packageHint: '点击打开文件选择器，导入插件安装包。',
+        packageBadge: 'Package',
+        packagePillPrimary: '.constella-plugin',
+        packagePillCompat: '.zip',
+        developmentTitle: '加载开发插件目录',
+        developmentTitleBusy: '正在加载开发插件…',
+        developmentDescription: '面向开发者，选择包含 `manifest.json` 的插件目录进行本地调试加载。',
+        developmentHint: '点击打开目录选择器，不会复制源码目录内容。',
+        developmentBadge: 'Development',
+        developmentPillFolder: 'Plugin Folder',
+        developmentPillManifest: 'manifest.json',
+        packageSource: '安装包',
+        directorySource: '目录',
+        developmentSource: '开发目录',
+        marketEyebrow: 'Plugin Market',
+        marketTitle: '插件市场',
+        marketDescription: '这里将用于后续承载市场入口、精选插件、分类、评分、更新与在线安装能力。',
+        marketSoon: '即将推出'
     }
-
-    return {
+    : {
         title: 'Plugins',
-        description: 'This view shows built-in nodes and installed plugins, with room reserved for a future marketplace.',
+        description: 'This view shows built-in official nodes, development plugins, installed plugins, and a reserved marketplace area.',
         refresh: 'Refresh',
         remove: 'Remove',
-        desktopOnly: 'Plugin installation and management are only available in the Electron desktop app.',
+        desktopOnly: 'Plugin installation and development loading are only available in the Electron desktop app.',
         builtinTitle: 'Built-in Nodes',
+        developmentListTitle: 'Development Plugins',
         installedTitle: 'Installed Plugins',
         builtinTag: 'Built-in',
         editableTag: 'Editable',
         cardTag: 'Card Mode',
         author: 'Author',
         source: 'Source',
+        path: 'Path',
+        addedAt: 'Added',
         installedAt: 'Installed',
         nodeKinds: 'Node kinds',
-        dropTitle: 'Drop plugin here',
-        dropTitleActive: 'Release to import',
-        dropTitleInvalid: 'This item cannot be imported',
-        dropTitleBusy: 'Importing plugin…',
-        dropDescription: 'Supports plugin folders, manifest.json, and zip / .constella-plugin packages.',
-        dropHint: 'You can also click here to open the picker.',
-        dropHintActive: 'Valid plugin content detected. Release to start importing.',
-        dropHintInvalid: 'Please drop a plugin folder, manifest.json, or plugin archive.',
-        dropHintBusy: 'The plugin list will refresh automatically when the import finishes.',
-        dropBadgeIdle: 'Import',
-        dropBadgeValid: 'Ready',
-        dropBadgeInvalid: 'Unsupported',
-        dropBadgeBusy: 'Importing',
-        dropPillFolder: 'Folder',
-        dropPillArchive: 'ZIP / Package',
-        dropPillClick: 'Click to pick',
+        packageTitle: 'Import Plugin Package',
+        packageTitleBusy: 'Importing package…',
+        packageDescription: 'For end users, prefer `.constella-plugin` packages, with `.zip` as a compatibility format.',
+        packageHint: 'Click to open the file picker and import a plugin package.',
+        packageBadge: 'Package',
+        packagePillPrimary: '.constella-plugin',
+        packagePillCompat: '.zip',
+        developmentTitle: 'Load Development Plugin',
+        developmentTitleBusy: 'Loading development plugin…',
+        developmentDescription: 'For developers, choose a plugin directory that contains `manifest.json` for local iteration.',
+        developmentHint: 'Click to open the folder picker. Source files stay in place.',
+        developmentBadge: 'Development',
+        developmentPillFolder: 'Plugin Folder',
+        developmentPillManifest: 'manifest.json',
+        packageSource: 'Package',
+        directorySource: 'Directory',
+        developmentSource: 'Development Folder',
         marketEyebrow: 'Plugin Market',
         marketTitle: 'Marketplace',
-        marketDescription: 'This area can later host featured plugins, categories, ratings, updates, and online installs.',
+        marketDescription: 'This area is reserved for future marketplace entry points, featured plugins, categories, ratings, updates, and online installs.',
         marketSoon: 'Coming Soon'
     }
-})
-
-const dropzoneClass = computed(() => ({
-    'is-busy': busy.value,
-    'is-valid': isDragging.value && dropFeedback.value === 'valid',
-    'is-invalid': isDragging.value && dropFeedback.value === 'invalid'
-}))
-
-const dropzoneTitle = computed(() => {
-    if (busy.value) return text.value.dropTitleBusy
-    if (isDragging.value && dropFeedback.value === 'valid') return text.value.dropTitleActive
-    if (isDragging.value && dropFeedback.value === 'invalid') return text.value.dropTitleInvalid
-    return text.value.dropTitle
-})
-
-const dropzoneHint = computed(() => {
-    if (busy.value) return text.value.dropHintBusy
-    if (isDragging.value && dropFeedback.value === 'valid') return text.value.dropHintActive
-    if (isDragging.value && dropFeedback.value === 'invalid') return text.value.dropHintInvalid
-    return text.value.dropHint
-})
-
-const dropzoneBadge = computed(() => {
-    if (busy.value) return text.value.dropBadgeBusy
-    if (isDragging.value && dropFeedback.value === 'valid') return text.value.dropBadgeValid
-    if (isDragging.value && dropFeedback.value === 'invalid') return text.value.dropBadgeInvalid
-    return text.value.dropBadgeIdle
-})
+)
 
 function localizedPluginName(plugin: PluginMeta) {
     const key = `canvas.nodeTypes.${plugin.kind}`
@@ -288,32 +333,34 @@ function formatInstalledTime(value: string) {
     return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
 }
 
-function getDroppedPluginPath(event: DragEvent): string | null {
-    const files = Array.from(event.dataTransfer?.files || []) as DroppedFile[]
-    const file = files[0]
-    if (!file) return null
-    return typeof file.path === 'string' && file.path.trim() ? file.path : null
-}
-
-function isSupportedPluginPath(sourcePath: string): boolean {
-    const normalized = sourcePath.toLowerCase()
-    return (
-        !normalized.includes('.') ||
-        normalized.endsWith('\\') ||
-        normalized.endsWith('/manifest.json') ||
-        normalized.endsWith('.zip') ||
-        normalized.endsWith('.constella-plugin')
-    )
-}
-
 async function refreshCatalog() {
     if (!supportsPluginManagement.value) {
         installedPlugins.value = []
+        developmentPlugins.value = []
         return
     }
 
     errorMessage.value = ''
-    installedPlugins.value = await refreshInstalledPluginsCatalog()
+    const [nextInstalled, nextDevelopment] = await Promise.all([
+        refreshInstalledPluginsCatalog(),
+        refreshDevelopmentPluginsCatalog()
+    ])
+    installedPlugins.value = nextInstalled
+    developmentPlugins.value = nextDevelopment
+}
+
+function readDeveloperModeSetting() {
+    try {
+        const settings = JSON.parse(localStorage.getItem('settings') || '{}')
+        developerMode.value = settings.developerMode === true
+    } catch {
+        developerMode.value = false
+    }
+}
+
+function handleSettingsUpdated(event: Event) {
+    const customEvent = event as CustomEvent<Record<string, unknown>>
+    developerMode.value = customEvent.detail?.developerMode === true
 }
 
 async function syncPluginRuntime() {
@@ -321,14 +368,11 @@ async function syncPluginRuntime() {
     await reloadPlugins()
 }
 
-async function installFromSource(sourcePath?: string) {
-    if (!supportsPluginManagement.value) return
-
+async function runBusyAction(action: () => Promise<void>) {
     busy.value = true
     errorMessage.value = ''
     try {
-        await installPluginPackage(sourcePath)
-        await syncPluginRuntime()
+        await action()
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         if (!/cancel/i.test(message)) {
@@ -339,89 +383,72 @@ async function installFromSource(sourcePath?: string) {
     }
 }
 
-async function openPicker() {
+async function openPackagePicker() {
     if (busy.value) return
-    await installFromSource()
+    await runBusyAction(async () => {
+        await installPluginPackage()
+        await syncPluginRuntime()
+    })
 }
 
-function handleDragEnter(event: DragEvent) {
-    if (busy.value || !supportsPluginManagement.value) return
-    dragDepth.value += 1
-    isDragging.value = true
-    const sourcePath = getDroppedPluginPath(event)
-    dropFeedback.value = sourcePath && isSupportedPluginPath(sourcePath) ? 'valid' : 'invalid'
+async function openDevelopmentPicker() {
+    if (busy.value) return
+    await runBusyAction(async () => {
+        await addDevelopmentPlugin()
+        await syncPluginRuntime()
+    })
 }
 
-function handleDragOver(event: DragEvent) {
-    if (!supportsPluginManagement.value || busy.value) return
-    const sourcePath = getDroppedPluginPath(event)
-    dropFeedback.value = sourcePath && isSupportedPluginPath(sourcePath) ? 'valid' : 'invalid'
-    if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = dropFeedback.value === 'valid' ? 'copy' : 'none'
-    }
-}
-
-function handleDragLeave() {
-    if (!supportsPluginManagement.value || busy.value) return
-    dragDepth.value = Math.max(0, dragDepth.value - 1)
-    if (dragDepth.value === 0) {
-        isDragging.value = false
-        dropFeedback.value = 'idle'
-    }
-}
-
-async function handleDrop(event: DragEvent) {
-    dragDepth.value = 0
-    isDragging.value = false
-
-    const sourcePath = getDroppedPluginPath(event)
-    const isValid = Boolean(sourcePath && isSupportedPluginPath(sourcePath))
-    dropFeedback.value = 'idle'
-
-    if (!sourcePath || !isValid) {
-        errorMessage.value = text.value.dropHintInvalid
-        return
-    }
-
-    await installFromSource(sourcePath)
-}
-
-async function togglePlugin(pluginId: string, enabled: boolean) {
-    busy.value = true
-    errorMessage.value = ''
-    try {
+async function toggleInstalledPlugin(pluginId: string, enabled: boolean) {
+    await runBusyAction(async () => {
         await setInstalledPluginEnabled(pluginId, enabled)
         await syncPluginRuntime()
-    } catch (error) {
-        errorMessage.value = error instanceof Error ? error.message : String(error)
-    } finally {
-        busy.value = false
-    }
+    })
 }
 
-async function removePlugin(pluginId: string, pluginName: string) {
-    const confirmed = confirm(
-        locale.value === 'zh-CN'
-            ? `确定要卸载插件“${pluginName}”吗？`
-            : `Remove plugin "${pluginName}"?`
-    )
+async function toggleDevelopmentPlugin(pluginId: string, enabled: boolean) {
+    await runBusyAction(async () => {
+        await setDevelopmentPluginEnabled(pluginId, enabled)
+        await syncPluginRuntime()
+    })
+}
+
+async function removeInstalled(pluginId: string, pluginName: string) {
+    const confirmed = confirm(locale.value === 'zh-CN'
+        ? `确认移除已安装插件“${pluginName}”？`
+        : `Remove installed plugin "${pluginName}"?`)
     if (!confirmed) return
 
-    busy.value = true
-    errorMessage.value = ''
-    try {
+    await runBusyAction(async () => {
         await removeInstalledPlugin(pluginId)
         await syncPluginRuntime()
-    } catch (error) {
-        errorMessage.value = error instanceof Error ? error.message : String(error)
-    } finally {
-        busy.value = false
-    }
+    })
+}
+
+async function removeDevelopment(pluginId: string, pluginName: string) {
+    const confirmed = confirm(locale.value === 'zh-CN'
+        ? `确认移除开发插件“${pluginName}”？这不会删除原始目录。`
+        : `Remove development plugin "${pluginName}"? This will not delete the source directory.`)
+    if (!confirmed) return
+
+    await runBusyAction(async () => {
+        await removeDevelopmentPlugin(pluginId)
+        await syncPluginRuntime()
+    })
 }
 
 watch(() => locale.value, () => {
     void refreshCatalog()
 }, { immediate: true })
+
+onMounted(() => {
+    readDeveloperModeSetting()
+    window.addEventListener('settings-updated', handleSettingsUpdated as EventListener)
+})
+
+onBeforeUnmount(() => {
+    window.removeEventListener('settings-updated', handleSettingsUpdated as EventListener)
+})
 </script>
 
 <style scoped>
@@ -453,7 +480,13 @@ watch(() => locale.value, () => {
     color: var(--text-secondary);
     line-height: 1.6;
     font-size: 0.92rem;
-    max-width: 720px;
+    max-width: 760px;
+}
+
+.plugin-actions-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
 .plugin-refresh-btn {
@@ -461,56 +494,56 @@ watch(() => locale.value, () => {
     margin-top: 2px;
 }
 
-.plugin-dropzone {
+.plugin-import-panel {
+    width: 100%;
     display: grid;
-    grid-template-columns: 132px minmax(0, 1fr);
-    gap: 20px;
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: 18px;
     align-items: center;
-    padding: 22px;
+    padding: 20px;
     border-radius: 20px;
     border: 1px solid var(--border-color);
     background:
-        linear-gradient(180deg, rgba(59, 130, 246, 0.045), rgba(59, 130, 246, 0.015)),
+        linear-gradient(180deg, rgba(59, 130, 246, 0.05), rgba(59, 130, 246, 0.015)),
         var(--bg-secondary);
     cursor: pointer;
-    transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    text-align: left;
+    transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
-.plugin-dropzone:hover {
+.plugin-import-panel:hover:not(:disabled) {
     border-color: rgba(59, 130, 246, 0.28);
     background:
-        linear-gradient(180deg, rgba(59, 130, 246, 0.055), rgba(59, 130, 246, 0.02)),
+        linear-gradient(180deg, rgba(59, 130, 246, 0.065), rgba(59, 130, 246, 0.02)),
         var(--bg-secondary);
 }
 
-.plugin-dropzone.is-valid {
-    border-color: rgba(34, 197, 94, 0.38);
+.plugin-import-panel-dev {
     background:
-        linear-gradient(180deg, rgba(34, 197, 94, 0.075), rgba(34, 197, 94, 0.025)),
+        linear-gradient(180deg, rgba(16, 185, 129, 0.05), rgba(16, 185, 129, 0.015)),
         var(--bg-secondary);
-    box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.08);
 }
 
-.plugin-dropzone.is-invalid {
-    border-color: rgba(239, 68, 68, 0.32);
+.plugin-import-panel-dev:hover:not(:disabled) {
+    border-color: rgba(16, 185, 129, 0.28);
     background:
-        linear-gradient(180deg, rgba(239, 68, 68, 0.06), rgba(239, 68, 68, 0.02)),
+        linear-gradient(180deg, rgba(16, 185, 129, 0.065), rgba(16, 185, 129, 0.02)),
         var(--bg-secondary);
-    box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.06);
 }
 
-.plugin-dropzone.is-busy {
+.plugin-import-panel.is-busy,
+.plugin-import-panel:disabled {
     opacity: 0.8;
     cursor: progress;
 }
 
-.plugin-dropzone-sidebar {
+.plugin-import-sidebar {
     display: grid;
     justify-items: center;
     gap: 14px;
 }
 
-.plugin-dropzone-badge {
+.plugin-import-badge {
     padding: 5px 10px;
     border-radius: 999px;
     background: rgba(59, 130, 246, 0.12);
@@ -521,19 +554,14 @@ watch(() => locale.value, () => {
     text-transform: uppercase;
 }
 
-.plugin-dropzone.is-valid .plugin-dropzone-badge {
-    background: rgba(34, 197, 94, 0.12);
-    color: #15803d;
+.plugin-import-badge-dev {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
 }
 
-.plugin-dropzone.is-invalid .plugin-dropzone-badge {
-    background: rgba(239, 68, 68, 0.12);
-    color: #dc2626;
-}
-
-.plugin-dropzone-emblem {
-    width: 92px;
-    height: 92px;
+.plugin-import-emblem {
+    width: 84px;
+    height: 84px;
     border-radius: 24px;
     background:
         linear-gradient(180deg, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.04)),
@@ -544,30 +572,23 @@ watch(() => locale.value, () => {
     justify-content: center;
 }
 
-.plugin-dropzone.is-valid .plugin-dropzone-emblem {
+.plugin-import-emblem-dev {
     background:
-        linear-gradient(180deg, rgba(34, 197, 94, 0.14), rgba(34, 197, 94, 0.05)),
+        linear-gradient(180deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.04)),
         var(--bg-primary);
-    border-color: rgba(34, 197, 94, 0.16);
+    border-color: rgba(16, 185, 129, 0.14);
 }
 
-.plugin-dropzone.is-invalid .plugin-dropzone-emblem {
-    background:
-        linear-gradient(180deg, rgba(239, 68, 68, 0.14), rgba(239, 68, 68, 0.05)),
-        var(--bg-primary);
-    border-color: rgba(239, 68, 68, 0.16);
-}
-
-.plugin-dropzone-emblem-core {
+.plugin-import-emblem-core {
     position: relative;
-    width: 46px;
-    height: 46px;
+    width: 42px;
+    height: 42px;
     border-radius: 14px;
-    background: rgba(255, 255, 255, 0.86);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
-.plugin-dropzone-emblem-line {
+.plugin-import-emblem-line {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -576,47 +597,43 @@ watch(() => locale.value, () => {
     transform: translate(-50%, -50%);
 }
 
-.plugin-dropzone.is-valid .plugin-dropzone-emblem-line {
-    background: #16a34a;
+.plugin-import-emblem-dev .plugin-import-emblem-line {
+    background: #059669;
 }
 
-.plugin-dropzone.is-invalid .plugin-dropzone-emblem-line {
-    background: #dc2626;
-}
-
-.plugin-dropzone-emblem-line-v {
+.plugin-import-emblem-line-v {
     width: 4px;
     height: 20px;
 }
 
-.plugin-dropzone-emblem-line-h {
+.plugin-import-emblem-line-h {
     width: 20px;
     height: 4px;
 }
 
-.plugin-dropzone-main {
+.plugin-import-main {
     display: grid;
     gap: 10px;
 }
 
-.plugin-dropzone-title {
+.plugin-import-title {
     font-size: 1rem;
     font-weight: 700;
     color: var(--text-primary);
 }
 
-.plugin-dropzone-description {
+.plugin-import-description {
     color: var(--text-secondary);
     line-height: 1.6;
 }
 
-.plugin-dropzone-pills {
+.plugin-import-pills {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
 }
 
-.plugin-drop-pill {
+.plugin-import-pill {
     padding: 5px 10px;
     border-radius: 999px;
     background: var(--bg-tertiary);
@@ -625,7 +642,7 @@ watch(() => locale.value, () => {
     font-weight: 700;
 }
 
-.plugin-dropzone-hint {
+.plugin-import-hint {
     font-size: 12px;
     color: var(--text-tertiary, var(--text-secondary));
 }
@@ -767,6 +784,10 @@ watch(() => locale.value, () => {
     border-color: rgba(59, 130, 246, 0.28);
 }
 
+.plugin-card-dev:hover {
+    border-color: rgba(16, 185, 129, 0.26);
+}
+
 .plugin-card-row {
     display: flex;
     align-items: center;
@@ -829,6 +850,7 @@ watch(() => locale.value, () => {
 .plugin-meta-stack {
     display: grid;
     gap: 6px;
+    word-break: break-word;
 }
 
 .plugin-tags {
@@ -899,12 +921,12 @@ watch(() => locale.value, () => {
         align-items: stretch;
     }
 
-    .plugin-dropzone {
+    .plugin-import-panel {
         grid-template-columns: 1fr;
         padding: 18px;
     }
 
-    .plugin-dropzone-sidebar {
+    .plugin-import-sidebar {
         justify-items: start;
     }
 

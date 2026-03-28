@@ -220,7 +220,26 @@
                             </div>
                         </div>
 
-                        <!-- 快捷键设置 -->
+                        <div v-show="activeCategory === 'developer'" class="settings-section">
+                            <h3 class="section-title">{{ locale === 'zh-CN' ? '开发者设置' : 'Developer Settings' }}</h3>
+
+                            <div class="setting-item">
+                                <label class="setting-label">
+                                    <span>{{ locale === 'zh-CN' ? '开发者模式' : 'Developer Mode' }}</span>
+                                    <span class="setting-subtext">
+                                        {{ locale === 'zh-CN'
+                                            ? '开启后显示开发插件目录加载入口与开发插件列表。'
+                                            : 'Show development plugin loading entry points and development plugin lists.' }}
+                                    </span>
+                                </label>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" v-model="settingsData.developerMode" />
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 插件设置 -->
                         <div v-show="activeCategory === 'plugins'" class="settings-section">
                             <PluginCatalogPane />
                         </div>
@@ -284,6 +303,7 @@ import {
     removeInstalledPlugin,
     setInstalledPluginEnabled
 } from '@/plugins/installed'
+import { reloadPlugins } from '@/plugins/register'
 
 const { t, locale } = useI18n()
 
@@ -298,12 +318,14 @@ const emit = defineEmits(['update:modelValue'])
 
 const isOpen = ref(props.modelValue)
 const activeCategory = ref('general')
+const lastAppliedDeveloperMode = ref(false)
 
 // 分类列表
 const categories = [
     { key: 'account', icon: UserIcon },
     { key: 'general', icon: SettingIcon },
     { key: 'appearance', icon: ViewListIcon },
+    { key: 'developer', icon: SettingIcon },
     { key: 'plugins', icon: SettingIcon },
     { key: 'shortcuts', icon: SettingIcon }
 ]
@@ -336,6 +358,7 @@ const settingsData = reactive({
     email: '',
     // 通用设置
     language: 'zh-CN',
+    developerMode: false,
     // 外观设置（仅保留主题）
     theme: 'light',
     // 快捷键
@@ -436,6 +459,8 @@ const loadSettings = () => {
     if (savedLocale) {
         settingsData.language = savedLocale
     }
+
+    lastAppliedDeveloperMode.value = settingsData.developerMode === true
     
     // 初始化账户信息（如果没有）
     initializeAccount()
@@ -495,6 +520,11 @@ const applySettings = () => {
     if (settingsData.theme) {
         document.documentElement.setAttribute('data-theme', settingsData.theme)
         localStorage.setItem('theme', settingsData.theme)
+    }
+
+    if (settingsData.developerMode !== lastAppliedDeveloperMode.value) {
+        lastAppliedDeveloperMode.value = settingsData.developerMode === true
+        void reloadPlugins()
     }
 
     // 移除字体设置（不再管理字体大小）
@@ -587,6 +617,10 @@ async function handleRemovePlugin(pluginId, pluginName) {
 }
 
 function getCategoryLabel(categoryKey) {
+    if (categoryKey === 'developer') {
+        return locale.value === 'zh-CN' ? '开发者' : 'Developer'
+    }
+
     if (categoryKey === 'plugins') {
         return locale.value === 'zh-CN' ? '插件' : 'Plugins'
     }
@@ -987,6 +1021,13 @@ applySettings()
     display: flex;
     flex-direction: column;
     gap: 4px;
+}
+
+.setting-subtext {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    line-height: 1.5;
 }
 
 .label-with-help {

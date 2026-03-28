@@ -1,6 +1,7 @@
 export const PLUGIN_ARCHIVE_EXTENSION = '.constella-plugin'
 export const PLUGIN_MANIFEST_FILE = 'manifest.json'
 export const PLUGIN_INSTALLATION_FILE = 'installation.json'
+export const PLUGIN_DEVELOPMENT_FILE = 'development.json'
 
 export interface PluginPackageNodeManifest {
     kind: string
@@ -41,5 +42,18 @@ export interface InstalledPluginRecord {
     source: 'directory' | 'archive'
     installDir: string
     archivePath?: string
+    manifest: PluginPackageManifest
+}
+
+export interface DevelopmentPluginRecord {
+    id: string
+    name: string
+    version: string
+    description?: string
+    author?: string
+    homepage?: string
+    enabled: boolean
+    addedAt: string
+    sourcePath: string
     manifest: PluginPackageManifest
 }
