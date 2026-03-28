@@ -1,49 +1,96 @@
-# Plugin Development Architecture 4.0
+# 插件开发架构 4.0
 
-Version: 4.0  
-Status: Active  
-Scope: `web/src/plugins/**`, runtime install flow, Electron plugin persistence, plugin management UI
+版本：4.0  
+状态：Active  
+范围：`web/src/plugins/**`、运行时安装流程、Electron 持久化、插件管理 UI、未来插件市场兼容性
 
-## 1. Architecture Goals
+## 1. 目标
 
-Plugin architecture 4.0 defines a unified model for:
+插件架构 4.0 定义了以下能力边界的清晰分离：
 
-- Built-in node plugins shipped with the app
-- Installable runtime plugins imported from local folders or archives
-- Shared i18n integration
-- Runtime registration and refresh
-- A plugin panel that acts as both manager and marketplace foundation
+- 官方内置节点插件
+- 用户安装的运行时插件
+- 仅开发阶段使用的本地插件
 
-## 2. Plugin Types
+并统一规范：
 
-Constella now has two plugin sources:
+- `manifest.json` 作为插件根元数据
+- 运行时注册与刷新行为
+- i18n 集成方式
+- Electron 侧持久化
+- 面向未来插件市场的“安装包优先”方向
 
-### 2.1 Built-in Plugins
+## 2. 插件分层
 
-Built-in plugins live in:
+Constella 应将插件来源视为三个明确层级。
+
+### 2.1 内置官方插件
+
+位置：
 
 `web/src/plugins/<plugin-name>/`
 
-They are bundled with the app and registered through local module discovery.
+特征：
 
-### 2.2 Installed Runtime Plugins
+- 随应用一同打包
+- 属于官方节点目录
+- 随仓库版本演进
+- 每个构建默认可用
 
-Installed plugins are imported at runtime from:
+### 2.2 用户安装插件
 
-- A plugin folder
-- A `manifest.json` inside a plugin folder
-- A `.constella-plugin` archive
-- A `.zip` archive
+来源：
 
-They are persisted into the local Electron user data directory and loaded dynamically.
+- `.constella-plugin`
+- `.zip`
 
-## 3. Core Data Model
+特征：
 
-### 3.1 `PluginMeta`
+- 由终端用户安装
+- 持久化在 Electron 用户数据目录
+- 可选且可卸载
+- 目标与未来插件市场分发模型保持一致
 
-`PluginMeta` describes node-level fallback metadata used by the host.
+### 2.3 开发插件
 
-Key fields:
+来源：
+
+- 含 `manifest.json` 的本地插件目录
+
+建议位置：
+
+- 仓库根目录 `dev-plugins/`，或其他明确隔离的开发专用目录
+
+特征：
+
+- 用于本地迭代和调试
+- 不属于内置官方插件
+- 不等同于用户安装插件
+- 不应意外混入发布产物
+- 仅在启用开发者模式时出现在产品 UI 中
+
+## 3. 为什么必须保持分层隔离
+
+这三层分别解决不同问题：
+
+- 内置插件属于产品本体
+- 用户安装插件属于用户本地环境
+- 开发插件属于开发流程
+
+若混用，会出现常见风险：
+
+- 临时开发插件误入生产发布
+- 内置与外部插件归属边界不清
+- 运行时安装流与源码插件流难以维护
+- 插件市场与本地开发概念被混淆
+
+## 4. 核心数据模型
+
+### 4.1 `PluginMeta`
+
+`PluginMeta` 描述宿主 UI 使用的节点级回退元数据。
+
+关键字段：
 
 - `kind`
 - `label`
@@ -53,23 +100,31 @@ Key fields:
 - `supportsCardMode`
 - `supportsFontSizeControl`
 
-`label` and `description` are fallback values. UI should prefer i18n keys such as:
+当 i18n 可用时，UI 应优先使用 i18n 键，而非回退文本：
 
 - `canvas.nodeTypes.<kind>`
 - `canvas.nodeTypeDesc.<kind>`
 
-### 3.2 `NodePlugin`
+### 4.2 `NodePlugin`
 
-A node plugin includes:
+一个内置节点插件包含：
 
 - `meta`
 - `renderer`
-- optional `editor`
-- optional `onDblClick`
+- 可选 `editor`
+- 可选 `onDblClick`
 
-## 4. Built-in Plugin Structure
+### 4.3 运行时安装包清单
 
-Recommended structure:
+运行时可安装插件以 `manifest.json` 作为插件根契约。
+
+重要规则：
+
+- `manifest.json` 是插件内部入口文件，不是面向用户的独立安装包
+
+## 5. 内置插件结构
+
+推荐结构：
 
 ```text
 src/plugins/my-plugin/
@@ -79,34 +134,20 @@ src/plugins/my-plugin/
   MyEditor.vue
 ```
 
-### 4.1 `manifest.ts`
+### 5.1 `manifest.ts`
 
-Defines fallback metadata.
+定义宿主注册使用的回退元数据。
 
-### 4.2 `index.ts`
+### 5.2 `index.ts`
 
-Exports:
+导出：
 
 - `pluginPlugin`
-- optional `pluginI18n`
+- 可选 `pluginI18n`
 
-### 4.3 Renderer
+## 6. 运行时插件结构
 
-Renderer receives host props such as:
-
-- `content`
-- `width`
-- `height`
-- `displayMode`
-- `scale`
-
-### 4.4 Editor
-
-Editor is optional and should work with the host editor modal contract.
-
-## 5. Runtime Installable Plugin Structure
-
-Recommended plugin folder layout:
+推荐插件根布局：
 
 ```text
 my-plugin/
@@ -121,123 +162,162 @@ my-plugin/
     icon.png
 ```
 
-## 6. Registration Pipeline
+推荐打包格式：
 
-### 6.1 Built-in Registration
+- `.constella-plugin` 作为主要发布产物
+- `.zip` 作为兼容格式
 
-Built-in plugins are auto-discovered from:
+## 7. 注册流水线
+
+### 7.1 内置插件注册
+
+内置插件发现来源：
 
 `web/src/plugins/**/index.ts`
 
-The host registers:
+宿主注册内容：
 
 - `pluginPlugin`
-- optional `pluginI18n`
+- 可选 `pluginI18n`
 
-### 6.2 Installed Plugin Registration
+### 7.2 开发插件注册
 
-Installed plugins are loaded from the local installed plugin store.
+开发插件应从独立开发目录，或独立的“加载插件目录”流程加载。
 
-The runtime loader:
+它们不应被视为内置插件，也不应默认持久化为终端用户安装插件；除非被明确打包并执行安装流程。
 
-1. Reads installation records
-2. Loads `manifest.json`
-3. Merges plugin i18n bundles
-4. Imports renderer/editor runtime modules from local file paths
-5. Registers node kinds unless the kind is already occupied
+开发者模式策略：
 
-## 7. Runtime Refresh Model
+- 开启开发者模式时，可在插件面板显示开发插件加载与列表能力
+- 关闭开发者模式时，应隐藏开发插件相关 UI
+- 关闭开发者模式时，即使本地保留开发插件记录，也应在运行时跳过注册
 
-Plugin operations should not force a full app reload.
+### 7.3 用户安装插件注册
 
-Current expected behavior:
+已安装插件从本地安装存储加载。
 
-- Install plugin -> refresh installed catalog -> reload plugin registry at runtime
-- Enable/disable plugin -> refresh runtime registry only
-- Remove plugin -> refresh runtime registry only
+运行时加载器应：
 
-The host exposes a reactive plugin catalog version so dependent UI can update.
+1. 读取安装记录
+2. 加载 `manifest.json`
+3. 合并插件 i18n 资源
+4. 从本地文件路径导入运行时 renderer/editor 模块
+5. 完成冲突检查后注册节点类型
 
-## 8. i18n Strategy
+## 8. 冲突策略
 
-### 8.1 Built-in Plugins
+推荐规则：
 
-Built-in plugins should define `pluginI18n` in `index.ts`.
+- 内置官方插件不得被开发插件或已安装插件以相同节点 `kind` 覆盖
 
-Important keys:
+若发生冲突：
+
+- 拒绝注册，并提供明确错误提示
+
+该策略可保证官方节点行为稳定，避免意外覆盖。
+
+## 9. 运行时刷新模型
+
+插件操作应更新运行时状态，而不要求整应用重载。
+
+预期行为：
+
+- 安装插件 -> 刷新已安装目录 -> 重载运行时插件注册表
+- 启用/禁用插件 -> 刷新运行时插件注册表
+- 卸载插件 -> 刷新运行时插件注册表
+
+宿主应暴露响应式的插件目录版本号，使依赖 UI 自动更新。
+
+## 10. i18n 策略
+
+### 10.1 内置插件
+
+内置插件应在 `index.ts` 中定义 `pluginI18n`。
+
+关键键位：
 
 - `canvas.nodeTypes.<kind>`
 - `canvas.nodeTypeDesc.<kind>`
-- plugin-specific editor/renderer namespaces when needed
 
-### 8.2 Installed Plugins
+### 10.2 运行时插件
 
-Runtime plugins may declare locale bundle file paths inside `manifest.json`.
+运行时插件可在 `manifest.json` 中声明语言包路径。
 
-Those locale messages are merged into host i18n during runtime registration.
+这些语言消息会在运行时注册阶段合并到宿主 i18n。
 
-## 9. Plugin Management UI
+## 11. 插件管理 UI
 
-The plugin panel now has three responsibilities:
+插件面板有三项职责：
 
-- Show built-in nodes
-- Show installed runtime plugins
-- Provide import/install entry points and future marketplace space
+- 展示内置官方节点
+- 展示已安装运行时插件
+- 为未来插件市场 UI 预留空间
 
-Current import UI:
+推荐产品方向：
 
-- Drag-and-drop import zone
-- Click-to-open native picker fallback
+- 主用户入口：导入 `.constella-plugin` / `.zip`
+- 次级开发入口：开发者模式下加载插件目录
+- 产品层插件管理可同时出现在设置页与房间页 Dock 插件面板
 
-Supported import content:
+这样可保持终端用户“安装包优先”体验，同时保留高效本地开发流。
 
-- Plugin folder
-- `manifest.json`
-- `.zip`
-- `.constella-plugin`
+## 12. 持久化模型
 
-## 10. Persistence Model
+已安装插件数据存储在 Electron 用户数据目录：
 
-Installed plugin data is stored under Electron user data:
+- 已安装插件：`app.getPath('userData')/plugins/installed`
+- 导入压缩包缓存：`app.getPath('userData')/plugins/archives`
 
-- Installed plugins: `app.getPath('userData')/plugins/installed`
-- Imported archives cache: `app.getPath('userData')/plugins/archives`
+这也是安装插件在关闭并重启应用后仍可用的原因。
 
-This is why installed plugins remain available after closing and reopening the app.
+开发插件记录也可本地持久化，但在逻辑上仍应与用户安装插件隔离。
 
-## 11. Developer Guidance
+## 13. 推荐目录策略
 
-### 11.1 For Built-in Nodes
+建议使用：
 
-Use built-in plugins when:
+- `web/src/plugins/`：内置官方插件
+- `app.getPath('userData')/plugins/installed`：终端用户安装插件
+- `dev-plugins/` 或等效隔离目录：开发插件
 
-- The node is part of the official product
-- It should ship with every build
-- It belongs in the default node catalog
+避免：
 
-### 11.2 For External Plugins
+- 将实验性本地插件目录混入内置插件目录
+- 将 `manifest.json` 当作可独立安装产物
+- 用内置插件目录替代用户安装存储
 
-Use runtime installable plugins when:
+## 14. 开发者指引
 
-- The feature should be optional
-- The node should be distributable independently
-- Future plugin marketplace compatibility is desired
+以下场景应使用内置插件：
 
-### 11.3 Recommended Delivery
+- 节点属于官方能力
+- 应随每个构建发布
+- 应出现在默认节点目录中
 
-- Development: import plugin folder
-- Distribution: provide `.constella-plugin`
-- `manifest.json`: keep as internal entry file, not as the main user-facing distribution format
+以下场景应使用用户安装插件：
 
-## 12. 4.0 Checklist
+- 功能是可选能力
+- 节点应可独立分享
+- 需要插件市场兼容
 
-When creating a new plugin, confirm:
+以下场景应使用开发插件：
 
-- Unique `kind`
-- Valid fallback `manifest`
-- Renderer module works in runtime loader
-- Editor module is optional but compatible if provided
-- i18n keys are supplied
-- Import works from folder during development
-- Archive packaging works for distribution
-- Install, enable, disable, and uninstall refresh the runtime without full app reload
+- 你正在本地迭代
+- 不希望临时代码混入官方源码插件
+- 你希望在发布前验证打包流程
+
+## 15. 4.0 检查清单
+
+创建或接入插件时，请确认：
+
+- 插件 `id` 唯一
+- 节点 `kind` 唯一
+- 回退元数据有效
+- `manifest.json` 有效
+- 运行时 renderer 可正常工作
+- 可选 editor 存在时可正常工作
+- 需要时提供 i18n 资源
+- 开发工作流中的目录加载可用
+- 开发者模式关闭时目录加载入口已隐藏
+- 终端用户分发打包可用
+- 安装、启用、禁用、卸载可干净刷新运行时状态

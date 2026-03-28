@@ -1,30 +1,53 @@
-# Plugin Package Format
+# 插件安装包格式规范
 
-Constella currently supports two plugin delivery modes:
+Constella 的插件生态目前围绕两条面向受众的交付路径，以及一条内部入口文件规则定义：
 
-- Development import: import a complete plugin folder
-- Distribution package: import a `.constella-plugin` or `.zip` archive
+- 面向终端用户的安装格式：`.constella-plugin` 或 `.zip`
+- 面向开发者的加载方式：未打包插件目录
+- `manifest.json` 是插件根目录内的入口文件，不是可单独安装的分发包
 
-`manifest.json` is the entry file of a plugin directory. It is not a standalone plugin by itself. When you import `manifest.json`, Constella treats the whole directory containing that file as the plugin source.
+## 1. 交付模式
 
-## Recommended Delivery Strategy
+### 1.1 终端用户分发
 
-- For local development and testing, use a plugin folder
-- For sharing and release, use a `.constella-plugin` archive
-- Treat `.zip` as a compatibility format during early-stage tooling
+推荐格式：
 
-## Supported Import Sources
+- `.constella-plugin`：主分发格式
+- `.zip`：兼容分发格式
 
-The Electron desktop app can currently install plugins from:
+这两种格式最契合未来插件市场分发、本地备份、下载与分享场景。
 
-- A plugin folder
-- A `manifest.json` file inside a plugin folder
-- A `.constella-plugin` archive
-- A `.zip` archive
+### 1.2 开发者加载
 
-The plugin panel uses a drag-and-drop import area and also allows clicking the drop zone to open the native picker.
+推荐开发来源：
 
-## Plugin Folder Layout
+- 包含 `manifest.json` 的完整插件目录
+
+该路径用于本地迭代、测试与调试，应视为开发者便利能力，而非面向普通用户的主要安装格式。
+
+## 2. 三层插件模型
+
+Constella 应区分三类插件层级：
+
+### 2.1 内置官方插件
+
+- 位置：`web/src/plugins/<plugin-name>/`
+- 归属：随应用发布
+- 目标：每个构建默认包含的官方节点类型
+
+### 2.2 用户安装插件
+
+- 来源：`.constella-plugin` 或 `.zip`
+- 持久化位置：Electron 用户数据目录
+- 目标：由终端用户按需安装的可选能力
+
+### 2.3 开发插件
+
+- 来源：本地插件目录
+- 建议位置：专用开发目录，例如 `dev-plugins/`
+- 目标：本地测试，不与内置官方插件混放临时代码
+
+## 3. 插件根目录结构
 
 ```text
 my-plugin/
@@ -39,7 +62,7 @@ my-plugin/
     icon.png
 ```
 
-## `manifest.json`
+## 4. `manifest.json`
 
 ```json
 {
@@ -50,7 +73,7 @@ my-plugin/
   "author": "Example Studio",
   "homepage": "https://example.com",
   "engine": {
-    "constella": "^1.0.0"
+    "constella": "^1.1.0"
   },
   "nodes": [
     {
@@ -73,46 +96,69 @@ my-plugin/
 }
 ```
 
-## Field Notes
+## 5. 字段说明
 
-- `id`: stable plugin identifier
-- `name`: display name for installed plugin management
-- `version`: plugin version
-- `nodes`: one plugin package can provide one or more node kinds
-- `renderer`: required runtime renderer module path
-- `editor`: optional runtime editor module path
-- `i18n`: optional locale bundles merged into host i18n at runtime
+- `id`：稳定的插件标识符
+- `name`：插件管理 UI 中的显示名称
+- `version`：插件版本号
+- `nodes`：一个安装包可提供一个或多个节点类型
+- `renderer`：必填，运行时渲染器模块路径
+- `editor`：可选，运行时编辑器模块路径
+- `i18n`：可选，运行时合并到宿主 i18n 的多语言资源
 
-## Runtime Module Rules
+## 6. 运行时模块规则
 
-- `renderer.js` must export a Vue component as `default`
-- `editor.js` should also export a Vue component as `default` when present
-- Named exports such as `renderer`, `RendererComponent`, `editor`, and `EditorComponent` are also accepted
-- Runtime plugin modules must not bundle or import Vue with bare module specifiers such as `import { h } from 'vue'`
-- Use the host API instead:
+- `renderer.js` 必须以 `default` 导出 Vue 组件
+- `editor.js` 若存在，应以 `default` 导出 Vue 组件
+- 运行时加载器也可兼容命名导出，例如 `renderer`、`RendererComponent`、`editor`、`EditorComponent`
+- 运行时模块不得通过裸导入打包或引入 Vue，例如 `import { h } from 'vue'`
+
+应改用宿主 API：
 
 ```js
 const { h, ref, computed } = window.__CONSTELLA_PLUGIN_API__.vue
 ```
 
-## Installation Behavior
+## 7. 打包建议
 
-After installation, Constella:
+推荐发布流程：
 
-1. Validates `manifest.json`
-2. Copies the full plugin source into the local installed plugin store
-3. Persists installation metadata separately
-4. Loads enabled plugins at runtime without requiring a full app reload
+1. 构建插件运行时资源
+2. 确认 `manifest.json` 中路径正确
+3. 将插件根目录打包为 `.constella-plugin`
+4. 可选提供 `.zip` 作为兼容格式
 
-## Local Persistence
+注意：
 
-Installed plugin data is stored in Electron user data:
+- 不要单独分发 `manifest.json`
+- 不要把插件根目录以外的父级目录一并打包
+- 压缩包根层级应直接包含插件文件
 
-- Installed plugin contents: `app.getPath('userData')/plugins/installed`
-- Imported archives cache: `app.getPath('userData')/plugins/archives`
+## 8. 安装与持久化
 
-## Current Scope
+对于已安装插件，Constella 应：
 
-- Plugin marketplace UI is being prepared, but online install is not implemented yet
-- Current install flow is local-only
-- Plugin signature, sandboxing, and trust policy are not finalized yet
+1. 校验 `manifest.json`
+2. 将插件源文件复制到本地安装存储
+3. 单独持久化安装元数据
+4. 在运行时注册已启用插件
+
+Electron 中安装数据目录：
+
+- 已安装插件内容：`app.getPath('userData')/plugins/installed`
+- 导入压缩包缓存：`app.getPath('userData')/plugins/archives`
+
+## 9. 推荐产品方向
+
+- 面向终端用户的导入入口应优先 `.constella-plugin` 与 `.zip`
+- 开发者工作流可单独提供“加载插件目录”入口
+- 目录加载能力应由设置中的开发者模式开关控制
+- 内置官方插件、用户安装插件、开发插件应保持明确分层
+
+## 10. 当前说明
+
+- 插件市场在线分发能力仍在准备中
+- 签名校验、沙箱隔离、信任策略尚未最终定稿
+- 即使关闭开发者模式，开发插件记录也可能保留
+- 开发者模式关闭时，应隐藏开发插件加载入口，并在运行时跳过开发插件注册
+- 在“安装包优先”用户体验完全落地前，本地开发导入细节可能继续演进

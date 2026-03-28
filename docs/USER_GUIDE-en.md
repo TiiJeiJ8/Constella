@@ -33,7 +33,7 @@
 
 ## 5. Plugin Panel
 
-Constella now includes a dedicated plugin panel in two places:
+Constella includes a dedicated plugin panel in two places:
 
 - Settings -> Plugins
 - Room dock -> Plugins
@@ -43,31 +43,51 @@ The panel shows:
 - Built-in official nodes
 - Installed external plugins
 - A reserved marketplace area for future online distribution
+- When Developer Mode is enabled, the panel can also show development plugin tools
 
-## 6. Plugin Import and Installation
+## 6. Plugin Types
 
-Plugin import is currently available in the Electron desktop app.
+Constella distinguishes three plugin layers:
 
-You can install a plugin by:
+- Built-in official plugins: shipped with the app
+- User-installed plugins: installed locally by end users
+- Development plugins: local folder-based plugins for developer testing
 
-- Dragging a plugin folder into the plugin drop zone
-- Dragging a `.constella-plugin` or `.zip` archive into the drop zone
-- Clicking the drop zone and selecting local content manually
+These layers are not the same:
+
+- Built-in plugins are part of the product
+- Installed plugins belong to the user's local environment
+- Development plugins belong to the development workflow
+
+## 7. Import and Installation
+
+Plugin import is available in the Electron desktop app.
+
+Recommended formats for end users:
+
+- `.constella-plugin`
+- `.zip`
+
+Developer-oriented source:
+
+- A plugin folder that contains `manifest.json`
 
 Important notes:
 
-- `manifest.json` is only the entry file of a plugin folder
-- Importing `manifest.json` means importing the whole directory that contains it
+- `manifest.json` is the entry file of a plugin folder
+- `manifest.json` is not a standalone plugin package
 - Installed plugins remain available after restarting the app because they are stored locally
+- The package import flow is the main path for end users
+- Folder-based loading is intended for developers and is shown only when Developer Mode is enabled
 
-## 7. Where Installed Plugins Are Stored
+## 8. Where Installed Plugins Are Stored
 
 Electron stores plugin data under the user data directory:
 
 - Installed plugin contents: `app.getPath('userData')/plugins/installed`
 - Imported archives cache: `app.getPath('userData')/plugins/archives`
 
-## 8. Enable, Disable, and Remove
+## 9. Enable, Disable, and Remove
 
 In the plugin panel you can:
 
@@ -75,26 +95,33 @@ In the plugin panel you can:
 - Disable a plugin
 - Remove a plugin
 
-These operations refresh the runtime plugin registry and should not require a full app reload.
+These operations are intended to refresh the runtime plugin registry without requiring a full app reload.
 
-## 9. Export and Assets
+## 10. Development Plugin Guidance
+
+If you are building a plugin locally:
+
+- Keep temporary development plugins outside built-in plugin source directories
+- Prefer a dedicated development directory such as `dev-plugins/`
+- Package the plugin as `.constella-plugin` when preparing it for sharing
+- If Developer Mode is turned off, development plugins are hidden from the panel and skipped during runtime loading, but their saved records are preserved
+
+Do not treat the built-in `src/plugins/` directory as the general install location for user plugins.
+
+## 11. Export and Assets
 
 - Export canvas as JSON, PNG, and SVG
 - Export node content as Markdown, Text, and PDF where supported
 - Upload assets and insert them into canvas
 
-## 10. Troubleshooting
+## 12. Troubleshooting
 
-### 10.1 Plugin Cannot Be Imported
+### 12.1 Plugin Cannot Be Imported
 
-- Check that the plugin folder contains `manifest.json`
+- Check that the package or folder contains a valid `manifest.json`
 - Check that all files referenced by `manifest.json` exist
-- If using an archive, make sure it contains the plugin root contents instead of an unrelated outer directory
+- If using an archive, make sure the archive root is the actual plugin root
 
-### 10.2 Plugin Still Exists After Restart
+### 12.2 Plugin Still Exists After Restart
 
 This is expected. Installed plugins are persisted in Electron user data.
-
-### 10.3 Web App Cannot Install Plugins
-
-This is expected. Local plugin installation is currently desktop-only.

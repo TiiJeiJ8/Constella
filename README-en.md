@@ -76,11 +76,15 @@
 
 Constella now supports both built-in node plugins and installable runtime plugins.
 
-- Built-in plugins live in `src/plugins/`
-- Runtime plugins can be imported from a plugin folder during development
-- Distribution packages can use `.constella-plugin` or `.zip`
-- `manifest.json` is the entry file of a plugin folder, not a standalone plugin package
-- The plugin panel in Electron supports drag-and-drop import and click-to-pick fallback
+- Built-in official plugins live in `src/plugins/`
+- End-user plugin distribution should use `.constella-plugin` as the primary format, with `.zip` as a compatibility format
+- Development plugins can still be loaded from a plugin folder during local iteration
+- `manifest.json` is the entry file inside a plugin folder, not a standalone plugin package
+- Built-in plugins, user-installed plugins, and development plugins should be kept as separate layers
+- Plugin management is available in both `Settings -> Plugins` and the room dock plugin panel
+- The plugin panel defaults to end-user package installation flow; development plugin loading is shown only when Developer Mode is enabled in Settings
+- Turning Developer Mode off hides development plugin entry points and prevents development plugins from being loaded at runtime, while keeping their records for later reuse
+- Installed user plugins are persisted under Electron user data, so they remain after restarting the desktop app
 
 See:
 
