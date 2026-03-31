@@ -92,6 +92,57 @@
                                 </label>
                             </div>
 
+                            <div v-if="draft.format === 'pdf' && kind === 'markdown'" class="export-panel-section export-options-grid export-content-section">
+                                <div class="export-option-card">
+                                    <div class="export-panel-label">{{ t('canvas.editor.exportMermaidOversizeLabel') }}</div>
+                                    <div class="export-choice-row">
+                                        <button
+                                            v-for="option in mermaidOversizeOptions"
+                                            :key="option.id"
+                                            type="button"
+                                            class="export-choice-btn"
+                                            :class="{ active: draft.pdfMermaidOversize === option.id }"
+                                            @click="draft.pdfMermaidOversize = option.id"
+                                        >
+                                            {{ option.label }}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="export-option-card">
+                                    <div class="export-panel-label">{{ t('canvas.editor.exportMermaidScaleModeLabel') }}</div>
+                                    <div class="export-choice-row">
+                                        <button
+                                            v-for="option in mermaidScaleModeOptions"
+                                            :key="option.id"
+                                            type="button"
+                                            class="export-choice-btn"
+                                            :class="{ active: draft.pdfMermaidScaleMode === option.id }"
+                                            @click="draft.pdfMermaidScaleMode = option.id"
+                                        >
+                                            {{ option.label }}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="export-option-card export-option-card-wide">
+                                    <div class="export-panel-label">{{ t('canvas.editor.exportMermaidDensityLabel') }}</div>
+                                    <div class="export-choice-row">
+                                        <button
+                                            v-for="option in mermaidDensityOptions"
+                                            :key="option.id"
+                                            type="button"
+                                            class="export-choice-btn"
+                                            :class="{ active: draft.pdfMermaidDensity === option.id }"
+                                            @click="draft.pdfMermaidDensity = option.id"
+                                        >
+                                            {{ option.label }}
+                                        </button>
+                                    </div>
+                                    <div class="export-toggle-description">{{ t('canvas.editor.exportMermaidDensityDescription') }}</div>
+                                </div>
+                            </div>
+
                             <div v-else-if="draft.format === 'txt' && kind === 'markdown'" class="export-panel-section export-content-section">
                                 <div class="export-option-card">
                                     <div class="export-panel-label">{{ t('canvas.editor.exportTextModeLabel') }}</div>
@@ -136,6 +187,9 @@ import type {
     DocumentExportFormat,
     ExportableDocumentKind,
     ExportPanelSettings,
+    ExportPdfMermaidDensity,
+    ExportPdfMermaidOversize,
+    ExportPdfMermaidScaleMode,
     ExportPdfOrientation,
     ExportPanelThemeMode,
     ExportTextMode
@@ -194,6 +248,21 @@ const themeOptions = computed<Array<{ id: ExportPanelThemeMode; label: string }>
 const orientationOptions = computed<Array<{ id: ExportPdfOrientation; label: string }>>(() => ([
     { id: 'portrait', label: t('canvas.editor.exportOrientationPortrait') },
     { id: 'landscape', label: t('canvas.editor.exportOrientationLandscape') }
+]))
+
+const mermaidOversizeOptions = computed<Array<{ id: ExportPdfMermaidOversize; label: string }>>(() => ([
+    { id: 'scale', label: t('canvas.editor.exportMermaidOversizeScale') },
+    { id: 'page-break', label: t('canvas.editor.exportMermaidOversizePageBreak') }
+]))
+
+const mermaidScaleModeOptions = computed<Array<{ id: ExportPdfMermaidScaleMode; label: string }>>(() => ([
+    { id: 'fit-page', label: t('canvas.editor.exportMermaidScaleModeFitPage') },
+    { id: 'fit-width', label: t('canvas.editor.exportMermaidScaleModeFitWidth') }
+]))
+
+const mermaidDensityOptions = computed<Array<{ id: ExportPdfMermaidDensity; label: string }>>(() => ([
+    { id: 'standard', label: t('canvas.editor.exportMermaidDensityStandard') },
+    { id: 'compact', label: t('canvas.editor.exportMermaidDensityCompact') }
 ]))
 
 const textModeOptions = computed<Array<{ id: ExportTextMode; label: string }>>(() => ([
@@ -255,6 +324,9 @@ function cloneSettings(settings: ExportPanelSettings): ExportPanelSettings {
         pdfTheme: settings.pdfTheme,
         pdfOrientation: settings.pdfOrientation,
         pdfIncludeTitle: settings.pdfIncludeTitle,
+        pdfMermaidOversize: settings.pdfMermaidOversize,
+        pdfMermaidScaleMode: settings.pdfMermaidScaleMode,
+        pdfMermaidDensity: settings.pdfMermaidDensity,
         txtMode: settings.txtMode
     }
 }
@@ -450,6 +522,10 @@ function cloneSettings(settings: ExportPanelSettings): ExportPanelSettings {
     border: 1px solid rgba(255, 255, 255, 0.07);
     border-radius: 18px;
     background: rgba(255, 255, 255, 0.03);
+}
+
+.export-option-card-wide {
+    grid-column: 1 / -1;
 }
 
 .export-choice-row {

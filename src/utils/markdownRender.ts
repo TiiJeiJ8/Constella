@@ -7,6 +7,9 @@ import type { MermaidConfig } from 'mermaid'
 
 type MermaidThemeMode = 'light' | 'dark'
 type PdfOrientation = 'portrait' | 'landscape'
+type PdfMermaidOversize = 'scale' | 'page-break'
+type PdfMermaidScaleMode = 'fit-page' | 'fit-width'
+type PdfMermaidDensity = 'standard' | 'compact'
 
 const markdownUtils = new MarkdownIt().utils
 const mathPlaceholders = new Map<string, string>()
@@ -319,11 +322,17 @@ export function buildPrintableDocumentHtml(
         theme?: MermaidThemeMode
         includeTitle?: boolean
         orientation?: PdfOrientation
+        mermaidOversize?: PdfMermaidOversize
+        mermaidScaleMode?: PdfMermaidScaleMode
+        mermaidDensity?: PdfMermaidDensity
     } = {}
 ): string {
     const theme = options.theme ?? 'light'
     const includeTitle = options.includeTitle ?? true
     const orientation = options.orientation ?? 'portrait'
+    const mermaidOversize = options.mermaidOversize ?? 'scale'
+    const mermaidScaleMode = options.mermaidScaleMode ?? 'fit-page'
+    const mermaidDensity = options.mermaidDensity ?? 'compact'
     const isLight = theme === 'light'
 
     return `<!doctype html>
@@ -350,6 +359,13 @@ export function buildPrintableDocumentHtml(
       --accent: ${isLight ? '#2f6fed' : '#93c5fd'};
       --quote: ${isLight ? '#eaf0f8' : 'rgba(255, 255, 255, 0.04)'};
       --shadow: ${isLight ? '0 20px 50px rgba(15, 23, 42, 0.08)' : '0 24px 60px rgba(0, 0, 0, 0.35)'};
+      --mermaid-content-max-height: ${orientation === 'landscape' ? '165mm' : '235mm'};
+      --mermaid-wrapper-margin: ${mermaidDensity === 'compact' ? '0.7em' : '1.2em'};
+      --mermaid-wrapper-padding-top: ${mermaidDensity === 'compact' ? '12px' : '16px'};
+      --mermaid-wrapper-padding-side: ${mermaidDensity === 'compact' ? '12px' : '18px'};
+      --mermaid-wrapper-padding-bottom: ${mermaidDensity === 'compact' ? '12px' : '18px'};
+      --mermaid-label-margin: ${mermaidDensity === 'compact' ? '8px 8px 0' : '12px 12px 0'};
+      --mermaid-label-scale: ${mermaidDensity === 'compact' ? '0.96' : '1'};
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: var(--page-surface); color: var(--text); font-family: Georgia, "Times New Roman", serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -391,9 +407,14 @@ export function buildPrintableDocumentHtml(
     .document-body th { background: var(--surface-alt); font-family: "Segoe UI", system-ui, sans-serif; text-align: left; }
     .katex-block { display: flex; justify-content: center; padding: 14px 16px; border-radius: 12px; background: var(--surface-alt); overflow-x: auto; page-break-inside: avoid; break-inside: avoid; }
     .katex-error { color: #c2410c; }
-    .mermaid-wrapper { margin: 1.2em 0; padding: 16px 18px 18px; border-radius: 16px; background: var(--surface-alt); overflow: auto; page-break-inside: avoid; break-inside: avoid; }
-    .mermaid-wrapper .mermaid { display: flex; justify-content: center; min-width: fit-content; }
-    .mermaid-wrapper svg { max-width: 100%; width: auto !important; height: auto; display: block; margin: 12px auto 0; }
+    .mermaid-wrapper { margin: var(--mermaid-wrapper-margin) 0; padding: var(--mermaid-wrapper-padding-top) var(--mermaid-wrapper-padding-side) var(--mermaid-wrapper-padding-bottom); border-radius: 16px; background: var(--surface-alt); overflow: visible; page-break-inside: ${mermaidOversize === 'page-break' ? 'avoid' : 'auto'}; break-inside: ${mermaidOversize === 'page-break' ? 'avoid' : 'auto'}; }
+    .mermaid-wrapper .mermaid { display: flex; justify-content: center; min-width: 0; width: 100%; }
+    .mermaid-wrapper .mermaid-block-lang { margin: var(--mermaid-label-margin); transform: scale(var(--mermaid-label-scale)); transform-origin: left center; }
+    .mermaid-wrapper svg { max-width: 100%; width: auto !important; height: auto; display: block; margin: 12px auto 0; overflow: visible; }
+    .mermaid-wrapper.mermaid-fit-width svg { max-height: none; }
+    .mermaid-wrapper.mermaid-fit-page svg { max-height: var(--mermaid-content-max-height); }
+    .mermaid-wrapper[data-mermaid-scaled='true'] svg { width: auto !important; height: auto !important; }
+    .mermaid-wrapper::-webkit-scrollbar, .mermaid-wrapper *::-webkit-scrollbar { display: none; width: 0; height: 0; }
     .mermaid-fallback { white-space: pre-wrap; }
     .mermaid text, .mermaid .label, .mermaid .nodeLabel, .mermaid .edgeLabel, .mermaid .edgeLabel p, .mermaid .edgeLabel span, .mermaid .cluster-label text, .mermaid .cluster-label span, .mermaid .mindmap-node .label, .mermaid .mindmap-node text, .mermaid .mindmap-node foreignObject, .mermaid .mindmap-node foreignObject div { fill: ${isLight ? '#172033' : '#e5eefc'} !important; color: ${isLight ? '#172033' : '#e5eefc'} !important; }
     .mermaid .edgeLabel rect, .mermaid .labelBkg { fill: ${isLight ? 'rgba(255, 255, 255, 0.96)' : 'rgba(23, 24, 28, 0.92)'} !important; }
@@ -411,6 +432,7 @@ export function buildPrintableDocumentHtml(
       body { padding: var(--page-pad-y) var(--page-pad-x); }
       .document-shell { width: 100%; max-width: none; padding: 0; box-shadow: none; border-radius: 0; background: transparent; }
       a { color: inherit; text-decoration: none; }
+      .mermaid-wrapper, .mermaid-wrapper * { scrollbar-width: none !important; }
     }
   </style>
 </head>
@@ -419,6 +441,62 @@ export function buildPrintableDocumentHtml(
     ${includeTitle ? `<h1 class="document-title">${markdownUtils.escapeHtml(title)}</h1>` : ''}
     <section class="document-body">${bodyHtml}</section>
   </main>
+  <script>
+    (() => {
+      const oversize = ${JSON.stringify(mermaidOversize)};
+      const scaleMode = ${JSON.stringify(mermaidScaleMode)};
+      const minScale = 0.55;
+      const wrappers = Array.from(document.querySelectorAll('.mermaid-wrapper'));
+
+      function getSvgSize(svg) {
+        const viewBox = svg.viewBox && svg.viewBox.baseVal;
+        if (viewBox && viewBox.width && viewBox.height) {
+          return { width: viewBox.width, height: viewBox.height };
+        }
+        const width = Number(svg.getAttribute('width')) || svg.getBoundingClientRect().width || svg.clientWidth || 0;
+        const height = Number(svg.getAttribute('height')) || svg.getBoundingClientRect().height || svg.clientHeight || 0;
+        return { width, height };
+      }
+
+      wrappers.forEach((wrapper) => {
+        const svg = wrapper.querySelector('svg');
+        if (!svg) return;
+
+        wrapper.classList.add(scaleMode === 'fit-width' ? 'mermaid-fit-width' : 'mermaid-fit-page');
+        wrapper.style.overflow = 'visible';
+        svg.style.overflow = 'visible';
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+
+        if (oversize !== 'scale') {
+          return;
+        }
+
+        const wrapperWidth = Math.max(1, wrapper.clientWidth - 4);
+        const maxHeightText = getComputedStyle(document.documentElement).getPropertyValue('--mermaid-content-max-height').trim();
+        const probe = document.createElement('div');
+        probe.style.position = 'absolute';
+        probe.style.visibility = 'hidden';
+        probe.style.height = maxHeightText || '235mm';
+        document.body.appendChild(probe);
+        const maxHeight = probe.getBoundingClientRect().height || Infinity;
+        probe.remove();
+
+        const { width, height } = getSvgSize(svg);
+        if (!width || !height) return;
+
+        const widthScale = wrapperWidth / width;
+        const heightScale = scaleMode === 'fit-page' ? maxHeight / height : Infinity;
+        const nextScale = Math.min(1, widthScale, heightScale);
+
+        if (nextScale < 1 && nextScale >= minScale) {
+          svg.style.width = \`\${width * nextScale}px\`;
+          svg.style.height = \`\${height * nextScale}px\`;
+          wrapper.dataset.mermaidScaled = 'true';
+        }
+      });
+    })();
+  </script>
 </body>
 </html>`
 }

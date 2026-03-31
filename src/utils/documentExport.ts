@@ -6,6 +6,9 @@ export type ExportTheme = 'light' | 'dark'
 export type ExportPanelThemeMode = 'current' | ExportTheme
 export type ExportPdfOrientation = 'portrait' | 'landscape'
 export type ExportTextMode = 'plain' | 'source'
+export type ExportPdfMermaidOversize = 'scale' | 'page-break'
+export type ExportPdfMermaidScaleMode = 'fit-page' | 'fit-width'
+export type ExportPdfMermaidDensity = 'standard' | 'compact'
 
 export interface ExportPanelSettings {
     format: DocumentExportFormat
@@ -13,6 +16,9 @@ export interface ExportPanelSettings {
     pdfTheme: ExportPanelThemeMode
     pdfOrientation: ExportPdfOrientation
     pdfIncludeTitle: boolean
+    pdfMermaidOversize: ExportPdfMermaidOversize
+    pdfMermaidScaleMode: ExportPdfMermaidScaleMode
+    pdfMermaidDensity: ExportPdfMermaidDensity
     txtMode: ExportTextMode
 }
 
@@ -24,6 +30,9 @@ export interface ExportDocumentOptions {
     theme?: ExportTheme
     includeTitle?: boolean
     orientation?: ExportPdfOrientation
+    mermaidOversize?: ExportPdfMermaidOversize
+    mermaidScaleMode?: ExportPdfMermaidScaleMode
+    mermaidDensity?: ExportPdfMermaidDensity
     textMode?: ExportTextMode
 }
 
@@ -63,7 +72,10 @@ async function exportAsPdf({
     fileName,
     theme,
     includeTitle,
-    orientation
+    orientation,
+    mermaidOversize,
+    mermaidScaleMode,
+    mermaidDensity
 }: {
     kind: ExportableDocumentKind
     content: string
@@ -72,6 +84,9 @@ async function exportAsPdf({
     theme: ExportTheme
     includeTitle: boolean
     orientation: ExportPdfOrientation
+    mermaidOversize: ExportPdfMermaidOversize
+    mermaidScaleMode: ExportPdfMermaidScaleMode
+    mermaidDensity: ExportPdfMermaidDensity
 }): Promise<ExportDocumentResult> {
     const bodyHtml = kind === 'markdown'
         ? await renderMarkdownToHtml(content, { consumeLeadingTitle: includeTitle ? title : undefined, theme })
@@ -83,7 +98,10 @@ async function exportAsPdf({
     const html = buildPrintableDocumentHtml(title, bodyHtml, {
         theme,
         includeTitle,
-        orientation
+        orientation,
+        mermaidOversize,
+        mermaidScaleMode,
+        mermaidDensity
     })
 
     if (window.electron?.exportDocumentPdf) {
@@ -121,6 +139,9 @@ export async function exportDocument(format: DocumentExportFormat, options: Expo
     const theme = options.theme === 'light' ? 'light' : 'dark'
     const includeTitle = options.includeTitle ?? true
     const orientation = options.orientation ?? 'portrait'
+    const mermaidOversize = options.mermaidOversize ?? 'scale'
+    const mermaidScaleMode = options.mermaidScaleMode ?? 'fit-page'
+    const mermaidDensity = options.mermaidDensity ?? 'compact'
     const textMode = options.textMode ?? 'plain'
 
     if (format === 'md') {
@@ -159,6 +180,9 @@ export async function exportDocument(format: DocumentExportFormat, options: Expo
         fileName,
         theme,
         includeTitle,
-        orientation
+        orientation,
+        mermaidOversize,
+        mermaidScaleMode,
+        mermaidDensity
     })
 }

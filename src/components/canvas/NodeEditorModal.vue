@@ -1716,6 +1716,9 @@ const exportPanelDefaults = computed<ExportPanelSettings>(() => ({
     pdfTheme: 'current',
     pdfOrientation: 'portrait',
     pdfIncludeTitle: true,
+    pdfMermaidOversize: 'scale',
+    pdfMermaidScaleMode: 'fit-page',
+    pdfMermaidDensity: 'compact',
     txtMode: 'plain'
 }))
 
@@ -1745,6 +1748,9 @@ async function handleExportConfirm(settings: ExportPanelSettings) {
             theme: resolveExportTheme(settings.pdfTheme),
             includeTitle: settings.pdfIncludeTitle,
             orientation: settings.pdfOrientation,
+            mermaidOversize: settings.pdfMermaidOversize,
+            mermaidScaleMode: settings.pdfMermaidScaleMode,
+            mermaidDensity: settings.pdfMermaidDensity,
             textMode: settings.txtMode
         })
 
