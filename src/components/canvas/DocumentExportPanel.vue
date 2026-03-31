@@ -37,7 +37,7 @@
                         </aside>
 
                         <section class="export-content">
-                            <div class="export-panel-section export-content-section">
+                            <div class="export-panel-section export-content-section export-top-row" :class="{ 'pdf-mode': draft.format === 'pdf' }">
                                 <label class="export-field">
                                     <span class="export-panel-label">{{ t('canvas.editor.exportFilenameLabel') }}</span>
                                     <input
@@ -47,6 +47,14 @@
                                         class="export-input"
                                         :placeholder="t('canvas.editor.exportFilenamePlaceholder')"
                                     />
+                                </label>
+
+                                <label v-if="draft.format === 'pdf'" class="export-toggle-card export-inline-toggle-card">
+                                    <div>
+                                        <div class="export-panel-label">{{ t('canvas.editor.exportTitleLabel') }}</div>
+                                        <div class="export-toggle-description">{{ t('canvas.editor.exportTitleDescription') }}</div>
+                                    </div>
+                                    <input v-model="draft.pdfIncludeTitle" type="checkbox" class="export-checkbox" />
                                 </label>
                             </div>
 
@@ -83,13 +91,6 @@
                                     </div>
                                 </div>
 
-                                <label class="export-toggle-card">
-                                    <div>
-                                        <div class="export-panel-label">{{ t('canvas.editor.exportTitleLabel') }}</div>
-                                        <div class="export-toggle-description">{{ t('canvas.editor.exportTitleDescription') }}</div>
-                                    </div>
-                                    <input v-model="draft.pdfIncludeTitle" type="checkbox" class="export-checkbox" />
-                                </label>
                             </div>
 
                             <div v-if="draft.format === 'pdf' && kind === 'markdown'" class="export-panel-section export-options-grid export-content-section">
@@ -486,12 +487,27 @@ function cloneSettings(settings: ExportPanelSettings): ExportPanelSettings {
     padding: 18px 24px 0;
 }
 
+.export-top-row {
+    display: block;
+}
+
+.export-top-row.pdf-mode {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 14px;
+    align-items: stretch;
+}
+
 .export-panel-section {
     padding: 0 24px 18px;
 }
 
 .export-field {
     display: block;
+}
+
+.export-inline-toggle-card {
+    margin-top: 22px;
 }
 
 .export-input {
@@ -671,6 +687,12 @@ html[data-theme='light'] .export-panel-footer {
         padding-right: 18px;
     }
     .export-options-grid { grid-template-columns: 1fr; }
+    .export-top-row.pdf-mode {
+        grid-template-columns: 1fr;
+    }
+    .export-inline-toggle-card {
+        margin-top: 0;
+    }
     .export-panel-footer {
         flex-direction: column;
         align-items: stretch;
