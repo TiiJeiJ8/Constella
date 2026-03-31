@@ -42,7 +42,7 @@
 
 ### 快速开始
 
-1. 确保 Node.js 版本建议 >= 20
+1. 确保 Node.js 版本建议 22.*
 2. 安装依赖：`npm install`
 3. 启动 Web 开发环境：`npm run dev`
 4. 启动 Electron 开发模式：`npm run dev:electron`
