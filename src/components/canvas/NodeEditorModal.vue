@@ -46,6 +46,15 @@
                             </div>
                             <div class="header-actions">
                                 <button
+                                    v-if="canImportDocument"
+                                    type="button"
+                                    class="header-action-btn"
+                                    :title="t('canvas.editor.importAction')"
+                                    @click="triggerImport"
+                                >
+                                    {{ t('canvas.editor.importAction') }}
+                                </button>
+                                <button
                                     v-if="canExportDocument"
                                     type="button"
                                     class="header-action-btn primary"
@@ -57,6 +66,13 @@
                                 <button class="close-btn" :title="t('canvas.editor.closeHint')" @click="handleClose">
                                     <span>&times;</span>
                                 </button>
+                                <input
+                                    ref="importInputRef"
+                                    class="sr-only-file-input"
+                                    type="file"
+                                    :accept="acceptedImportExtensions"
+                                    @change="handleImportFileChange"
+                                />
                             </div>
                         </div>
 
@@ -477,6 +493,7 @@ const awareness = inject<{
 const overlayRef = ref<HTMLDivElement | null>(null)
 const editorContainerRef = ref<HTMLDivElement | null>(null)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
+const importInputRef = ref<HTMLInputElement | null>(null)
 const previewRef = ref<HTMLDivElement | null>(null)
 const slashMenuRef = ref<HTMLDivElement | null>(null)
 const imageLightboxRef = ref<HTMLDivElement | null>(null)
@@ -713,6 +730,8 @@ const viewModes = computed(() => ([
     { id: 'split' as EditorViewMode, label: t('canvas.editor.modeSplit') },
     { id: 'preview' as EditorViewMode, label: t('canvas.editor.modePreview') }
 ]))
+const acceptedImportExtensions = '.txt,.md,.markdown,.mdown,.mkd'
+const canImportDocument = computed(() => props.content.kind === 'markdown' || props.content.kind === 'text')
 const canExportDocument = computed(() => props.content.kind === 'markdown' || props.content.kind === 'text')
 const supportsElectronPdf = computed(() => Boolean(window.electron?.exportDocumentPdf))
 const showEditorPane = computed(() => !isMarkdown.value || effectiveViewMode.value === 'edit' || effectiveViewMode.value === 'split')
@@ -1024,6 +1043,51 @@ function handleInput(event: Event) {
     emit('update', props.nodeId, target.value)
     checkSlashCommand(target)
     handleCursorChange()
+}
+
+function triggerImport() {
+    if (!canImportDocument.value) {
+        toast.error(t('canvas.editor.importUnsupported'))
+        return
+    }
+    importInputRef.value?.click()
+}
+
+function resetImportInput() {
+    if (importInputRef.value) {
+        importInputRef.value.value = ''
+    }
+}
+
+async function handleImportFileChange(event: Event) {
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
+
+    if (!file) {
+        resetImportInput()
+        return
+    }
+
+    const lowerName = file.name.toLowerCase()
+    const supportedExtensions = ['.txt', '.md', '.markdown', '.mdown', '.mkd']
+    const hasSupportedExtension = supportedExtensions.some(extension => lowerName.endsWith(extension))
+
+    if (!hasSupportedExtension) {
+        toast.error(t('canvas.editor.importInvalidType'))
+        resetImportInput()
+        return
+    }
+
+    try {
+        const text = (await file.text()).replace(/^\uFEFF/, '')
+        setEditorValue(text, 0, 0)
+        toast.success(t('canvas.editor.importSuccess', { name: file.name }))
+    } catch (error) {
+        console.error('[NodeEditorModal] Document import failed:', error)
+        toast.error(t('canvas.editor.importFailed'))
+    } finally {
+        resetImportInput()
+    }
 }
 
 function syncPreviewFromEditor() {
@@ -2019,6 +2083,7 @@ onUnmounted(() => {
 .image-lightbox-close { position: absolute; top: 20px; right: 24px; width: 40px; height: 40px; border: none; border-radius: 999px; background: rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.88); font-size: 28px; line-height: 1; cursor: pointer; }
 .image-lightbox-media { max-width: min(92vw, 1440px); max-height: calc(100vh - 120px); border-radius: 18px; box-shadow: 0 26px 60px rgba(0, 0, 0, 0.35); object-fit: contain; background: rgba(255, 255, 255, 0.04); }
 .image-lightbox-caption { max-width: min(90vw, 960px); padding: 10px 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.86); font-size: 13px; line-height: 1.4; text-align: center; }
+.sr-only-file-input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 html[data-theme='light'] .editor-overlay { background: rgba(0, 0, 0, 0.45); }
 html[data-theme='light'] .editor-container, html[data-theme='light'] .edit-pane, html[data-theme='light'] .preview-pane { background: #ffffff; }
 html[data-theme='light'] .editor-container { box-shadow: 0 25px 80px rgba(0, 0, 0, 0.18); }
