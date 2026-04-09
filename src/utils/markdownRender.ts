@@ -324,6 +324,7 @@ export function buildPrintableDocumentHtml(
         orientation?: PdfOrientation
         mermaidOversize?: PdfMermaidOversize
         mermaidScaleMode?: PdfMermaidScaleMode
+        mermaidScalePercent?: number
         mermaidDensity?: PdfMermaidDensity
     } = {}
 ): string {
@@ -332,6 +333,8 @@ export function buildPrintableDocumentHtml(
     const orientation = options.orientation ?? 'portrait'
     const mermaidOversize = options.mermaidOversize ?? 'scale'
     const mermaidScaleMode = options.mermaidScaleMode ?? 'fit-page'
+    const mermaidScaleBaseline = 0.75
+    const mermaidScalePercent = Math.min(110, Math.max(70, options.mermaidScalePercent ?? 100))
     const mermaidDensity = options.mermaidDensity ?? 'compact'
     const isLight = theme === 'light'
 
@@ -410,10 +413,9 @@ export function buildPrintableDocumentHtml(
     .mermaid-wrapper { margin: var(--mermaid-wrapper-margin) 0; padding: var(--mermaid-wrapper-padding-top) var(--mermaid-wrapper-padding-side) var(--mermaid-wrapper-padding-bottom); border-radius: 16px; background: var(--surface-alt); overflow: visible; page-break-inside: ${mermaidOversize === 'page-break' ? 'avoid' : 'auto'}; break-inside: ${mermaidOversize === 'page-break' ? 'avoid' : 'auto'}; }
     .mermaid-wrapper .mermaid { display: flex; justify-content: center; min-width: 0; width: 100%; }
     .mermaid-wrapper .mermaid-block-lang { margin: var(--mermaid-label-margin); transform: scale(var(--mermaid-label-scale)); transform-origin: left center; }
-    .mermaid-wrapper svg { max-width: 100%; width: auto !important; height: auto; display: block; margin: 12px auto 0; overflow: visible; }
+    .mermaid-wrapper svg { max-width: 100%; width: auto; height: auto; display: block; margin: 12px auto 0; overflow: visible; }
     .mermaid-wrapper.mermaid-fit-width svg { max-height: none; }
     .mermaid-wrapper.mermaid-fit-page svg { max-height: var(--mermaid-content-max-height); }
-    .mermaid-wrapper[data-mermaid-scaled='true'] svg { width: auto !important; height: auto !important; }
     .mermaid-wrapper::-webkit-scrollbar, .mermaid-wrapper *::-webkit-scrollbar { display: none; width: 0; height: 0; }
     .mermaid-fallback { white-space: pre-wrap; }
     .mermaid text, .mermaid .label, .mermaid .nodeLabel, .mermaid .edgeLabel, .mermaid .edgeLabel p, .mermaid .edgeLabel span, .mermaid .cluster-label text, .mermaid .cluster-label span, .mermaid .mindmap-node .label, .mermaid .mindmap-node text, .mermaid .mindmap-node foreignObject, .mermaid .mindmap-node foreignObject div { fill: ${isLight ? '#172033' : '#e5eefc'} !important; color: ${isLight ? '#172033' : '#e5eefc'} !important; }
@@ -445,7 +447,8 @@ export function buildPrintableDocumentHtml(
     (() => {
       const oversize = ${JSON.stringify(mermaidOversize)};
       const scaleMode = ${JSON.stringify(mermaidScaleMode)};
-      const minScale = 0.55;
+      const globalScale = ${JSON.stringify(mermaidScaleBaseline * (mermaidScalePercent / 100))};
+      const minScale = 0.35;
       const wrappers = Array.from(document.querySelectorAll('.mermaid-wrapper'));
 
       function getSvgSize(svg) {
@@ -468,10 +471,6 @@ export function buildPrintableDocumentHtml(
         svg.removeAttribute('width');
         svg.removeAttribute('height');
 
-        if (oversize !== 'scale') {
-          return;
-        }
-
         const wrapperWidth = Math.max(1, wrapper.clientWidth - 4);
         const maxHeightText = getComputedStyle(document.documentElement).getPropertyValue('--mermaid-content-max-height').trim();
         const probe = document.createElement('div');
@@ -487,11 +486,15 @@ export function buildPrintableDocumentHtml(
 
         const widthScale = wrapperWidth / width;
         const heightScale = scaleMode === 'fit-page' ? maxHeight / height : Infinity;
-        const nextScale = Math.min(1, widthScale, heightScale);
+        const fitScale = oversize === 'scale'
+          ? Math.min(1, widthScale, heightScale)
+          : 1;
+        const safeScale = Math.min(widthScale, heightScale);
+        const nextScale = Math.min(fitScale * globalScale, Math.max(fitScale, safeScale));
 
-        if (nextScale < 1 && nextScale >= minScale) {
-          svg.style.width = \`\${width * nextScale}px\`;
-          svg.style.height = \`\${height * nextScale}px\`;
+        if (nextScale !== 1 && nextScale >= minScale) {
+          svg.style.setProperty('width', \`\${width * nextScale}px\`, 'important');
+          svg.style.setProperty('height', \`\${height * nextScale}px\`, 'important');
           wrapper.dataset.mermaidScaled = 'true';
         }
       });

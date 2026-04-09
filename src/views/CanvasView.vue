@@ -503,7 +503,11 @@ function handleSettingsUpdated(e) {
         userShortcuts.value = settings.shortcuts || getShortcutMap()
 
         const performance = settings.performance || {}
-        applyPerformanceSettings(performance)
+        applyPerformanceSettings({
+            showCanvasPerformancePanel: performance.showCanvasPerformancePanel,
+            markdownLodScaleThreshold: performance.markdownLodScaleThreshold,
+            developerMode: settings.developerMode
+        })
     } catch (err) {
         userShortcuts.value = getShortcutMap()
         applyPerformanceSettings()

@@ -10,6 +10,10 @@ export type ExportPdfMermaidOversize = 'scale' | 'page-break'
 export type ExportPdfMermaidScaleMode = 'fit-page' | 'fit-width'
 export type ExportPdfMermaidDensity = 'standard' | 'compact'
 
+export const EXPORT_PDF_MERMAID_SCALE_MIN = 70
+export const EXPORT_PDF_MERMAID_SCALE_MAX = 110
+export const EXPORT_PDF_MERMAID_SCALE_STEP = 5
+
 export interface ExportPanelSettings {
     format: DocumentExportFormat
     fileName: string
@@ -18,6 +22,7 @@ export interface ExportPanelSettings {
     pdfIncludeTitle: boolean
     pdfMermaidOversize: ExportPdfMermaidOversize
     pdfMermaidScaleMode: ExportPdfMermaidScaleMode
+    pdfMermaidScalePercent: number
     pdfMermaidDensity: ExportPdfMermaidDensity
     txtMode: ExportTextMode
 }
@@ -32,6 +37,7 @@ export interface ExportDocumentOptions {
     orientation?: ExportPdfOrientation
     mermaidOversize?: ExportPdfMermaidOversize
     mermaidScaleMode?: ExportPdfMermaidScaleMode
+    mermaidScalePercent?: number
     mermaidDensity?: ExportPdfMermaidDensity
     textMode?: ExportTextMode
 }
@@ -75,6 +81,7 @@ async function exportAsPdf({
     orientation,
     mermaidOversize,
     mermaidScaleMode,
+    mermaidScalePercent,
     mermaidDensity
 }: {
     kind: ExportableDocumentKind
@@ -86,6 +93,7 @@ async function exportAsPdf({
     orientation: ExportPdfOrientation
     mermaidOversize: ExportPdfMermaidOversize
     mermaidScaleMode: ExportPdfMermaidScaleMode
+    mermaidScalePercent: number
     mermaidDensity: ExportPdfMermaidDensity
 }): Promise<ExportDocumentResult> {
     const bodyHtml = kind === 'markdown'
@@ -101,6 +109,7 @@ async function exportAsPdf({
         orientation,
         mermaidOversize,
         mermaidScaleMode,
+        mermaidScalePercent,
         mermaidDensity
     })
 
@@ -141,6 +150,10 @@ export async function exportDocument(format: DocumentExportFormat, options: Expo
     const orientation = options.orientation ?? 'portrait'
     const mermaidOversize = options.mermaidOversize ?? 'scale'
     const mermaidScaleMode = options.mermaidScaleMode ?? 'fit-page'
+    const mermaidScalePercent = Math.min(
+        EXPORT_PDF_MERMAID_SCALE_MAX,
+        Math.max(EXPORT_PDF_MERMAID_SCALE_MIN, options.mermaidScalePercent ?? 100)
+    )
     const mermaidDensity = options.mermaidDensity ?? 'compact'
     const textMode = options.textMode ?? 'plain'
 
@@ -183,6 +196,7 @@ export async function exportDocument(format: DocumentExportFormat, options: Expo
         orientation,
         mermaidOversize,
         mermaidScaleMode,
+        mermaidScalePercent,
         mermaidDensity
     })
 }

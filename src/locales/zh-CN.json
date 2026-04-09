@@ -322,6 +322,11 @@
             "bezier": "曲线",
             "step": "折线"
         },
+        "about": {
+            "title": "关于",
+            "subtitle": "在设置页中快速查看当前软件的关键信息。",
+            "openRepository": "打开仓库"
+        },
         "editor": {
             "edit": "编辑",
             "preview": "预览",
@@ -360,6 +365,8 @@
             "exportOrientationLabel": "方向",
             "exportMermaidOversizeLabel": "Mermaid 过大时",
             "exportMermaidScaleModeLabel": "Mermaid 缩放方式",
+            "exportMermaidScalePercentLabel": "Mermaid 全局缩放",
+            "exportMermaidScalePercentDescription": "统一微调图表整体大小，不影响正文文字。",
             "exportMermaidDensityLabel": "Mermaid 留白密度",
             "exportTitleLabel": "文档标题",
             "exportTitleDescription": "将文档标题作为页面大标题显示。",

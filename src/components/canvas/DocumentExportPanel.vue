@@ -36,7 +36,7 @@
                             </div>
                         </aside>
 
-                        <section class="export-content">
+                        <section ref="contentRef" class="export-content" @wheel="handleContentWheel">
                             <div class="export-panel-section export-content-section export-top-row" :class="{ 'pdf-mode': draft.format === 'pdf' }">
                                 <label class="export-field">
                                     <span class="export-panel-label">{{ t('canvas.editor.exportFilenameLabel') }}</span>
@@ -126,6 +126,36 @@
                                     </div>
                                 </div>
 
+                                <div class="export-option-card export-option-card-wide export-scale-card">
+                                    <div class="export-scale-header">
+                                        <div>
+                                            <div class="export-panel-label">{{ t('canvas.editor.exportMermaidScalePercentLabel') }}</div>
+                                            <div class="export-toggle-description">{{ t('canvas.editor.exportMermaidScalePercentDescription') }}</div>
+                                        </div>
+                                        <span class="export-scale-value">{{ draft.pdfMermaidScalePercent }}%</span>
+                                    </div>
+                                    <input
+                                        v-model.number="draft.pdfMermaidScalePercent"
+                                        class="export-scale-slider"
+                                        type="range"
+                                        :min="EXPORT_PDF_MERMAID_SCALE_MIN"
+                                        :max="EXPORT_PDF_MERMAID_SCALE_MAX"
+                                        :step="EXPORT_PDF_MERMAID_SCALE_STEP"
+                                    />
+                                    <div class="export-choice-row export-scale-presets">
+                                        <button
+                                            v-for="percent in mermaidScalePresets"
+                                            :key="percent"
+                                            type="button"
+                                            class="export-choice-btn"
+                                            :class="{ active: draft.pdfMermaidScalePercent === percent }"
+                                            @click="draft.pdfMermaidScalePercent = percent"
+                                        >
+                                            {{ percent }}%
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <div class="export-option-card export-option-card-wide">
                                     <div class="export-panel-label">{{ t('canvas.editor.exportMermaidDensityLabel') }}</div>
                                     <div class="export-choice-row">
@@ -184,6 +214,11 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import {
+    EXPORT_PDF_MERMAID_SCALE_MAX,
+    EXPORT_PDF_MERMAID_SCALE_MIN,
+    EXPORT_PDF_MERMAID_SCALE_STEP
+} from '@/utils/documentExport'
 import type {
     DocumentExportFormat,
     ExportableDocumentKind,
@@ -212,6 +247,7 @@ const emit = defineEmits<{
 
 const overlayRef = ref<HTMLDivElement | null>(null)
 const fileNameInputRef = ref<HTMLInputElement | null>(null)
+const contentRef = ref<HTMLElement | null>(null)
 const draft = ref<ExportPanelSettings>(cloneSettings(props.defaultSettings))
 
 const availableFormats = computed(() => {
@@ -271,6 +307,8 @@ const textModeOptions = computed<Array<{ id: ExportTextMode; label: string }>>((
     { id: 'source', label: t('canvas.editor.exportTextModeSource') }
 ]))
 
+const mermaidScalePresets = [EXPORT_PDF_MERMAID_SCALE_MIN, 80, 90, 100, EXPORT_PDF_MERMAID_SCALE_MAX]
+
 const activeHint = computed(() => {
     if (draft.value.format === 'pdf') {
         return props.supportsElectronPdf
@@ -318,6 +356,23 @@ function handleConfirm() {
     emit('update:modelValue', false)
 }
 
+function handleContentWheel(event: WheelEvent) {
+    const container = contentRef.value
+    if (!container) return
+
+    const canScroll = container.scrollHeight > container.clientHeight + 1
+    if (!canScroll) return
+
+    const nextScrollTop = container.scrollTop + event.deltaY
+    const maxScrollTop = container.scrollHeight - container.clientHeight
+    const clampedScrollTop = Math.max(0, Math.min(maxScrollTop, nextScrollTop))
+
+    if (clampedScrollTop !== container.scrollTop) {
+        event.preventDefault()
+        container.scrollTop = clampedScrollTop
+    }
+}
+
 function cloneSettings(settings: ExportPanelSettings): ExportPanelSettings {
     return {
         format: settings.format,
@@ -327,6 +382,7 @@ function cloneSettings(settings: ExportPanelSettings): ExportPanelSettings {
         pdfIncludeTitle: settings.pdfIncludeTitle,
         pdfMermaidOversize: settings.pdfMermaidOversize,
         pdfMermaidScaleMode: settings.pdfMermaidScaleMode,
+        pdfMermaidScalePercent: settings.pdfMermaidScalePercent ?? 100,
         pdfMermaidDensity: settings.pdfMermaidDensity,
         txtMode: settings.txtMode
     }
@@ -347,8 +403,10 @@ function cloneSettings(settings: ExportPanelSettings): ExportPanelSettings {
 }
 
 .export-panel {
+    display: flex;
+    flex-direction: column;
     width: min(820px, 100%);
-    max-height: min(86vh, 780px);
+    max-height: min(84vh, 720px);
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 24px;
@@ -409,15 +467,19 @@ function cloneSettings(settings: ExportPanelSettings): ExportPanelSettings {
 }
 
 .export-panel-body {
+    flex: 1 1 auto;
     display: grid;
     grid-template-columns: 240px minmax(0, 1fr);
-    min-height: 440px;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .export-sidebar {
-    padding: 18px 16px 18px 18px;
+    min-height: 0;
+    padding: 16px 14px 16px 16px;
     border-right: 1px solid rgba(255, 255, 255, 0.06);
     background: rgba(255, 255, 255, 0.02);
+    overflow-y: auto;
 }
 
 .export-sidebar-label {
@@ -481,10 +543,12 @@ function cloneSettings(settings: ExportPanelSettings): ExportPanelSettings {
     flex-direction: column;
     min-width: 0;
     min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .export-content-section {
-    padding: 18px 24px 0;
+    padding: 14px 20px 0;
 }
 
 .export-top-row {
@@ -494,12 +558,12 @@ function cloneSettings(settings: ExportPanelSettings): ExportPanelSettings {
 .export-top-row.pdf-mode {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 300px;
-    gap: 14px;
+    gap: 12px;
     align-items: stretch;
 }
 
 .export-panel-section {
-    padding: 0 24px 18px;
+    padding: 0 20px 14px;
 }
 
 .export-field {
@@ -507,7 +571,7 @@ function cloneSettings(settings: ExportPanelSettings): ExportPanelSettings {
 }
 
 .export-inline-toggle-card {
-    margin-top: 22px;
+    margin-top: 20px;
 }
 
 .export-input {
@@ -529,19 +593,24 @@ function cloneSettings(settings: ExportPanelSettings): ExportPanelSettings {
 .export-options-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
+    gap: 12px;
 }
 
 .export-option-card,
 .export-toggle-card {
-    padding: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 18px;
+    padding: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.065);
+    border-radius: 16px;
     background: rgba(255, 255, 255, 0.03);
 }
 
 .export-option-card-wide {
     grid-column: 1 / -1;
+}
+
+.export-scale-card {
+    padding-top: 13px;
+    padding-bottom: 13px;
 }
 
 .export-choice-row {
@@ -577,6 +646,35 @@ function cloneSettings(settings: ExportPanelSettings): ExportPanelSettings {
     line-height: 1.45;
 }
 
+.export-scale-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.export-scale-value {
+    flex: 0 0 auto;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: rgba(96, 165, 250, 0.16);
+    color: #dbeafe;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.export-scale-slider {
+    width: 100%;
+    margin: 12px 0 8px;
+    accent-color: #60a5fa;
+    cursor: pointer;
+}
+
+.export-scale-presets {
+    gap: 8px;
+}
+
 .export-checkbox {
     width: 18px;
     height: 18px;
@@ -587,7 +685,7 @@ function cloneSettings(settings: ExportPanelSettings): ExportPanelSettings {
     justify-content: space-between;
     gap: 16px;
     margin-top: auto;
-    padding: 18px 24px 24px;
+    padding: 14px 20px 18px;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -673,6 +771,11 @@ html[data-theme='light'] .export-choice-btn.active {
     color: #1d4ed8;
 }
 
+html[data-theme='light'] .export-scale-value {
+    background: rgba(59, 130, 246, 0.12);
+    color: #1d4ed8;
+}
+
 html[data-theme='light'] .export-panel-footer {
     border-top-color: rgba(15, 23, 42, 0.08);
 }
@@ -684,7 +787,7 @@ html[data-theme='light'] .export-panel-footer {
     .export-sidebar {
         border-right: none;
         border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        padding-right: 18px;
+        padding-right: 16px;
     }
     .export-options-grid { grid-template-columns: 1fr; }
     .export-top-row.pdf-mode {

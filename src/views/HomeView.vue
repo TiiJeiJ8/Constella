@@ -586,7 +586,7 @@ function showInfo() {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 40px 20px;
+    padding: clamp(24px, 4vw, 40px) 20px;
     opacity: 0;
     transition: opacity 0.8s ease 0.5s;
 }
@@ -619,26 +619,27 @@ function showInfo() {
 
 .header-section {
     text-align: center;
-    margin-bottom: 48px;
+    margin-bottom: clamp(24px, 4vw, 48px);
 }
 
 .title {
-    font-size: 6.5rem;
+    font-size: clamp(2.8rem, 9vw, 6.5rem);
     font-weight: 700;
     color: var(--text-primary);
     margin-bottom: 12px;
     letter-spacing: -0.02em;
+    line-height: 0.95;
 }
 
 .subtitle {
-    font-size: 1.125rem;
+    font-size: clamp(0.95rem, 1.6vw, 1.125rem);
     color: var(--text-secondary);
     font-weight: 400;
 }
 
 .server-shell {
     width: 100%;
-    max-width: 520px;
+    max-width: min(520px, 100%);
     display: flex;
     flex-direction: column;
     gap: 18px;
@@ -646,7 +647,7 @@ function showInfo() {
 
 .server-card {
     width: 100%;
-    padding: 28px;
+    padding: clamp(20px, 3vw, 28px);
     background: var(--bg-secondary);
     border: 1px solid var(--border-light);
     border-radius: 16px;
@@ -714,7 +715,7 @@ function showInfo() {
     display: flex;
     align-items: center;
     gap: 8px;
-    min-width: 120px;
+    min-width: clamp(108px, 18vw, 120px);
     justify-content: center;
 }
 
@@ -969,7 +970,7 @@ function showInfo() {
 
 .selected-server-strip-side {
     flex-shrink: 0;
-    min-width: 160px;
+    min-width: clamp(136px, 18vw, 160px);
     display: grid;
     gap: 6px;
 }
@@ -1151,6 +1152,38 @@ function showInfo() {
 
     .ctrl-btn .lang-text {
         font-size: 12px;
+    }
+}
+
+@media (max-width: 1100px) {
+    .control-buttons {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        max-width: 220px;
+    }
+
+    .server-shell {
+        max-width: min(520px, calc(100vw - 40px));
+    }
+}
+
+@media (max-height: 760px) {
+    .main-content {
+        justify-content: flex-start;
+        padding-top: 96px;
+        overflow-y: auto;
+    }
+
+    .header-section {
+        margin-bottom: 24px;
+    }
+
+    .title {
+        font-size: clamp(2.4rem, 7vw, 4.5rem);
+    }
+
+    .char {
+        font-size: clamp(2.8rem, 8vw, 4.2rem);
     }
 }
 </style>

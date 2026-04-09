@@ -324,7 +324,7 @@ watch(password, () => {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 40px 20px;
+    padding: clamp(24px, 4vw, 40px) 20px;
 }
 
 .content-wrapper {
@@ -332,7 +332,7 @@ watch(password, () => {
     flex-direction: column;
     align-items: center;
     width: 100%;
-    max-width: 480px;
+    max-width: min(480px, 100%);
 }
 
 .lang-fade-enter-active,
@@ -352,11 +352,11 @@ watch(password, () => {
 
 .header-section {
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: clamp(24px, 4vw, 40px);
 }
 
 .title {
-    font-size: 3rem;
+    font-size: clamp(2rem, 5vw, 3rem);
     font-weight: 700;
     color: var(--text-primary);
     margin-bottom: 12px;
@@ -364,7 +364,7 @@ watch(password, () => {
 }
 
 .subtitle {
-    font-size: 1rem;
+    font-size: clamp(0.92rem, 1.5vw, 1rem);
     color: var(--text-secondary);
     font-weight: 400;
     margin-bottom: 16px;
@@ -378,6 +378,9 @@ watch(password, () => {
     background: var(--bg-tertiary);
     border-radius: 20px;
     font-size: 0.75rem;
+    max-width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .server-label {
@@ -387,11 +390,12 @@ watch(password, () => {
 .server-url {
     color: var(--accent-primary);
     font-weight: 600;
+    word-break: break-all;
 }
 
 .login-card {
     width: 100%;
-    padding: 40px;
+    padding: clamp(24px, 4vw, 40px);
     background: var(--bg-secondary);
     border: 1px solid var(--border-light);
     border-radius: 20px;
@@ -598,6 +602,23 @@ watch(password, () => {
 
     .ctrl-btn .lang-text {
         font-size: 12px;
+    }
+}
+
+@media (max-height: 760px) {
+    .main-content {
+        justify-content: flex-start;
+        padding-top: 88px;
+        overflow-y: auto;
+    }
+
+    .avatar-section {
+        margin-bottom: 24px;
+    }
+
+    .avatar-wrapper {
+        width: 72px;
+        height: 72px;
     }
 }
 </style>

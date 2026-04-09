@@ -8,6 +8,7 @@ const LONG_FRAME_THRESHOLD_MS = 32
 type PerformanceSettingsInput = {
     showCanvasPerformancePanel?: boolean
     markdownLodScaleThreshold?: number
+    developerMode?: boolean
 }
 
 interface UseCanvasPerformanceOptions {
@@ -28,12 +29,14 @@ function getPerformanceSettings() {
 
         return {
             showCanvasPerformancePanel: performance.showCanvasPerformancePanel !== false,
-            markdownLodScaleThreshold: normalizeMarkdownLodScaleThreshold(performance.markdownLodScaleThreshold)
+            markdownLodScaleThreshold: normalizeMarkdownLodScaleThreshold(performance.markdownLodScaleThreshold),
+            developerMode: settings.developerMode === true
         }
     } catch {
         return {
             showCanvasPerformancePanel: true,
-            markdownLodScaleThreshold: DEFAULT_MARKDOWN_LOD_SCALE_THRESHOLD
+            markdownLodScaleThreshold: DEFAULT_MARKDOWN_LOD_SCALE_THRESHOLD,
+            developerMode: false
         }
     }
 }
@@ -44,7 +47,10 @@ export function useCanvasPerformance(options: UseCanvasPerformanceOptions) {
 
     const showCanvasPerformancePanel = ref(performanceSettings.showCanvasPerformancePanel)
     const markdownLodScaleThreshold = ref(performanceSettings.markdownLodScaleThreshold)
-    const isDevPerformancePanelVisible = computed(() => import.meta.env.DEV && showCanvasPerformancePanel.value)
+    const developerMode = ref(performanceSettings.developerMode)
+    const isDevPerformancePanelVisible = computed(() =>
+        showCanvasPerformancePanel.value && developerMode.value
+    )
 
     const visibleNodeCount = ref(0)
     const visibleEdgeCount = ref(0)
@@ -176,8 +182,17 @@ export function useCanvasPerformance(options: UseCanvasPerformanceOptions) {
     }
 
     function applyPerformanceSettings(performance: PerformanceSettingsInput = {}) {
-        showCanvasPerformancePanel.value = performance.showCanvasPerformancePanel !== false
-        markdownLodScaleThreshold.value = normalizeMarkdownLodScaleThreshold(performance.markdownLodScaleThreshold)
+        if (typeof performance.showCanvasPerformancePanel !== 'undefined') {
+            showCanvasPerformancePanel.value = performance.showCanvasPerformancePanel !== false
+        }
+
+        if (typeof performance.markdownLodScaleThreshold !== 'undefined') {
+            markdownLodScaleThreshold.value = normalizeMarkdownLodScaleThreshold(performance.markdownLodScaleThreshold)
+        }
+
+        if (typeof performance.developerMode !== 'undefined') {
+            developerMode.value = performance.developerMode === true
+        }
     }
 
     let stopWatchingPerformancePanel: (() => void) | null = null

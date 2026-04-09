@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <Teleport to="body">
         <Transition name="overlay">
             <div v-if="isOpen" class="settings-overlay" @click="handleOverlayClick"></div>
@@ -108,6 +108,7 @@
                                     :placeholder="t('settings.account.emailPlaceholder')"
                                 />
                             </div>
+
                         </div>
 
                         <!-- 通用设置 -->
@@ -135,14 +136,6 @@
                                 </select>
                             </div>
 
-                            <div class="setting-item">
-                                <label class="setting-label">{{ t('settings.appearance.performancePanel') }}</label>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" v-model="settingsData.performance.showCanvasPerformancePanel" />
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-
                             <div class="setting-item setting-item-column">
                                 <label class="setting-label">{{ t('settings.appearance.markdownLodThreshold') }}</label>
                                 <input
@@ -158,6 +151,55 @@
                         </div>
 
                         <!-- 编辑器设置 -->
+                        <div v-show="activeCategory === 'about'" class="settings-section">
+                            <div class="about-section-head">
+                                <div>
+                                    <h3 class="section-title">{{ locale === 'zh-CN' ? '关于' : 'About' }}</h3>
+                                    <p class="about-section-subtitle">
+                                        {{ locale === 'zh-CN' ? '在设置页中快速查看当前软件的关键信息。' : 'Quick product information for the current app window.' }}
+                                    </p>
+                                </div>
+                                <button class="secondary-btn" @click="openRepository">
+                                    {{ locale === 'zh-CN' ? '打开仓库' : 'Open Repository' }}
+                                </button>
+                            </div>
+
+                            <div class="about-overview-card">
+                                <div class="about-badge">Constella</div>
+                                <p class="about-description">{{ t('about.description') }}</p>
+                            </div>
+
+                            <div class="about-meta-grid">
+                                <article v-for="card in aboutCards" :key="card.key" class="about-meta-card">
+                                    <span class="about-meta-label">{{ card.label }}</span>
+                                    <strong class="about-meta-value">{{ card.value }}</strong>
+                                </article>
+                            </div>
+
+                            <div class="about-feature-block">
+                                <h4 class="about-block-title">{{ t('about.features.title') }}</h4>
+                                <div class="about-feature-list">
+                                    <div
+                                        v-for="featureKey in aboutFeatureKeys"
+                                        :key="featureKey"
+                                        class="about-feature-item"
+                                    >
+                                        <span class="about-feature-dot"></span>
+                                        <span>{{ t(`about.features.${featureKey}`) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="about-feature-block">
+                                <h4 class="about-block-title">{{ t('about.tech.title') }}</h4>
+                                <div class="about-tech-list">
+                                    <p class="about-tech-item">{{ t('about.tech.frontend') }}</p>
+                                    <p class="about-tech-item">{{ t('about.tech.backend') }}</p>
+                                    <p class="about-tech-item">{{ t('about.tech.realtime') }}</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <div v-show="activeCategory === 'editor'" class="settings-section">
                             <h3 class="section-title">{{ t('settings.editor.title') }}</h3>
                             
@@ -237,6 +279,21 @@
                                     <span class="toggle-slider"></span>
                                 </label>
                             </div>
+
+                            <div v-if="settingsData.developerMode" class="setting-item">
+                                <label class="setting-label">
+                                    <span>{{ t('settings.appearance.performancePanel') }}</span>
+                                    <span class="setting-subtext">
+                                        {{ locale === 'zh-CN'
+                                            ? '控制画布性能面板显示；需同时开启开发者模式。'
+                                            : 'Controls the canvas performance panel. Developer mode must also be enabled.' }}
+                                    </span>
+                                </label>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" v-model="settingsData.performance.showCanvasPerformancePanel" />
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
                         </div>
 
                         <!-- 插件设置 -->
@@ -282,12 +339,16 @@
 import { ref, reactive, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-    CloseIcon,
-    SettingIcon,
-    ViewListIcon,
     UserIcon,
+    SettingIcon,
+    PaletteIcon,
+    CloseIcon,
     HelpCircleIcon,
-    RefreshIcon
+    InfoCircleIcon,
+    RefreshIcon,
+    CodeIcon,
+    AddIcon,
+    KeyboardIcon
 } from 'tdesign-icons-vue-next'
 import PluginCatalogPane from '@/components/plugins/PluginCatalogPane.vue'
 import {
@@ -319,16 +380,43 @@ const emit = defineEmits(['update:modelValue'])
 const isOpen = ref(props.modelValue)
 const activeCategory = ref('general')
 const lastAppliedDeveloperMode = ref(false)
+const appVersion = '1.1.0'
+const appRepositoryUrl = 'https://github.com/TiiJeiJ8/constella'
 
 // 分类列表
 const categories = [
     { key: 'account', icon: UserIcon },
     { key: 'general', icon: SettingIcon },
-    { key: 'appearance', icon: ViewListIcon },
-    { key: 'developer', icon: SettingIcon },
-    { key: 'plugins', icon: SettingIcon },
-    { key: 'shortcuts', icon: SettingIcon }
+    { key: 'appearance', icon: PaletteIcon },
+    { key: 'developer', icon: CodeIcon },
+    { key: 'plugins', icon: AddIcon },
+    { key: 'shortcuts', icon: KeyboardIcon },
+    { key: 'about', icon: InfoCircleIcon }
 ]
+
+const aboutCards = computed(() => [
+    {
+        key: 'version',
+        label: t('about.version'),
+        value: appVersion
+    },
+    {
+        key: 'license',
+        label: 'License',
+        value: 'MIT'
+    },
+    {
+        key: 'authors',
+        label: t('about.authors.title'),
+        value: `${t('about.authors.author1')} / ${t('about.authors.author2')}`
+    }
+])
+
+const aboutFeatureKeys = computed(() =>
+    locale.value === 'zh-CN'
+        ? ['crossPlatform', 'infiniteCanvas', 'realtime', 'offline', 'secure', 'easyDeploy']
+        : ['structuredCanvas', 'collaboration', 'roomPermissions', 'lanDiscovery', 'assetsSnapshots', 'pluginsExport']
+)
 
 const defaultShortcuts = {
     select: 'v',
@@ -559,6 +647,15 @@ function reloadApplication() {
     window.location.reload()
 }
 
+function openRepository() {
+    if (window.electron?.openExternal) {
+        window.electron.openExternal(appRepositoryUrl)
+        return
+    }
+
+    window.open(appRepositoryUrl, '_blank')
+}
+
 async function handleInstallPlugin() {
     if (!supportsPluginManagement.value) return
 
@@ -623,6 +720,10 @@ function getCategoryLabel(categoryKey) {
 
     if (categoryKey === 'plugins') {
         return locale.value === 'zh-CN' ? '插件' : 'Plugins'
+    }
+
+    if (categoryKey === 'about') {
+        return locale.value === 'zh-CN' ? '关于' : 'About'
     }
 
     return t(`settings.categories.${categoryKey}`)
@@ -706,7 +807,8 @@ applySettings()
     top: 0;
     right: 0;
     bottom: 0;
-    width: 680px;
+    width: min(720px, calc(100vw - 24px));
+    max-width: 100vw;
     background: var(--bg-primary);
     box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
     z-index: 2001;
@@ -756,14 +858,16 @@ applySettings()
     flex: 1;
     display: flex;
     overflow: hidden;
+    min-height: 0;
 }
 
 /* ==================== 左侧导航 ==================== */
 .settings-nav {
-    width: 200px;
+    width: clamp(180px, 24vw, 220px);
     padding: 16px 12px;
     border-right: 1px solid var(--border-color);
     overflow-y: auto;
+    flex-shrink: 0;
 }
 
 .nav-item {
@@ -806,8 +910,9 @@ applySettings()
 /* ==================== 右侧主内容 ==================== */
 .settings-main {
     flex: 1;
-    padding: 24px;
+    padding: clamp(18px, 2.4vw, 24px);
     overflow-y: auto;
+    min-width: 0;
 }
 
 .settings-section {
@@ -826,10 +931,130 @@ applySettings()
 }
 
 .section-title {
-    font-size: 1.125rem;
+    font-size: clamp(1rem, 1vw + 0.75rem, 1.125rem);
     font-weight: 600;
     color: var(--text-primary);
     margin: 0 0 20px 0;
+}
+
+.about-section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.about-section-subtitle {
+    margin: 8px 0 0;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    font-size: 0.92rem;
+}
+
+.about-overview-card,
+.about-feature-block,
+.about-meta-card {
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    border-radius: 16px;
+}
+
+.about-overview-card {
+    padding: 18px;
+    margin-bottom: 18px;
+}
+
+.about-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent-primary) 12%, var(--bg-primary) 88%);
+    color: var(--accent-primary);
+    font-weight: 700;
+    font-size: 0.8rem;
+    margin-bottom: 12px;
+}
+
+.about-description {
+    margin: 0;
+    color: var(--text-primary);
+    line-height: 1.7;
+}
+
+.about-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.about-meta-card {
+    padding: 16px;
+    display: grid;
+    gap: 6px;
+}
+
+.about-meta-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+}
+
+.about-meta-value {
+    color: var(--text-primary);
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.about-feature-block {
+    padding: 18px;
+    margin-bottom: 16px;
+}
+
+.about-block-title {
+    margin: 0 0 14px;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.about-feature-list,
+.about-tech-list {
+    display: grid;
+    gap: 10px;
+}
+
+.about-feature-list {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.about-feature-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+.about-feature-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 8px;
+    flex-shrink: 0;
+    background: var(--accent-primary);
+}
+
+.about-tech-item {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    color: var(--text-primary);
+    line-height: 1.5;
 }
 
 /* ==================== 设置项 ==================== */
@@ -1000,7 +1225,7 @@ applySettings()
 }
 
 .setting-item.setting-item-column .setting-input {
-    width: 220px;
+    width: min(220px, 100%);
 }
 
 .setting-hint {
@@ -1057,7 +1282,7 @@ applySettings()
 
 .setting-select,
 .setting-input {
-    width: 220px;
+    width: min(220px, 100%);
     padding: 8px 12px;
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
@@ -1328,27 +1553,36 @@ applySettings()
 }
 
 /* ==================== 响应式设计 ==================== */
+@media (max-width: 1080px), (max-height: 820px) {
+    .settings-panel {
+        width: min(680px, calc(100vw - 16px));
+    }
+
+    .settings-nav {
+        width: 180px;
+        padding: 14px 10px;
+    }
+
+    .nav-item {
+        gap: 10px;
+        padding: 10px;
+    }
+}
+
 @media (max-width: 768px) {
     .settings-panel {
         width: 100%;
     }
 
-    .settings-content {
-        flex-direction: column;
-    }
-
     .settings-nav {
-        width: 100%;
-        border-right: none;
-        border-bottom: 1px solid var(--border-color);
-        display: flex;
-        flex-wrap: wrap;
-        padding: 12px;
+        width: 148px;
+        padding: 12px 8px;
     }
 
     .nav-item {
-        flex: 0 0 calc(50% - 4px);
-        margin-bottom: 8px;
+        margin-bottom: 4px;
+        padding: 9px 10px;
+        gap: 8px;
     }
 
     .setting-item {
@@ -1360,6 +1594,21 @@ applySettings()
     .setting-select,
     .setting-input {
         width: 100%;
+    }
+
+    .about-section-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+@media (max-height: 720px) {
+    .settings-header {
+        padding: 14px 18px;
+    }
+
+    .settings-main {
+        padding: 16px 18px 20px;
     }
 }
 </style>

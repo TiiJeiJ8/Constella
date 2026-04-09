@@ -373,6 +373,8 @@
             "exportOrientationLabel": "Orientation",
             "exportMermaidOversizeLabel": "Large Mermaid charts",
             "exportMermaidScaleModeLabel": "Mermaid scaling",
+            "exportMermaidScalePercentLabel": "Mermaid global scale",
+            "exportMermaidScalePercentDescription": "Fine-tune Mermaid chart size without changing body text.",
             "exportMermaidDensityLabel": "Mermaid spacing",
             "exportTitleLabel": "Document title",
             "exportTitleDescription": "Use the document title as the page heading.",
@@ -568,6 +570,7 @@
             "account": "Account",
             "general": "General",
             "appearance": "Appearance",
+            "about": "About",
             "plugins": "Plugins",
             "editor": "Editor",
             "collaboration": "Collaboration",
@@ -617,6 +620,11 @@
             "performancePanel": "Show performance panel (dev mode)",
             "markdownLodThreshold": "Markdown LOD Threshold",
             "markdownLodThresholdHint": "When zoom scale is below this value, Markdown falls back to plain text preview to reduce rendering cost."
+        },
+        "about": {
+            "title": "About",
+            "subtitle": "Quick product information for the current app window.",
+            "openRepository": "Open Repository"
         },
         "editor": {
             "title": "Editor Settings",

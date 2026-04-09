@@ -153,13 +153,15 @@ onUnmounted(() => {
     align-items: center;
     gap: 16px;
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    min-width: 450px;
-    max-width: 700px;
+    width: min(700px, calc(100vw - 32px));
+    min-width: min(450px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
 }
 
 .topbar.expanded {
-    min-width: 700px;
-    max-width: 800px;
+    width: min(800px, calc(100vw - 32px));
+    min-width: min(700px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
 }
 
 /* ==================== 暗色模式 ==================== */
@@ -255,6 +257,13 @@ html[data-theme='dark'] .topbar {
     flex: 1;
     display: flex;
     gap: 8px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+    display: none;
 }
 
 .tab {
@@ -324,15 +333,17 @@ html[data-theme='dark'] .create-btn:hover {
 /* ==================== 响应式设计 ==================== */
 @media (max-width: 1200px) {
     .topbar {
-        width: 350px;
+        width: min(560px, calc(100vw - 32px));
+        min-width: 0;
     }
 
     .topbar.expanded {
-        width: 600px;
+        width: min(680px, calc(100vw - 32px));
+        min-width: 0;
     }
 
     .search-input-wrapper {
-        width: 250px;
+        width: min(250px, 34vw);
     }
 }
 
@@ -340,6 +351,7 @@ html[data-theme='dark'] .create-btn:hover {
     .topbar {
         width: calc(100vw - 32px);
         padding: 0 16px;
+        gap: 10px;
     }
 
     .topbar.expanded {
@@ -347,7 +359,7 @@ html[data-theme='dark'] .create-btn:hover {
     }
 
     .search-input-wrapper {
-        width: 200px;
+        width: min(200px, 42vw);
     }
 
     .tab {
@@ -358,6 +370,25 @@ html[data-theme='dark'] .create-btn:hover {
     .create-btn {
         width: 32px;
         height: 32px;
+    }
+}
+
+@media (max-width: 560px) {
+    .topbar,
+    .topbar.expanded {
+        width: calc(100vw - 20px);
+        max-width: calc(100vw - 20px);
+        padding: 0 12px;
+        gap: 8px;
+    }
+
+    .search-input-wrapper {
+        width: min(150px, 38vw);
+    }
+
+    .tab {
+        padding: 6px 10px;
+        font-size: 12px;
     }
 }
 </style>
