@@ -380,7 +380,7 @@ const emit = defineEmits(['update:modelValue'])
 const isOpen = ref(props.modelValue)
 const activeCategory = ref('general')
 const lastAppliedDeveloperMode = ref(false)
-const appVersion = '1.1.0'
+const appVersion = __APP_VERSION__
 const appRepositoryUrl = 'https://github.com/TiiJeiJ8/constella'
 
 // 分类列表

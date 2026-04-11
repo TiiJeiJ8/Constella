@@ -1,6 +1,10 @@
 /// <reference types="vite/web" />
 import type { DevelopmentPluginRecord, InstalledPluginRecord } from './plugins/package'
 
+declare global {
+    const __APP_VERSION__: string
+}
+
 interface ElectronLanServer {
     id: string
     name: string

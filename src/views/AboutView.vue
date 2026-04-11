@@ -13,7 +13,7 @@
                     <div class="header-section">
                         <h1 class="title" style="user-select: none;">{{ t('about.title') }}</h1>
                         <p class="subtitle" style="user-select: none;">{{ t('about.subtitle') }}</p>
-                        <p class="version" style="user-select: none;">{{ t('about.version') }}: 1.1.0</p>
+                        <p class="version" style="user-select: none;">{{ t('about.version') }}: {{ appVersion }}</p>
                     </div>
 
                     <div class="description-section">
@@ -87,6 +87,7 @@ interface FeatureItem {
 
 const { t, locale } = useI18n()
 const emit = defineEmits(['navigate'])
+const appVersion = __APP_VERSION__
 
 const isElectron = ref(!!(window as Window & { electron?: unknown }).electron)
 const currentLocale = computed(() => locale.value)

@@ -1,7 +1,7 @@
 {
   "name": "web",
   "private": true,
-  "version": "v1.1.0",
+  "version": "v1.1.1",
   "description": "Constella - A visual workflow and node-based editing application",
   "author": "Constella Team",
   "type": "module",
@@ -13,6 +13,7 @@
     "dev": "vite --host 0.0.0.0",
     "dev:electron": "vite",
     "dev:electron-no-backend": "cross-env SKIP_BACKEND=true vite",
+    "version:bump": "node scripts/bump-version.cjs",
     "build": "vue-tsc -b && vite build",
     "build:server": "npm --prefix ../server run build",
     "prepare:server-runtime": "node scripts/prepare-server-runtime.cjs",
