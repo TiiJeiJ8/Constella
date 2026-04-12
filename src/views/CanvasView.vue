@@ -1,9 +1,7 @@
 <template>
     <div class="canvas-view" :data-room-id="roomId">
-        <!-- 窗口控制按钮 -->
         <WindowControls />
-        
-        <!-- 顶部栏 -->
+
         <CanvasTopBar
             :room-id="roomId"
             :room-name="roomName"
@@ -17,7 +15,6 @@
             style="margin-top: 10px"
         />
 
-        <!-- 左侧工具栏 -->
         <Toolbox
             :active-tool="activeTool"
             :can-undo="canUndo"
@@ -29,7 +26,6 @@
             style="user-select: none;"
         />
 
-        <!-- 中央画布区 -->
         <div
             class="canvas-area"
             ref="canvasAreaRef"
@@ -64,8 +60,7 @@
                 @stage-transform="handleStageTransform"
                 @render-stats="handleRenderStats"
             />
-            
-            <!-- 节点内容叠加层 -->
+
             <NodeContentOverlay
                 v-for="(node, overlayOrder) in visibleOverlayNodes"
                 :key="`content-${node.id}`"
@@ -99,7 +94,6 @@
             />
         </div>
 
-        <!-- 编辑器弹窗 -->
         <NodeEditorModal
             v-if="editingNode"
             :node-id="editingNode.id"
@@ -108,7 +102,6 @@
             @close="handleCloseEditor"
         />
 
-        <!-- 自定义插件编辑器（按插件自动路由到对应 editor 组件） -->
         <component
             v-if="editingCustomNode && editingCustomPlugin?.editor"
             :is="editingCustomPlugin.editor"
@@ -118,14 +111,12 @@
             @close="editingCustomNodeId = null"
         />
 
-        <!-- 成员面板 -->
         <MembersPanel
             v-model="isMembersPanelOpen"
             :room-id="roomId"
             :current-users="currentUsers"
         />
 
-        <!-- 边标签编辑对话框 -->
         <InputDialog
             v-model="isEdgeLabelDialogOpen"
             :title="t('canvas.edge.labelTitle')"
@@ -134,7 +125,6 @@
             @confirm="handleEdgeLabelConfirm"
         />
 
-        <!-- 右侧面板 -->
         <RightPanel
             :active-panel="activePanel"
             :is-collapsed="isPanelCollapsed"
@@ -164,7 +154,6 @@
             @snapshot-delete="handleSnapshotDelete"
         />
 
-        <!-- 底部状态栏 -->
         <StatusBar
             :zoom="zoom"
             :position="position"
@@ -176,33 +165,27 @@
             @send-message="handleSendMessage"
         />
 
-        <!-- 聊天面板 -->
         <ChatPanel
             v-model="isChatPanelOpen"
             :messages="chatMessages"
             @send="handleSendMessage"
         />
 
-        <!-- 聊天气泡容器 -->
         <ChatBubbleContainer ref="bubbleContainerRef" />
     </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted, onUnmounted, watch, provide } from 'vue'
+<script setup lang="ts">
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import * as Y from 'yjs'
-import { useYjs } from '@/composables/useYjs'
-import { useYjsNodes } from '@/composables/useYjsNodes'
-import { useYjsEdges } from '@/composables/useYjsEdges'
-import { useYjsChat } from '@/composables/useYjsChat'
-import { useAwareness } from '@/composables/useAwareness'
-import { useCanvasPerformance } from '@/composables/useCanvasPerformance'
-import { registerPlugins } from '@/plugins/register'
 import { pluginCatalogVersion, pluginRegistry } from '@/plugins'
-import { exportCanvas } from '@/utils/canvasExport'
+import { useCanvasAssets } from '@/composables/useCanvasAssets'
+import { useCanvasImportExport } from '@/composables/useCanvasImportExport'
+import { useCanvasPerformance } from '@/composables/useCanvasPerformance'
+import { useCanvasRoom } from '@/composables/useCanvasRoom'
+import { useCanvasSelection } from '@/composables/useCanvasSelection'
+import { useCanvasShortcuts } from '@/composables/useCanvasShortcuts'
 import { useToast } from '@/utils/useToast'
-import { apiService } from '@/services/api'
 import WindowControls from '@/components/base/WindowControls.vue'
 import CanvasTopBar from '@/components/canvas/CanvasTopBar.vue'
 import Toolbox from '@/components/canvas/Toolbox.vue'
@@ -217,16 +200,6 @@ import InputDialog from '@/components/base/InputDialog.vue'
 import ChatPanel from '@/components/canvas/ChatPanel.vue'
 import ChatBubbleContainer from '@/components/canvas/ChatBubbleContainer.vue'
 
-// 注册插件
-registerPlugins().catch(err => {
-    console.error('[Plugins] Failed to register plugins:', err)
-})
-
-const { t } = useI18n()
-const toast = useToast()
-
-const ASSET_DRAG_MIME = 'application/x-constella-asset'
-
 const props = defineProps({
     roomId: {
         type: String,
@@ -235,176 +208,146 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['navigate'])
+const { t } = useI18n()
+const toast = useToast()
 
-// 状态管理
-const roomName = ref('Loading Room...')
-const activeTool = ref('select')
 const activePanel = ref('properties')
 const zoom = ref(100)
 const position = ref({ x: 0, y: 0 })
-const selectedCount = ref(0)
-const isSyncing = ref(false)
-const isOffline = ref(false)
 const isDark = ref(false)
 const isPanelCollapsed = ref(false)
-const canvasStageRef = ref(null)
-
-// 成员面板
-const isMembersPanelOpen = ref(false)
-const currentUsers = computed(() => {
-    // 从 awareness 获取当前用户列表
-    const users = [
-        { id: localStorage.getItem('user_id') || 'current', name: getUserName(), isMe: true }
-    ]
-    // 加上远程用户 - 使用正确的属性路径
-    remoteCursors.value.forEach(cursor => {
-        users.push({
-            id: String(cursor.clientId),
-            name: cursor.user?.name || t('common.anonymous'),
-            isMe: false
-        })
-    })
-    return users
-})
-
-// 聊天功能
-const isChatPanelOpen = ref(false)
-const bubbleContainerRef = ref(null)
-
-// 边标签编辑对话框
 const isEdgeLabelDialogOpen = ref(false)
-const editingEdgeId = ref(null)
+const editingEdgeId = ref<string | null>(null)
 const editingEdgeLabel = ref('')
-
-// Stage 变换状态（用于内容叠加层定位）
 const stageScale = ref(1)
 const stagePosition = ref({ x: 0, y: 0 })
-const canvasAreaRef = ref(null)
+const canvasStageRef = ref<any>(null)
+const canvasAreaRef = ref<HTMLElement | null>(null)
 const canvasAreaSize = ref({ width: 0, height: 0 })
-let canvasAreaResizeObserver = null
-const editingNodeId = ref(null)
+const bubbleContainerRef = ref<{ addBubble?: (message: unknown) => void } | null>(null)
+const editingNodeId = ref<string | null>(null)
+const editingCustomNodeId = ref<string | null>(null)
 
-// 房间资源（暂存本地，后续对接 API）
-const roomAssets = ref([])
-let assetsRefreshInterval = null
+const {
+    roomName,
+    isSyncing,
+    isOffline,
+    isMembersPanelOpen,
+    isChatPanelOpen,
+    currentUsers,
+    remoteCursors,
+    yjs,
+    awareness,
+    yjsNodes,
+    yjsEdges,
+    chatMessages,
+    unreadCount,
+    handleExit,
+    handleSendMessage
+} = useCanvasRoom({
+    roomId: props.roomId,
+    t,
+    bubbleContainerRef,
+    emitNavigate: (view) => emit('navigate', view)
+})
 
-// 房间快照（暂存本地，后续对接 API）
-const roomSnapshots = ref([])
+const canvasNodes = computed(() => yjsNodes.nodes.value)
+const canvasEdges = computed(() => yjsEdges.edges.value)
+const canUndo = computed(() => yjsNodes.canUndo.value)
+const canRedo = computed(() => yjsNodes.canRedo.value)
 
-// 自定义插件编辑器（通用化，后续新插件无需改此文件）
-const editingCustomNodeId = ref(null)
 const editingCustomNode = computed(() => {
     if (!editingCustomNodeId.value) return null
-    return yjsNodes.nodes.value.find(n => n.id === editingCustomNodeId.value)
+    return canvasNodes.value.find(node => node.id === editingCustomNodeId.value) || null
 })
+
 const editingCustomPlugin = computed(() => {
     pluginCatalogVersion.value
     if (!editingCustomNode.value) return null
     return pluginRegistry.get(editingCustomNode.value.content?.kind)
 })
 
-// 获取存储的 token
-const getStoredToken = () => {
-    return localStorage.getItem('accessToken') || ''
-}
+const {
+    markdownLodScaleThreshold,
+    isDevPerformancePanelVisible,
+    visibleNodeCount,
+    visibleEdgeCount,
+    syncsPerSecond,
+    frameCostMs,
+    fps,
+    longFrameCount,
+    longFrameThresholdMs,
+    handleRenderStats: updatePerformanceRenderStats,
+    applyPerformanceSettings
+} = useCanvasPerformance({
+    getVisibleNodeCount: () => visibleOverlayNodes.value.length,
+    getCurrentSyncTick: () => (yjsNodes.syncTick?.value || 0) + (yjsEdges.syncTick?.value || 0)
+})
 
-// 获取用户姓名（从 settings 中读取）
-const getUserName = () => {
-    const settings = JSON.parse(localStorage.getItem('settings') || '{}')
-    if (settings.lastName && settings.firstName) {
-        // 根据当前语言决定姓名顺序
-        const currentLocale = localStorage.getItem('locale') || 'zh-CN'
-        return currentLocale === 'zh-CN'
-            ? `${settings.lastName}${settings.firstName}`
-            : `${settings.firstName} ${settings.lastName}`
-    }
-    // 降级使用 username 或 userId
-    return localStorage.getItem('username') || settings.userId || localStorage.getItem('user_id') || t('common.anonymous')
-}
+const {
+    activeTool,
+    userShortcuts,
+    handleToolChange
+} = useCanvasShortcuts({
+    editingNodeId,
+    applyPerformanceSettings
+})
 
-// Yjs 实时协作
-const yjs = useYjs({
+const {
+    roomAssets,
+    handleAssetUpload,
+    handleAssetDelete,
+    handleAssetInsert,
+    handleCanvasDragOver,
+    handleCanvasDrop
+} = useCanvasAssets({
     roomId: props.roomId,
-    token: getStoredToken(),
-    onConnect: () => {
-        console.log('[Canvas] Yjs connected')
-        isSyncing.value = false
-        isOffline.value = false
-        
-        // 初始化 Awareness
-        awareness.initialize()
-        
-        // 连接后立即初始化节点和边管理（确保首次进入时能创建示例节点）
-        if (yjs.doc) {
-            yjsEdges.initialize()
-            yjsNodes.initialize()
-            // 初始化聊天
-            yjsChat.initialize()
-        }
-    },
-    onDisconnect: () => {
-        console.log('[Canvas] Yjs disconnected')
-        isOffline.value = true
-    },
-    onSync: (synced) => {
-        console.log('[Canvas] Yjs synced:', synced)
-        isSyncing.value = !synced
-        
-        // 同步完成后确保初始化已完成（防止连接回调未触发的情况）
-        if (synced && yjs.doc) {
-            yjsEdges.initialize()
-            yjsNodes.initialize()
-            yjsChat.initialize()
-        }
-    },
-    onError: (error) => {
-        console.error('[Canvas] Yjs error:', error)
-        isOffline.value = true
-    }
+    t,
+    toast,
+    yjsNodes,
+    canvasAreaRef,
+    stagePosition,
+    stageScale
 })
 
-// Awareness 用户感知
-const awareness = useAwareness({
-    provider: yjs.provider,
-    userName: getUserName()
+const {
+    roomSnapshots,
+    handleSnapshotCreate,
+    handleSnapshotRestore,
+    handleSnapshotDelete,
+    handleTopBarSnapshot,
+    handleExport,
+    handleImport
+} = useCanvasImportExport({
+    roomName,
+    canvasNodes,
+    canvasEdges,
+    canvasStageRef,
+    stagePosition,
+    stageScale,
+    yjs,
+    yjsNodes,
+    yjsEdges,
+    t,
+    toast
 })
 
-// 为子组件提供 Awareness（用于编辑器协作光标）
-provide('awareness', {
-    otherUsers: awareness.otherUsers,
-    updateTextCursor: awareness.updateTextCursor
+const {
+    selectedCount,
+    selectedNodes,
+    selectedEdges,
+    handleNodeSelect,
+    handleNodeSelectFromPanel,
+    handleEdgeSelect,
+    handleEdgeSelectFromPanel,
+    handleEdgePropertyChange
+} = useCanvasSelection({
+    canvasNodes,
+    canvasEdges,
+    awareness,
+    canvasStageRef,
+    yjsEdges
 })
-
-// 其他用户光标
-const remoteCursors = computed(() => awareness.otherUsers.value)
-
-// Yjs 边（连接线）数据管理（先初始化，以便 yjsNodes 的 UndoManager 能跟踪）
-const yjsEdges = useYjsEdges({
-    getDoc: () => yjs.doc
-})
-
-// Yjs 节点数据管理（UndoManager 同时跟踪节点和连线）
-const yjsNodes = useYjsNodes({
-    getDoc: () => yjs.doc,
-    additionalTrackedMaps: () => {
-        const edgesMap = yjsEdges.edgesMap()
-        return edgesMap ? [edgesMap] : []
-    }
-})
-
-// Yjs 聊天数据管理
-const userId = localStorage.getItem('user_id') || 'current'
-const yjsChat = useYjsChat({
-    getDoc: () => yjs.doc,
-    userId,
-    userName: getUserName()
-})
-
-const chatMessages = computed(() => yjsChat.messages.value)
-const unreadCount = computed(() => yjsChat.unreadCount.value)
-
-// 渲染用的节点数据（从 Yjs 同步）
-const canvasNodes = computed(() => yjsNodes.nodes.value)
 
 const OVERLAY_VIEWPORT_BUFFER = 240
 
@@ -414,15 +357,15 @@ const overlayViewportRect = computed(() => {
     const scale = Math.max(0.01, stageScale.value || 1)
     const buffer = OVERLAY_VIEWPORT_BUFFER / scale
 
-    const left = -stagePosition.value.x / scale - buffer
-    const top = -stagePosition.value.y / scale - buffer
-    const right = (-stagePosition.value.x + width) / scale + buffer
-    const bottom = (-stagePosition.value.y + height) / scale + buffer
-
-    return { left, top, right, bottom }
+    return {
+        left: -stagePosition.value.x / scale - buffer,
+        top: -stagePosition.value.y / scale - buffer,
+        right: (-stagePosition.value.x + width) / scale + buffer,
+        bottom: (-stagePosition.value.y + height) / scale + buffer
+    }
 })
 
-function isNodeInOverlayViewport(node, viewport) {
+function isNodeInOverlayViewport(node: any, viewport: { left: number; top: number; right: number; bottom: number }) {
     const nodeRight = node.x + node.width
     const nodeBottom = node.y + node.height
 
@@ -440,206 +383,50 @@ const visibleOverlayNodes = computed(() => {
         return [...nodes].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
     }
 
-    const viewport = overlayViewportRect.value
     return nodes
-        .filter(node => isNodeInOverlayViewport(node, viewport))
+        .filter(node => isNodeInOverlayViewport(node, overlayViewportRect.value))
         .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
 })
 
-// 渲染用的边数据（从 Yjs 同步）
-const canvasEdges = computed(() => yjsEdges.edges.value)
-
-const {
-    showCanvasPerformancePanel,
-    markdownLodScaleThreshold,
-    isDevPerformancePanelVisible,
-    visibleNodeCount,
-    visibleEdgeCount,
-    syncsPerSecond,
-    frameCostMs,
-    fps,
-    longFrameCount,
-    longFrameThresholdMs,
-    handleRenderStats: updatePerformanceRenderStats,
-    applyPerformanceSettings,
-    startPerformanceMonitor,
-    stopPerformanceMonitor,
-} = useCanvasPerformance({
-    getVisibleNodeCount: () => visibleOverlayNodes.value.length,
-    getCurrentSyncTick: () => (yjsNodes.syncTick?.value || 0) + (yjsEdges.syncTick?.value || 0),
+const editingNode = computed(() => {
+    if (!editingNodeId.value) return null
+    return canvasNodes.value.find(node => node.id === editingNodeId.value) || null
 })
 
-// Undo/Redo 状态
-const canUndo = computed(() => yjsNodes.canUndo.value)
-const canRedo = computed(() => yjsNodes.canRedo.value)
-
-// 主题监听
 function updateTheme() {
     isDark.value = document.documentElement.getAttribute('data-theme') === 'dark'
 }
 
-// 工具切换
-function handleToolChange(tool) {
-    activeTool.value = tool
-    console.log('[Canvas] Tool changed:', tool)
-}
-
-// 从设置获取快捷键映射（tool -> key）
-function getShortcutMap() {
-    try {
-        const settings = JSON.parse(localStorage.getItem('settings') || '{}')
-        return settings.shortcuts || { select: 'v', pan: 'p', node: 'n', edge: 'e' }
-    } catch (e) {
-        return { select: 'v', pan: 'p', node: 'n', edge: 'e' }
-    }
-}
-
-// 响应式用户快捷键映射（SettingsPanel 会广播 settings-updated）
-const userShortcuts = ref(getShortcutMap())
-
-function handleSettingsUpdated(e) {
-    try {
-        const settings = e.detail || {}
-        userShortcuts.value = settings.shortcuts || getShortcutMap()
-
-        const performance = settings.performance || {}
-        applyPerformanceSettings({
-            showCanvasPerformancePanel: performance.showCanvasPerformancePanel,
-            markdownLodScaleThreshold: performance.markdownLodScaleThreshold,
-            developerMode: settings.developerMode
-        })
-    } catch (err) {
-        userShortcuts.value = getShortcutMap()
-        applyPerformanceSettings()
-    }
-}
-
-// 全局热键监听：根据用户设置切换工具
-function handleHotkey(e) {
-    const activeEl = document.activeElement
-    const isTyping = activeEl && (['INPUT', 'TEXTAREA'].includes(activeEl.tagName) || activeEl.isContentEditable || editingNodeId.value)
-    if (isTyping) return
-
-    const key = e.key.toLowerCase()
-    const shortcuts = userShortcuts.value || getShortcutMap()
-
-    // 以小写单字符为准
-    for (const tool of ['select', 'pan', 'node', 'edge']) {
-        const mapped = (shortcuts[tool] || '').toLowerCase()
-        if (mapped && mapped === key) {
-            activeTool.value = tool
-            e.preventDefault()
-            return
-        }
-    }
-}
-
-onMounted(() => {
-    window.addEventListener('keydown', handleHotkey)
-    window.addEventListener('settings-updated', handleSettingsUpdated)
-})
-
-onUnmounted(() => {
-    window.removeEventListener('keydown', handleHotkey)
-    window.removeEventListener('settings-updated', handleSettingsUpdated)
-})
-
-// 面板切换
-function handlePanelChange(panel) {
+function handlePanelChange(panel: string) {
     activePanel.value = panel
-    console.log('[Canvas] Panel changed:', panel)
 }
 
-// 退出房间
-function handleExit() {
-    console.log('[Canvas] Exiting room:', props.roomId)
-    emit('navigate', 'rooms')
-}
-
-// 聊天功能
-function handleSendMessage(content) {
-    if (content.trim()) {
-        yjsChat.sendMessage(content)
-    }
-}
-
-// 监听新消息，显示气泡提示
-watch(() => yjsChat.messages.value.length, (newLength, oldLength) => {
-    if (newLength > oldLength) {
-        const latestMessage = yjsChat.messages.value[newLength - 1]
-        if (bubbleContainerRef.value) {
-            bubbleContainerRef.value.addBubble(latestMessage)
-        }
-    }
-})
-
-// 监听聊天面板打开，标记为已读
-watch(isChatPanelOpen, (isOpen) => {
-    if (isOpen) {
-        yjsChat.markAsRead()
-    }
-})
-
-
-// 缩放变化
-function handleZoomChange(newZoom) {
+function handleZoomChange(newZoom: number) {
     zoom.value = newZoom
 }
 
-// 位置变化
-function handlePositionChange(newPosition) {
+function handlePositionChange(newPosition: { x: number; y: number }) {
     position.value = newPosition
 }
 
-// 选中节点的 IDs
-const selectedNodeIdList = ref([])
-
-// 计算选中的节点详情
-const selectedNodes = computed(() => {
-    return selectedNodeIdList.value
-        .map(id => canvasNodes.value.find(n => n.id === id))
-        .filter(Boolean)
-})
-
-// 节点选择
-function handleNodeSelect(selectedNodeIds) {
-    selectedCount.value = selectedNodeIds.length
-    selectedNodeIdList.value = selectedNodeIds
-    console.log('[Canvas] Nodes selected:', selectedNodeIds)
-    
-    // 同步选中状态到 Awareness，让其他用户看到
-    awareness.updateSelection(selectedNodeIds)
-}
-
-// 节点更新（同步到 Yjs）
-function handleNodeUpdate(updateData) {
+function handleNodeUpdate(updateData: any) {
     if (!updateData?.id) return
-
-    // 拖拽中的实时同步仅更新坐标，减少写入字段与无效事件。
     if (updateData._realtime) {
         yjsNodes.updateNodePosition(updateData.id, updateData.x, updateData.y)
         return
     }
-
     yjsNodes.updateNode(updateData.id, updateData)
 }
 
-// 节点删除（同步到 Yjs）
-function handleNodeDelete(nodeIds) {
-    console.log('[Canvas] Node delete:', nodeIds)
-    // 删除与这些节点相关的边
+function handleNodeDelete(nodeIds: string[]) {
     nodeIds.forEach(nodeId => {
         yjsEdges.deleteEdgesByNode(nodeId)
     })
     yjsNodes.deleteNodes(nodeIds)
 }
 
-// 节点创建（同步到 Yjs）
-function handleNodeCreate(createData) {
-    // 生成唯一 ID
+function handleNodeCreate(createData: { x: number; y: number }) {
     const nodeId = `node-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    
-    // 预设颜色列表
     const colors = [
         { fill: '#667eea', stroke: '#5568d3' },
         { fill: '#48bb78', stroke: '#38a169' },
@@ -648,55 +435,24 @@ function handleNodeCreate(createData) {
         { fill: '#9f7aea', stroke: '#805ad5' },
         { fill: '#38b2ac', stroke: '#319795' }
     ]
-    const color = colors[Math.floor(Math.random() * colors.length)]
-    
-    // 创建节点
+    const fallbackColor = { fill: '#667eea', stroke: '#5568d3' }
+    const color = colors[Math.floor(Math.random() * colors.length)] || fallbackColor
+
     yjsNodes.createNode({
         id: nodeId,
-        x: createData.x - 75,  // 居中节点（宽度150的一半）
-        y: createData.y - 50,  // 居中节点（高度100的一半）
+        x: createData.x - 75,
+        y: createData.y - 50,
         width: 180,
         height: 120,
         fill: color.fill,
         stroke: color.stroke,
         content: { kind: 'markdown', data: t('canvas.node.defaultContent') }
     })
-    
-    console.log('[Canvas] Node created:', nodeId, createData)
-
 }
 
-// 边选择
-const selectedEdgeIdList = ref([])
-
-// 计算选中的边详情
-const selectedEdges = computed(() => {
-    return selectedEdgeIdList.value
-        .map(id => canvasEdges.value.find(e => e.id === id))
-        .filter(Boolean)
-})
-
-function handleEdgeSelect(selectedEdgeIds) {
-    selectedEdgeIdList.value = selectedEdgeIds
-    console.log('[Canvas] Edges selected:', selectedEdgeIds)
-}
-
-// 边属性变更（从属性面板）
-function handleEdgePropertyChange(edgeId, property, value) {
-    yjsEdges.updateEdge(edgeId, { [property]: value })
-    console.log('[Canvas] Edge property changed:', edgeId, property, '->', value)
-}
-
-// 从面板选择边
-function handleEdgeSelectFromPanel(edgeId) {
-    selectedEdgeIdList.value = [edgeId]
-    console.log('[Canvas] Edge selected from panel:', edgeId)
-}
-
-// 边创建（同步到 Yjs）
-function handleEdgeCreate(edgeData) {
+function handleEdgeCreate(edgeData: { sourceId: string; targetId: string }) {
     const edgeId = `edge-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    
+
     yjsEdges.createEdge({
         id: edgeId,
         sourceId: edgeData.sourceId,
@@ -707,32 +463,21 @@ function handleEdgeCreate(edgeData) {
         startArrow: 'none',
         endArrow: 'arrow'
     })
-    
-    console.log('[Canvas] Edge created:', edgeId, edgeData)
-
 }
 
-// 边删除（同步到 Yjs）
-function handleEdgeDelete(edgeIds) {
-    console.log('[Canvas] Edge delete:', edgeIds)
+function handleEdgeDelete(edgeIds: string[]) {
     yjsEdges.deleteEdges(edgeIds)
 }
 
-// 边双击（编辑标签）
-function handleEdgeDblClick(edgeId) {
-    const edge = canvasEdges.value.find(e => e.id === edgeId)
+function handleEdgeDblClick(edgeId: string) {
+    const edge = canvasEdges.value.find(item => item.id === edgeId)
     if (!edge) return
-    
-    // 打开边标签编辑对话框
     editingEdgeId.value = edgeId
     editingEdgeLabel.value = edge.label || ''
     isEdgeLabelDialogOpen.value = true
-    
-    console.log('[Canvas] Edge dblclick:', edgeId)
 }
 
-// 边标签确认
-function handleEdgeLabelConfirm(newLabel) {
+function handleEdgeLabelConfirm(newLabel: string) {
     if (editingEdgeId.value) {
         yjsEdges.updateEdge(editingEdgeId.value, { label: newLabel })
         toast.success(t('canvas.toast.edgeLabelUpdated'))
@@ -741,561 +486,29 @@ function handleEdgeLabelConfirm(newLabel) {
     editingEdgeLabel.value = ''
 }
 
-// 资源上传
-async function handleAssetUpload(uploadData) {
-    console.log('[Canvas] Asset upload:', uploadData)
-    // 如果上传组件已完成上传并返回结果，直接使用它
-    if (uploadData && uploadData.success === true && uploadData.asset) {
-        const serverAsset = uploadData.asset
-
-        const baseUrl = apiService.getBaseUrl()
-        const fullUrl = serverAsset.url && serverAsset.url.startsWith('http')
-            ? serverAsset.url
-            : `${baseUrl}${serverAsset.url.replace(/^constella:\/\//, '/')}`
-
-        const asset = {
-            id: serverAsset.id,
-            name: serverAsset.name,
-            type: serverAsset.type,
-            size: serverAsset.size,
-            url: fullUrl,
-            uploadedAt: serverAsset.uploadedAt
-        }
-
-        roomAssets.value.push(asset)
-        console.log('[Canvas] Asset added:', asset.id)
-        await loadRoomAssets()
-        toast.success(t('canvas.toast.uploadSuccess'))
-        return
-    }
-
-    const file = uploadData.file
-
-    // 上传到服务器（回退逻辑）
-    const response = await apiService.uploadAsset(props.roomId, file)
-
-    if (!response.success) {
-        console.error('[Canvas] Asset upload failed:', response.message)
-        toast.error(t('canvas.toast.uploadFailed'))
-        return
-    }
-
-    const serverAsset = response.data
-    
-    // 构建完整的资源 URL
-    const baseUrl = apiService.getBaseUrl()
-    const fullUrl = serverAsset.url.startsWith('http') 
-        ? serverAsset.url 
-        : `${baseUrl}${serverAsset.url}`
-    
-    const asset = {
-        id: serverAsset.id,
-        name: serverAsset.name,
-        type: serverAsset.type,
-        size: serverAsset.size,
-        url: fullUrl,
-        uploadedAt: serverAsset.uploadedAt
-    }
-    
-    roomAssets.value.push(asset)
-    console.log('[Canvas] Asset added:', asset.id)
-    await loadRoomAssets()
-    toast.success(t('canvas.toast.uploadSuccess'))
-}
-
-// 资源删除
-async function handleAssetDelete(assetId) {
-    const index = roomAssets.value.findIndex(a => a.id === assetId)
-    if (index !== -1) {
-        const asset = roomAssets.value[index]
-        
-        // 如果是服务器资源，调用 API 删除
-        if (!asset.url.startsWith('blob:')) {
-            const response = await apiService.deleteAsset(props.roomId, assetId)
-            if (!response.success) {
-                console.error('[Canvas] Asset delete failed:', response.message)
-                toast.error(t('canvas.toast.deleteFailed'))
-                return
-            }
-        } else {
-            // 释放本地 URL
-            URL.revokeObjectURL(asset.url)
-        }
-        
-        roomAssets.value.splice(index, 1)
-        console.log('[Canvas] Asset deleted:', assetId)
-        await loadRoomAssets()
-    }
-}
-
-function getCanvasPointFromClient(clientX, clientY) {
-    const canvasArea = canvasAreaRef.value
-    if (!canvasArea) {
-        return { x: 0, y: 0 }
-    }
-
-    const rect = canvasArea.getBoundingClientRect()
-    return {
-        x: (clientX - rect.left - stagePosition.value.x) / stageScale.value,
-        y: (clientY - rect.top - stagePosition.value.y) / stageScale.value
-    }
-}
-
-function getViewportCenterCanvasPoint() {
-    const canvasArea = canvasAreaRef.value
-    if (!canvasArea) {
-        return { x: 0, y: 0 }
-    }
-
-    const rect = canvasArea.getBoundingClientRect()
-    return getCanvasPointFromClient(
-        rect.left + rect.width / 2,
-        rect.top + rect.height / 2
-    )
-}
-
-function createAssetNode(asset, position) {
-    const baseUrl = apiService.getBaseUrl()
-    let nodeUrl = asset.url
-    if (nodeUrl.startsWith(baseUrl + '/')) {
-        nodeUrl = 'constella:/' + nodeUrl.slice(baseUrl.length)
-    }
-
-    const nodeId = `node-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    const width = 200
-    const height = 150
-    const targetPosition = position || getViewportCenterCanvasPoint()
-
-    yjsNodes.createNode({
-        id: nodeId,
-        x: targetPosition.x - width / 2,
-        y: targetPosition.y - height / 2,
-        width,
-        height,
-        fill: '#ffffff',
-        stroke: '#e0e0e0',
-        content: {
-            kind: 'image',
-            data: nodeUrl,
-            metadata: {
-                assetId: asset.id,
-                name: asset.name,
-                type: asset.type
-            }
-        }
-    })
-
-    console.log('[Canvas] Image node created:', nodeId, targetPosition)
-}
-
-function handleCanvasDragOver(e) {
-    const hasAsset = Array.from(e.dataTransfer?.types || []).includes(ASSET_DRAG_MIME)
-    if (!hasAsset) return
-    e.dataTransfer.dropEffect = 'copy'
-}
-
-function handleCanvasDrop(e) {
-    const rawAsset = e.dataTransfer?.getData(ASSET_DRAG_MIME)
-    if (!rawAsset) return
-
-    try {
-        const asset = JSON.parse(rawAsset)
-        handleAssetInsert(asset, getCanvasPointFromClient(e.clientX, e.clientY))
-    } catch (error) {
-        console.error('[Canvas] Failed to parse dropped asset:', error)
-    }
-}
-
-// 资源插入到画布（创建图片节点）
-function handleAssetInsert(asset) {
-    console.log('[Canvas] Insert asset:', asset)
-    createAssetNode(asset, arguments[1])
-    return
-    
-    // 将绝对 URL 标准化为 constella:// 协议存入 Yjs，确保每个客户端都能用自己的
-    // baseUrl 解析图片地址，避免 localhost 等本地地址对其他用户不可用。
-    const baseUrl = apiService.getBaseUrl()
-    let nodeUrl = asset.url
-    if (nodeUrl.startsWith(baseUrl + '/')) {
-        // 'http://host:port/uploads/...' → 'constella://uploads/...'
-        nodeUrl = 'constella:/' + nodeUrl.slice(baseUrl.length)
-    }
-    
-    // 创建图片节点
-    const nodeId = `node-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    
-    yjsNodes.createNode({
-        id: nodeId,
-        x: 100 + Math.random() * 200,
-        y: 100 + Math.random() * 200,
-        width: 200,
-        height: 150,
-        fill: '#ffffff',
-        stroke: '#e0e0e0',
-        content: { 
-            kind: 'image', 
-            data: nodeUrl,
-            metadata: {
-                assetId: asset.id,
-                name: asset.name,
-                type: asset.type
-            }
-        }
-    })
-    
-    console.log('[Canvas] Image node created:', nodeId)
-}
-
-// 创建快照
-function handleSnapshotCreate(snapshotData) {
-    console.log('[Canvas] Creating snapshot:', snapshotData)
-    
-    // 获取当前状态
-    const currentNodes = JSON.parse(JSON.stringify(canvasNodes.value))
-    const currentEdges = JSON.parse(JSON.stringify(canvasEdges.value))
-    
-    const snapshot = {
-        ...snapshotData,
-        state: {
-            nodes: currentNodes,
-            edges: currentEdges
-        }
-    }
-    
-    roomSnapshots.value.push(snapshot)
-    
-    // 限制快照数量（最多保存 50 个）
-    if (roomSnapshots.value.length > 50) {
-        // 删除最旧的自动快照
-        const autoSnapshots = roomSnapshots.value.filter(s => s.auto)
-        if (autoSnapshots.length > 0) {
-            const oldestAuto = autoSnapshots[0]
-            const index = roomSnapshots.value.findIndex(s => s.id === oldestAuto.id)
-            if (index !== -1) {
-                roomSnapshots.value.splice(index, 1)
-            }
-        }
-    }
-    
-    // Toast 提示
-    if (!snapshotData.auto) {
-        toast.success(t('canvas.toast.snapshotCreated'))
-    }
-    
-    console.log('[Canvas] Snapshot created:', snapshot.id, 'Total:', roomSnapshots.value.length)
-}
-
-// 恢复快照
-function handleSnapshotRestore(snapshot) {
-    console.log('[Canvas] Restoring snapshot:', snapshot.id)
-    
-    if (!snapshot.state) {
-        console.warn('[Canvas] Snapshot has no state data')
-        return
-    }
-    
-    const { nodes, edges } = snapshot.state
-    
-    // 获取 doc
-    const doc = yjs.doc
-    if (!doc) {
-        console.warn('[Canvas] Doc not available')
-        return
-    }
-    
-    // 使用事务批量更新
-    doc.transact(() => {
-        // 获取 Yjs Maps
-        const nodesMap = doc.getMap('nodes')
-        const edgesMap = doc.getMap('edges')
-        
-        // 清除现有节点
-        nodesMap.forEach((_, id) => nodesMap.delete(id))
-        
-        // 清除现有连线
-        edgesMap.forEach((_, id) => edgesMap.delete(id))
-        
-        // 恢复节点
-        nodes.forEach(node => {
-            const yNode = new Y.Map()
-            yNode.set('x', node.x)
-            yNode.set('y', node.y)
-            yNode.set('width', node.width)
-            yNode.set('height', node.height)
-            yNode.set('fill', node.rectConfig?.fill || '#667eea')
-            yNode.set('stroke', node.rectConfig?.stroke || '#5568d3')
-            yNode.set('zIndex', node.zIndex ?? 0)
-            
-            // 恢复内容
-            if (node.content) {
-                const yContent = new Y.Map()
-                yContent.set('kind', node.content.kind || 'blank')
-                yContent.set('data', node.content.data || '')
-                if (node.content.displayMode) {
-                    yContent.set('displayMode', node.content.displayMode)
-                }
-                if (node.content.metadata) {
-                    yContent.set('metadata', node.content.metadata)
-                }
-                yNode.set('content', yContent)
-            }
-            
-            nodesMap.set(node.id, yNode)
-        })
-        
-        // 恢复连线
-        edges.forEach(edge => {
-            const yEdge = new Y.Map()
-            yEdge.set('sourceId', edge.sourceId)
-            yEdge.set('targetId', edge.targetId)
-            yEdge.set('sourceAnchor', edge.sourceAnchor || 'center')
-            yEdge.set('targetAnchor', edge.targetAnchor || 'center')
-            yEdge.set('type', edge.type || 'bezier')
-            yEdge.set('color', edge.color || '#667eea')
-            yEdge.set('strokeWidth', edge.strokeWidth || 2)
-            if (edge.dashArray) yEdge.set('dashArray', edge.dashArray)
-            yEdge.set('startArrow', edge.startArrow || 'none')
-            yEdge.set('endArrow', edge.endArrow || 'arrow')
-            if (edge.label) yEdge.set('label', edge.label)
-            yEdge.set('labelPosition', edge.labelPosition ?? 0.5)
-            yEdge.set('zIndex', edge.zIndex ?? 0)
-            
-            edgesMap.set(edge.id, yEdge)
-        })
-    })
-    
-    console.log('[Canvas] Restored', nodes.length, 'nodes and', edges.length, 'edges')
-    toast.success(t('canvas.toast.snapshotRestored'))
-}
-
-// 删除快照
-function handleSnapshotDelete(snapshotId) {
-    const index = roomSnapshots.value.findIndex(s => s.id === snapshotId)
-    if (index !== -1) {
-        roomSnapshots.value.splice(index, 1)
-        console.log('[Canvas] Snapshot deleted:', snapshotId)
-    }
-}
-
-// 从顶部栏创建快照
-function handleTopBarSnapshot() {
-    handleSnapshotCreate({
-        id: `snapshot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        name: `快照 ${new Date().toLocaleTimeString('zh-CN')}`,
-        createdAt: new Date().toISOString(),
-        auto: false
-    })
-}
-
-// 导出画布
-async function handleExport(options) {
-    console.log('[Canvas] Exporting canvas:', options)
-    
-    try {
-        // JSON 导出 - 导出画布数据
-        if (options.format === 'json') {
-            const exportData = {
-                version: '1.0',
-                exportedAt: new Date().toISOString(),
-                roomName: roomName.value,
-                nodes: canvasNodes.value.map(node => ({
-                    id: node.id,
-                    x: node.x,
-                    y: node.y,
-                    width: node.width,
-                    height: node.height,
-                    content: node.content,
-                    zIndex: node.zIndex || 0
-                })),
-                edges: canvasEdges.value.map(edge => ({
-                    id: edge.id,
-                    sourceId: edge.sourceId,
-                    targetId: edge.targetId,
-                    sourceAnchor: edge.sourceAnchor,
-                    targetAnchor: edge.targetAnchor,
-                    type: edge.type,
-                    color: edge.color,
-                    strokeWidth: edge.strokeWidth,
-                    dashArray: edge.dashArray,
-                    startArrow: edge.startArrow,
-                    endArrow: edge.endArrow,
-                    label: edge.label,
-                    labelPosition: edge.labelPosition,
-                    zIndex: edge.zIndex
-                }))
-            }
-            
-            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `${roomName.value}-${Date.now()}.constella.json`
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-            URL.revokeObjectURL(url)
-            
-            toast.success(t('canvas.toast.exportSuccess', { format: 'JSON' }))
-            console.log('[Canvas] JSON export completed')
-            return
-        }
-        
-        // 图片导出 - PNG/SVG
-        // 获取 Konva Stage
-        const stage = canvasStageRef.value?.getStage?.()
-        
-        await exportCanvas(
-            stage,
-            canvasNodes.value,
-            canvasEdges.value,
-            {
-                format: options.format,
-                filename: `${roomName.value}-${Date.now()}`,
-                scale: options.format === 'png' ? 2 : 1,
-                backgroundColor: '#ffffff',
-                padding: 40
-            }
-        )
-        
-        toast.success(t('canvas.toast.exportSuccess', { format: options.format.toUpperCase() }))
-        console.log('[Canvas] Export completed')
-    } catch (error) {
-        console.error('[Canvas] Export failed:', error)
-        toast.error(t('canvas.toast.exportFailed'))
-    }
-}
-
-// 导入画布数据
-function handleImport(data) {
-    console.log('[Canvas] Importing canvas data:', data)
-    
-    try {
-        // 验证数据格式 - 只检查基本结构，nodes 可以为空
-        if (!data || typeof data !== 'object') {
-            console.error('[Canvas] Import validation failed: data is not an object')
-            toast.error(t('canvas.topBar.importError'))
-            return
-        }
-        
-        // 兼容不同版本的数据格式
-        const nodes = data.nodes || []
-        const edges = data.edges || []
-        
-        if (!Array.isArray(nodes)) {
-            console.error('[Canvas] Import validation failed: nodes is not an array')
-            toast.error(t('canvas.topBar.importError'))
-            return
-        }
-        
-        // 如果没有节点，直接返回成功
-        if (nodes.length === 0) {
-            toast.success(t('canvas.topBar.importSuccess'))
-            return
-        }
-        
-        // 生成新的 ID 映射，避免和现有节点冲突
-        const idMap = new Map()
-        
-        // 计算偏移量，将导入的节点放在画布中心附近
-        let minX = Infinity, minY = Infinity
-        nodes.forEach(node => {
-            minX = Math.min(minX, node.x)
-            minY = Math.min(minY, node.y)
-        })
-        
-        // 获取当前视口中心
-        const viewportCenter = {
-            x: (window.innerWidth / 2 - stagePosition.value.x) / stageScale.value,
-            y: (window.innerHeight / 2 - stagePosition.value.y) / stageScale.value
-        }
-        
-        // 计算偏移
-        const offsetX = viewportCenter.x - minX
-        const offsetY = viewportCenter.y - minY
-        
-        // 导入节点
-        nodes.forEach(node => {
-            const newId = `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-            idMap.set(node.id, newId)
-            
-            yjsNodes.createNode({
-                id: newId,
-                x: node.x + offsetX,
-                y: node.y + offsetY,
-                width: node.width || 200,
-                height: node.height || 120,
-                content: node.content || { kind: 'blank' },
-                zIndex: node.zIndex || 0
-            })
-        })
-        
-        // 导入连线（更新节点 ID 引用）
-        edges.forEach(edge => {
-            const newSourceId = idMap.get(edge.sourceId)
-            const newTargetId = idMap.get(edge.targetId)
-            
-            // 只有当源节点和目标节点都存在时才创建连线
-            if (newSourceId && newTargetId) {
-                yjsEdges.createEdge({
-                    sourceId: newSourceId,
-                    targetId: newTargetId,
-                    sourceAnchor: edge.sourceAnchor,
-                    targetAnchor: edge.targetAnchor,
-                    type: edge.type || 'bezier',
-                    color: edge.color || '#667eea',
-                    strokeWidth: edge.strokeWidth || 2,
-                    dashArray: edge.dashArray,
-                    startArrow: edge.startArrow || 'none',
-                    endArrow: edge.endArrow || 'arrow',
-                    label: edge.label,
-                    labelPosition: edge.labelPosition,
-                    zIndex: edge.zIndex
-                })
-            }
-        })
-        
-        toast.success(t('canvas.topBar.importSuccess'))
-        console.log('[Canvas] Import completed, nodes:', nodes.length, 'edges:', edges.length)
-    } catch (error) {
-        console.error('[Canvas] Import failed:', error)
-        toast.error(t('canvas.topBar.importError'))
-    }
-}
-
-// 光标移动（同步到 Awareness）
-function handleCursorMove(cursorData) {
+function handleCursorMove(cursorData: { x: number; y: number }) {
     awareness.updateCursor(cursorData.x, cursorData.y)
 }
 
-// 光标离开画布
 function handleCursorLeave() {
     awareness.clearCursor()
 }
 
-// Stage 变换（缩放/平移）
-function handleStageTransform(transform) {
+function handleStageTransform(transform: { scale: number; x: number; y: number }) {
     stageScale.value = transform.scale
     stagePosition.value = { x: transform.x, y: transform.y }
 }
 
-function handleRenderStats(stats) {
+function handleRenderStats(stats: { visibleNodes?: number; visibleEdges?: number }) {
     updatePerformanceRenderStats(stats)
 }
 
-// 节点内容更新
-function handleContentUpdate(nodeId, data) {
+function handleContentUpdate(nodeId: string, data: string) {
     yjsNodes.updateNodeContent(nodeId, data)
 }
 
-// 计算当前正在编辑的节点
-const editingNode = computed(() => {
-    if (!editingNodeId.value) return null
-    return canvasNodes.value.find(n => n.id === editingNodeId.value)
-})
-
-// 节点双击 - 打开编辑器弹窗
-function handleNodeDblClick(nodeId) {
-    const node = canvasNodes.value.find(n => n.id === nodeId)
+function handleNodeDblClick(nodeId: string) {
+    const node = canvasNodes.value.find(item => item.id === nodeId)
     if (!node) return
 
     const kind = node.content?.kind || 'blank'
@@ -1303,52 +516,38 @@ function handleNodeDblClick(nodeId) {
 
     const plugin = pluginRegistry.get(kind)
     if (!plugin?.meta?.editable) return
-
-    // 让插件自己处理双击（如 hyperlink 直接打开网址）
     if (plugin.onDblClick?.(node.content)) return
 
-    // 有自定义 editor 组件 → 打开自定义编辑器
     if (plugin.editor) {
         editingCustomNodeId.value = nodeId
     } else {
-        // 无自定义 editor → 通用文本编辑器
         editingNodeId.value = nodeId
-        console.log('[Canvas] Opened editor for:', nodeId)
     }
 }
 
-// 自定义插件编辑器保存（通用，适配所有有 editor 的插件）
-function handleCustomEditorUpdate(nodeId, contentPatch) {
-    yjsNodes.updateNode(nodeId, { content: contentPatch })
+function handleCustomEditorUpdate(nodeId: string, contentPatch: Record<string, unknown>) {
+    yjsNodes.updateNode(nodeId, { content: contentPatch } as any)
     editingCustomNodeId.value = null
 }
 
-// 关闭编辑器
 function handleCloseEditor() {
     editingNodeId.value = null
 }
 
-// 节点类型变更（从属性面板）
-function handleNodeKindChange(nodeId, kind) {
+function handleNodeKindChange(nodeId: string, kind: string) {
     yjsNodes.updateNodeKind(nodeId, kind)
-    console.log('[Canvas] Node kind changed:', nodeId, '->', kind)
 }
 
-// 节点属性变更（从属性面板）
-function handleNodePropertyChange(nodeId, property, value) {
-    yjsNodes.updateNode(nodeId, { [property]: value })
-    console.log('[Canvas] Node property changed:', nodeId, property, '->', value)
+function handleNodePropertyChange(nodeId: string, property: string, value: unknown) {
+    yjsNodes.updateNode(nodeId, { [property]: value } as any)
 }
 
-// 节点显示模式变更
-function handleNodeDisplayModeChange(nodeId, displayMode) {
-    yjsNodes.updateNodeDisplayMode(nodeId, displayMode)
-    console.log('[Canvas] Node display mode changed:', nodeId, '->', displayMode)
+function handleNodeDisplayModeChange(nodeId: string, displayMode: string) {
+    yjsNodes.updateNodeDisplayMode(nodeId, displayMode as any)
 }
 
-// 节点内容 metadata 变更（例如显示字号）
-function handleNodeContentMetadataChange(nodeId, key, value) {
-    const node = canvasNodes.value.find(n => n.id === nodeId)
+function handleNodeContentMetadataChange(nodeId: string, key: string, value: unknown) {
+    const node = canvasNodes.value.find(item => item.id === nodeId)
     if (!node?.content) return
 
     const nextValue = key === 'fontSize'
@@ -1363,188 +562,65 @@ function handleNodeContentMetadataChange(nodeId, key, value) {
                 [key]: nextValue
             }
         }
-    })
-    console.log('[Canvas] Node content metadata changed:', nodeId, key, '->', nextValue)
+    } as any)
 }
 
-// 从图层面板选择节点
-function handleNodeSelectFromPanel(nodeId) {
-    selectedNodeIds.value = [nodeId]
-    // 通知 CanvasStage 选中该节点
-    if (canvasStageRef.value) {
-        canvasStageRef.value.selectNode(nodeId)
-    }
-    console.log('[Canvas] Node selected from panel:', nodeId)
-}
-
-// 节点图层（zIndex）变更
-function handleNodeZIndexChange(nodeId, action) {
-    const allZIndexes = canvasNodes.value.map(n => n.zIndex || 0)
-    const currentNode = canvasNodes.value.find(n => n.id === nodeId)
+function handleNodeZIndexChange(nodeId: string, action: 'top' | 'bottom' | 'up' | 'down') {
+    const allZIndexes = canvasNodes.value.map(node => node.zIndex || 0)
+    const currentNode = canvasNodes.value.find(node => node.id === nodeId)
     if (!currentNode) return
-    
+
     const currentZ = currentNode.zIndex || 0
     let newZ = currentZ
-    
+
     switch (action) {
         case 'top':
-            // 置于顶层：找到最大 zIndex + 1
-            newZ = Math.max(...allZIndexes) + 1
+            newZ = Math.max(...allZIndexes, currentZ) + 1
             break
         case 'bottom':
-            // 置于底层：找到最小 zIndex - 1
-            newZ = Math.min(...allZIndexes) - 1
+            newZ = Math.min(...allZIndexes, currentZ) - 1
             break
-        case 'up':
-            // 上移一层：找到比当前大的最小值
+        case 'up': {
             const higherZs = allZIndexes.filter(z => z > currentZ)
-            if (higherZs.length > 0) {
-                const nextHigher = Math.min(...higherZs)
-                newZ = nextHigher + 1
-            } else {
-                newZ = currentZ + 1
-            }
+            newZ = higherZs.length > 0 ? Math.min(...higherZs) + 1 : currentZ + 1
             break
-        case 'down':
-            // 下移一层：找到比当前小的最大值
+        }
+        case 'down': {
             const lowerZs = allZIndexes.filter(z => z < currentZ)
-            if (lowerZs.length > 0) {
-                const nextLower = Math.max(...lowerZs)
-                newZ = nextLower - 1
-            } else {
-                newZ = currentZ - 1
-            }
+            newZ = lowerZs.length > 0 ? Math.max(...lowerZs) - 1 : currentZ - 1
             break
+        }
     }
-    
-    yjsNodes.updateNode(nodeId, { zIndex: newZ })
-    console.log('[Canvas] Node zIndex changed:', nodeId, action, '->', newZ)
+
+    yjsNodes.updateNode(nodeId, { zIndex: newZ } as any)
 }
 
-// 撤销
 function handleUndo() {
     yjsNodes.undo()
 }
 
-// 重做
 function handleRedo() {
     yjsNodes.redo()
 }
 
-// 切换面板折叠
 function togglePanel() {
     isPanelCollapsed.value = !isPanelCollapsed.value
 }
 
 function updateCanvasAreaSize() {
     if (!canvasAreaRef.value) return
-
     canvasAreaSize.value = {
         width: canvasAreaRef.value.clientWidth || 0,
         height: canvasAreaRef.value.clientHeight || 0
     }
 }
 
-watch(
-    isDevPerformancePanelVisible,
-    (visible) => {
-        if (visible) {
-            startPerformanceMonitor()
-        } else {
-            stopPerformanceMonitor()
-        }
-    },
-    { immediate: true }
-)
+let canvasAreaResizeObserver: ResizeObserver | null = null
+let themeObserver: MutationObserver | null = null
 
-// 加载房间数据
-async function loadRoomData() {
-    try {
-        console.log('[Canvas] Loading room data for:', props.roomId)
-        const fallbackName = `Room ${props.roomId.slice(0, 8)}`
-        const response = await apiService.getRoomById(props.roomId)
-
-        if (response.success) {
-            const apiRoomName = response.data?.room?.name || response.data?.name
-
-            if (typeof apiRoomName === 'string' && apiRoomName.trim()) {
-                roomName.value = apiRoomName.trim()
-                return
-            }
-
-            console.warn('[Canvas] Room name missing in API response, using fallback name')
-        } else {
-            console.warn('[Canvas] Failed to load room from API, using fallback name:', response.message)
-        }
-
-        roomName.value = fallbackName
-    } catch (error) {
-        console.error('[Canvas] Failed to load room:', error)
-        roomName.value = `Room ${props.roomId.slice(0, 8)}`
-    }
-}
-
-function getMimeTypeFromUrl(url) {
-    const extension = url.split('.').pop().toLowerCase()
-    switch (extension) {
-        case 'png':
-        case 'jpg':
-        case 'jpeg':
-        case 'gif':
-        case 'bmp':
-        case 'webp':
-            return 'image'
-        case 'mp4':
-        case 'webm':
-        case 'ogg':
-            return 'video'
-        case 'mp3':
-        case 'wav':
-        case 'ogg':
-            return 'audio'
-        case 'pdf':
-            return 'pdf'
-        default:
-            return 'file'
-    }
-}
-
-// 加载房间资源列表
-async function loadRoomAssets() {
-    try {
-        console.log('[Canvas] Loading assets for room:', props.roomId)
-        const response = await apiService.getAssets(props.roomId)
-        
-        if (response.success && response.data) {
-            const baseUrl = apiService.getBaseUrl()
-            roomAssets.value = response.data.map(asset => ({
-                ...asset,
-                url: asset.url.startsWith('http') ? asset.url : `${baseUrl}${asset.url}`,
-                type: asset.type || getMimeTypeFromUrl(asset.url)
-            }))
-            console.log('[Canvas] Loaded', roomAssets.value.length, 'assets')
-        }
-    } catch (error) {
-        console.error('[Canvas] Failed to load assets:', error)
-    }
-}
-
-// 组件挂载
 onMounted(() => {
     updateTheme()
-    loadRoomData()
-    loadRoomAssets()
-    assetsRefreshInterval = setInterval(() => {
-        loadRoomAssets()
-    }, 4000)
     updateCanvasAreaSize()
-    
-    // 记录访问历史
-    recordVisit(props.roomId)
-    
-    // 连接 Yjs
-    console.log('[Canvas] Connecting to Yjs room:', props.roomId)
-    yjs.connect()
 
     if (typeof ResizeObserver !== 'undefined' && canvasAreaRef.value) {
         canvasAreaResizeObserver = new ResizeObserver(() => {
@@ -1554,47 +630,15 @@ onMounted(() => {
     } else {
         window.addEventListener('resize', updateCanvasAreaSize)
     }
-    
-    // 监听主题变化
-    const observer = new MutationObserver(updateTheme)
-    observer.observe(document.documentElement, {
+
+    themeObserver = new MutationObserver(updateTheme)
+    themeObserver.observe(document.documentElement, {
         attributes: true,
         attributeFilter: ['data-theme']
     })
-    
-    console.log('[Canvas] CanvasView mounted, roomId:', props.roomId)
 })
 
-// 记录房间访问历史
-function recordVisit(roomId) {
-    try {
-        const visits = localStorage.getItem('recentVisits')
-        let visitList = visits ? JSON.parse(visits) : []
-        
-        // 移除旧的相同房间记录
-        visitList = visitList.filter(v => v.roomId !== roomId)
-        
-        // 添加新记录到开头
-        visitList.unshift({
-            roomId,
-            lastVisit: Date.now()
-        })
-        
-        // 最多保留 50 条记录
-        visitList = visitList.slice(0, 50)
-        
-        localStorage.setItem('recentVisits', JSON.stringify(visitList))
-    } catch (e) {
-        console.error('Failed to record visit:', e)
-    }
-}
-
-// 组件卸载
 onUnmounted(() => {
-    if (assetsRefreshInterval) {
-        clearInterval(assetsRefreshInterval)
-        assetsRefreshInterval = null
-    }
     if (canvasAreaResizeObserver) {
         canvasAreaResizeObserver.disconnect()
         canvasAreaResizeObserver = null
@@ -1602,7 +646,8 @@ onUnmounted(() => {
         window.removeEventListener('resize', updateCanvasAreaSize)
     }
 
-    console.log('[Canvas] CanvasView unmounted')
+    themeObserver?.disconnect()
+    themeObserver = null
 })
 </script>
 
@@ -1616,7 +661,6 @@ onUnmounted(() => {
     transition: background-color 0.3s ease;
 }
 
-/* ==================== 画布区域 ==================== */
 .canvas-area {
     position: absolute;
     top: 0;
@@ -1625,12 +669,9 @@ onUnmounted(() => {
     bottom: 0;
     overflow: hidden;
     background: var(--canvas-bg);
-    /* 创建层叠上下文，确保子元素的 z-index 正确工作 */
     isolation: isolate;
 }
 
-/* ==================== 响应式设计 ==================== */
 @media (max-width: 768px) {
-    /* 移动端适配 */
 }
 </style>
