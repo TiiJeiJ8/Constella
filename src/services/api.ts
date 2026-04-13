@@ -11,6 +11,8 @@ export interface ApiResponse<T = any> {
     errorCode?: string  // 错误码，用于前端多语言映射
 }
 
+import { getAccessToken, getRefreshToken, getUserId, setAuthTokens } from '@/utils/storage'
+
 class ApiService {
     private baseUrl: string = ''
     private abortController: AbortController | null = null
@@ -55,7 +57,7 @@ class ApiService {
 
         this.refreshPromise = (async () => {
             try {
-                const refreshToken = localStorage.getItem('refresh_token')
+                const refreshToken = getRefreshToken()
                 if (!refreshToken) {
                     throw new Error('No refresh token')
                 }
@@ -65,10 +67,10 @@ class ApiService {
                 if (result.success && result.data) {
                     // 更新 token
                     if (result.data.access_token) {
-                        localStorage.setItem('access_token', result.data.access_token)
+                        setAuthTokens({ accessToken: result.data.access_token })
                     }
                     if (result.data.refresh_token) {
-                        localStorage.setItem('refresh_token', result.data.refresh_token)
+                        setAuthTokens({ refreshToken: result.data.refresh_token })
                     }
                     console.log('[Token] Auto refresh on 401 successful')
                 }
@@ -97,7 +99,7 @@ class ApiService {
 
             if (refreshResult.success) {
                 // Token 刷新成功，重新发起请求（只重试一次）
-                const newToken = localStorage.getItem('access_token')
+                const newToken = getAccessToken()
                 if (newToken && options.headers) {
                     (options.headers as Record<string, string>)['Authorization'] = `Bearer ${newToken}`
                 }
@@ -301,7 +303,7 @@ class ApiService {
      * 获取认证头
      */
     private getAuthHeaders(): HeadersInit {
-        const accessToken = localStorage.getItem('access_token')
+        const accessToken = getAccessToken()
         return {
             'Content-Type': 'application/json',
             ...(accessToken && { 'Authorization': `Bearer ${accessToken}` })
@@ -587,7 +589,7 @@ class ApiService {
      * 获取用户加入的房间列表
      */
     async getMyRooms(): Promise<ApiResponse> {
-        const userId = localStorage.getItem('user_id')
+        const userId = getUserId()
         if (!userId) {
             return {
                 success: false,
@@ -606,7 +608,7 @@ class ApiService {
             const formData = new FormData()
             formData.append('file', file)
 
-            const accessToken = localStorage.getItem('access_token')
+            const accessToken = getAccessToken()
             const headers: HeadersInit = {}
             if (accessToken) {
                 headers['Authorization'] = `Bearer ${accessToken}`

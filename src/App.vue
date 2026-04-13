@@ -2,9 +2,7 @@
         <Transition name="slide" mode="out-in">
             <HomeView v-if="currentView === 'home'" @navigate="handleNavigate" />
             <LoginView v-else-if="currentView === 'login'" @navigate="handleNavigate" />
-            <RoomsView v-else-if="currentView === 'rooms'" @navigate="handleNavigate" />
-            <RecentView v-else-if="currentView === 'recent'" @navigate="handleNavigate" />
-            <FavoritesView v-else-if="currentView === 'favorites'" @navigate="handleNavigate" />
+            <RoomWorkspaceView v-else-if="isRoomWorkspace" :subview="currentView" @navigate="handleNavigate" />
             <CanvasView v-else-if="currentView === 'canvas'" :room-id="currentRoomId" @navigate="handleNavigate" />
             <AboutView v-else-if="currentView === 'about'" @navigate="handleNavigate" />
         </Transition>
@@ -21,18 +19,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import HomeView from './views/HomeView.vue'
 import LoginView from './views/LoginView.vue'
-import RoomsView from './views/RoomsView.vue'
-import RecentView from './views/RecentView.vue'
-import FavoritesView from './views/FavoritesView.vue'
+import RoomWorkspaceView from './views/RoomWorkspaceView.vue'
 import CanvasView from './views/CanvasView.vue'
 import AboutView from './views/AboutView.vue'
 import Toast from './components/base/Toast.vue'
 import ToastManager from './components/base/ToastManager.vue'
 import { setToastInstance } from './utils/useToast'
 import { apiService } from './services/api'
+import { clearAuthStorage, getAccessToken, getRefreshToken, setAuthTokens } from './utils/storage'
 
 const currentView = ref('home')
 const currentRoomId = ref('')
@@ -40,6 +37,7 @@ const showToast = ref(false)
 const toastMessage = ref('')
 const toastType = ref('info')
 const toastManagerRef = ref(null)
+const isRoomWorkspace = computed(() => ['rooms', 'recent', 'favorites'].includes(currentView.value))
 
 // Token 自动刷新
 let tokenRefreshInterval = null
@@ -66,8 +64,8 @@ onUnmounted(() => {
 
 // 启动 Token 自动刷新
 function startTokenRefresh() {
-    const accessToken = localStorage.getItem('access_token')
-    const refreshToken = localStorage.getItem('refresh_token')
+    const accessToken = getAccessToken()
+    const refreshToken = getRefreshToken()
     
     if (!accessToken || !refreshToken) {
         return
@@ -78,7 +76,7 @@ function startTokenRefresh() {
     
     // 设置新的定时器
     tokenRefreshInterval = setInterval(async () => {
-        const currentRefreshToken = localStorage.getItem('refresh_token')
+        const currentRefreshToken = getRefreshToken()
         
         if (!currentRefreshToken) {
             stopTokenRefresh()
@@ -91,10 +89,10 @@ function startTokenRefresh() {
             if (result.success && result.data) {
                 // 更新 token
                 if (result.data.access_token) {
-                    localStorage.setItem('access_token', result.data.access_token)
+                    setAuthTokens({ accessToken: result.data.access_token })
                 }
                 if (result.data.refresh_token) {
-                    localStorage.setItem('refresh_token', result.data.refresh_token)
+                    setAuthTokens({ refreshToken: result.data.refresh_token })
                 }
                 console.log('[Token] Auto refresh successful')
             } else {
@@ -122,10 +120,7 @@ function stopTokenRefresh() {
 // 处理 Token 过期
 function handleTokenExpired() {
     stopTokenRefresh()
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
-    localStorage.removeItem('user_id')
-    localStorage.removeItem('username')
+    clearAuthStorage()
     
     toastMessage.value = '登录已过期，请重新登录'
     toastType.value = 'warning'

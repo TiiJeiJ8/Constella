@@ -121,6 +121,11 @@
         "createFirst": "Create your first room",
         "private": "Private Room",
         "members": "members",
+        "byCreator": "By {name}",
+        "memberCount": {
+            "one": "{count} member",
+            "other": "{count} members"
+        },
         "favorite": "Add to favorites",
         "unfavorite": "Remove from favorites",
         "errors": {

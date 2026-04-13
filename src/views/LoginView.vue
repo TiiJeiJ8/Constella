@@ -99,6 +99,7 @@ import { ChevronLeftIcon, MoonIcon, SunnyIcon } from 'tdesign-icons-vue-next'
 import WindowControls from '@/components/base/WindowControls.vue'
 import { apiService } from '@/services/api'
 import { handleApiError } from '@/utils/errorHandler'
+import { setAuthTokens, setStoredUser } from '@/utils/storage'
 
 const { t, te, locale } = useI18n()
 const emit = defineEmits(['navigate'])
@@ -232,11 +233,12 @@ async function handleLogin() {
             throw new Error(handleApiError(result))
         }
 
-        if (result.data?.access_token) localStorage.setItem('access_token', result.data.access_token)
-        if (result.data?.refresh_token) localStorage.setItem('refresh_token', result.data.refresh_token)
+        setAuthTokens({
+            accessToken: result.data?.access_token,
+            refreshToken: result.data?.refresh_token
+        })
         if (result.data?.user) {
-            localStorage.setItem('user', JSON.stringify(result.data.user))
-            localStorage.setItem('user_id', result.data.user.id.toString())
+            setStoredUser(result.data.user)
         }
 
         loginSuccess.value = true

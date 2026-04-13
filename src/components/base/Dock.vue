@@ -196,9 +196,6 @@ function toggleExitMenu() {
 function handleLogout() {
     showExitMenu.value = false
     // 清除登录信息
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
-    localStorage.removeItem('user')
     emit('logout')
 }
 
@@ -206,10 +203,6 @@ function handleLogout() {
 function handleDisconnect() {
     showExitMenu.value = false
     // 清除服务器连接信息
-    localStorage.removeItem('serverUrl')
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
-    localStorage.removeItem('user')
     emit('disconnect')
 }
 

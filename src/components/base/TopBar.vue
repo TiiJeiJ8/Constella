@@ -1,137 +1,194 @@
 <template>
-    <div 
-        ref="topbarRef" 
-        class="topbar" 
-        :class="{ expanded: searchExpanded }"
+    <div
+        ref="topbarRef"
+        class="topbar"
+        :class="{
+            expanded: isRoomsMode && searchExpanded,
+            'collection-mode': !isRoomsMode,
+            'compact-mode': !isRoomsMode
+        }"
     >
-        <!-- 搜索图标/输入框 -->
-        <div class="search-section">
-            <button 
-                v-if="!searchExpanded" 
-                class="search-icon-btn"
-                @click.stop="expandSearch"
-                :title="t('topbar.search')"
-            >
-                <span class="icon">🔍</span>
-            </button>
-            
-            <Transition name="search-fade">
-                <div v-if="searchExpanded" class="search-input-wrapper" @click.stop>
-                    <span class="search-icon">🔍</span>
-                    <input
-                        ref="searchInputRef"
-                        v-model="searchQuery"
-                        type="text"
-                        class="search-input"
-                        :placeholder="t('topbar.searchPlaceholder')"
-                        @blur="handleSearchBlur"
-                    />
-                </div>
-            </Transition>
-        </div>
+        <Transition name="topbar-mode" mode="out-in">
+            <div :key="mode" class="topbar-content">
+                <template v-if="isRoomsMode">
+                    <div class="search-section">
+                        <button
+                            v-if="!searchExpanded"
+                            class="search-icon-btn"
+                            :title="t('topbar.search')"
+                            @click.stop="expandSearch"
+                        >
+                            <span class="search-glyph" aria-hidden="true"></span>
+                        </button>
 
-        <!-- 标签组 -->
-        <div class="tabs">
-            <button
-                v-for="tab in tabs"
-                :key="tab.id"
-                class="tab"
-                :class="{ active: activeTab === tab.id }"
-                @click="switchTab(tab.id)"
-            >
-                <span v-if="!searchExpanded" class="tab-text-full">{{ t(`topbar.tabs.${tab.id}`) }}</span>
-                <span v-else class="tab-text-short">{{ t(`topbar.tabsShort.${tab.id}`) }}</span>
-            </button>
-        </div>
+                        <Transition name="search-fade">
+                            <div
+                                v-if="searchExpanded"
+                                class="search-input-wrapper"
+                                @click.stop
+                            >
+                                <span class="search-glyph" aria-hidden="true"></span>
+                                <input
+                                    ref="searchInputRef"
+                                    v-model="searchQuery"
+                                    type="text"
+                                    class="search-input"
+                                    :placeholder="t('topbar.searchPlaceholder')"
+                                    @blur="handleSearchBlur"
+                                />
+                            </div>
+                        </Transition>
+                    </div>
 
-        <!-- 创建房间按钮 -->
-        <button 
-            class="create-btn"
-            :title="t('topbar.createRoom')"
-            @click="handleCreateRoom"
-        >
-            <span class="icon">✨</span>
-        </button>
+                    <div class="tabs">
+                        <button
+                            v-for="tab in tabs"
+                            :key="tab.id"
+                            class="tab"
+                            :class="{ active: currentTab === tab.id }"
+                            @click="switchTab(tab.id)"
+                        >
+                            <span v-if="!searchExpanded" class="tab-text-full">{{ t(`topbar.tabs.${tab.id}`) }}</span>
+                            <span v-else class="tab-text-short">{{ t(`topbar.tabsShort.${tab.id}`) }}</span>
+                        </button>
+                    </div>
+
+                    <button
+                        class="create-btn"
+                        :title="t('topbar.createRoom')"
+                        @click="emit('createRoom')"
+                    >
+                        <span class="create-glyph" aria-hidden="true"></span>
+                    </button>
+                </template>
+
+                <template v-else>
+                    <div class="collection-title">
+                        <span class="collection-title-text">{{ title }}</span>
+                    </div>
+
+                    <div class="collection-search">
+                        <div class="search-input-wrapper always-visible">
+                            <span class="search-glyph" aria-hidden="true"></span>
+                            <input
+                                v-model="searchQuery"
+                                type="text"
+                                class="search-input"
+                                :placeholder="searchPlaceholder"
+                            />
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </Transition>
     </div>
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted, onUnmounted } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
+
+const props = defineProps({
+    mode: {
+        type: String,
+        default: 'rooms'
+    },
+    title: {
+        type: String,
+        default: ''
+    },
+    searchValue: {
+        type: String,
+        default: ''
+    },
+    activeTab: {
+        type: String,
+        default: 'all'
+    }
+})
+
 const emit = defineEmits(['createRoom', 'search', 'tabChange'])
 
-// 引用
 const topbarRef = ref(null)
 const searchInputRef = ref(null)
-
-// 状态
 const searchExpanded = ref(false)
-const searchQuery = ref('')
-const activeTab = ref('all')
+const searchQuery = ref(props.searchValue)
+const currentTab = ref(props.activeTab)
 
-// 标签配置
+const isRoomsMode = computed(() => props.mode === 'rooms')
+const searchPlaceholder = computed(() => {
+    if (props.mode === 'recent') return t('recent.searchPlaceholder')
+    if (props.mode === 'favorites') return t('favorites.searchPlaceholder')
+    return t('topbar.searchPlaceholder')
+})
+
 const tabs = [
-    { id: 'all', label: '全部房间', shortLabel: '全部' },
-    { id: 'my', label: '我的房间', shortLabel: '我的' },
-    { id: 'joined', label: '已加入', shortLabel: '已加入' },
-    { id: 'public', label: '公开房间', shortLabel: '公开' }
+    { id: 'all' },
+    { id: 'my' },
+    { id: 'joined' },
+    { id: 'public' }
 ]
 
-// 展开搜索
 function expandSearch() {
+    if (!isRoomsMode.value) return
     searchExpanded.value = true
-    nextTick(() => {
-        searchInputRef.value?.focus()
-    })
+    nextTick(() => searchInputRef.value?.focus())
 }
 
-// 收起搜索
 function collapseSearch() {
     if (!searchQuery.value) {
         searchExpanded.value = false
     }
 }
 
-// 搜索失焦处理
 function handleSearchBlur() {
-    // 延迟执行，避免点击其他元素时立即收起
-    setTimeout(() => {
+    if (!isRoomsMode.value) return
+    window.setTimeout(() => {
         collapseSearch()
     }, 200)
 }
 
-// 切换标签
 function switchTab(tabId) {
-    activeTab.value = tabId
+    currentTab.value = tabId
     emit('tabChange', tabId)
 }
 
-// 创建房间
-function handleCreateRoom() {
-    emit('createRoom')
-}
-
-// 点击外部关闭搜索
 function handleClickOutside(event) {
+    if (!isRoomsMode.value) return
     if (searchExpanded.value && !topbarRef.value?.contains(event.target)) {
         collapseSearch()
     }
 }
 
-// 监听搜索输入
-function handleSearchInput() {
-    emit('search', searchQuery.value)
-}
+watch(() => props.searchValue, value => {
+    searchQuery.value = value
+    if (isRoomsMode.value && value) {
+        searchExpanded.value = true
+    }
+})
 
-// 监听搜索查询变化
-import { watch } from 'vue'
-watch(searchQuery, () => {
-    handleSearchInput()
+watch(() => props.activeTab, value => {
+    currentTab.value = value
+})
+
+watch(() => props.mode, mode => {
+    if (mode !== 'rooms') {
+        searchExpanded.value = false
+    } else if (searchQuery.value) {
+        searchExpanded.value = true
+    }
+})
+
+watch(searchQuery, value => {
+    emit('search', value)
 })
 
 onMounted(() => {
+    if (isRoomsMode.value && searchQuery.value) {
+        searchExpanded.value = true
+    }
     document.addEventListener('click', handleClickOutside)
 })
 
@@ -153,29 +210,49 @@ onUnmounted(() => {
     align-items: center;
     gap: 16px;
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    width: min(700px, calc(100vw - 32px));
-    min-width: min(450px, calc(100vw - 32px));
+    width: min(720px, calc(100vw - 32px));
+    min-width: min(480px, calc(100vw - 32px));
     max-width: calc(100vw - 32px);
+    overflow: hidden;
+}
+
+.topbar-content {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: gap 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .topbar.expanded {
     width: min(800px, calc(100vw - 32px));
     min-width: min(700px, calc(100vw - 32px));
-    max-width: calc(100vw - 32px);
 }
 
-/* ==================== 暗色模式 ==================== */
+.topbar.collection-mode {
+    width: min(520px, calc(100vw - 32px));
+    min-width: 0;
+    padding: 0 16px;
+    border-radius: 22px;
+}
+
 html[data-theme='dark'] .topbar {
     background: rgba(28, 28, 28, 0.95);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* ==================== 搜索区域 ==================== */
-.search-section {
+.search-section,
+.collection-search {
     display: flex;
     align-items: center;
     position: relative;
+}
+
+.collection-search {
+    flex: 1;
+    justify-content: center;
+    min-width: 0;
 }
 
 .search-icon-btn {
@@ -199,14 +276,34 @@ html[data-theme='dark'] .topbar {
     background: rgba(255, 255, 255, 0.1);
 }
 
-.search-icon-btn .icon {
-    font-size: 18px;
+.search-glyph {
+    width: 14px;
+    height: 14px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    position: relative;
+    display: inline-block;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.search-glyph::after {
+    content: '';
+    position: absolute;
+    width: 7px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    right: -5px;
+    bottom: -2px;
+    transform: rotate(45deg);
+    transform-origin: center;
 }
 
 .search-input-wrapper {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     height: 36px;
     padding: 0 12px;
     background: rgba(0, 0, 0, 0.05);
@@ -214,13 +311,12 @@ html[data-theme='dark'] .topbar {
     width: 300px;
 }
 
-.dark .search-input-wrapper {
-    background: rgba(255, 255, 255, 0.05);
+.search-input-wrapper.always-visible {
+    width: min(220px, 100%);
 }
 
-.search-icon {
-    font-size: 16px;
-    opacity: 0.6;
+.dark .search-input-wrapper {
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .search-input {
@@ -230,29 +326,76 @@ html[data-theme='dark'] .topbar {
     font-size: 14px;
     color: var(--text-primary);
     outline: none;
+    min-width: 0;
 }
 
 .search-input::placeholder {
     color: var(--text-tertiary);
 }
 
-/* ==================== 搜索淡入淡出动画 ==================== */
+.collection-title {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    flex-shrink: 0;
+}
+
+.collection-title-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+}
+
 .search-fade-enter-active,
 .search-fade-leave-active {
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.search-fade-enter-from {
-    opacity: 0;
-    width: 0;
-}
-
+.search-fade-enter-from,
 .search-fade-leave-to {
     opacity: 0;
     width: 0;
+    transform: translateX(-8px);
 }
 
-/* ==================== 标签组 ==================== */
+.topbar-mode-enter-active,
+.topbar-mode-leave-active {
+    transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.topbar-mode-enter-from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+}
+
+.topbar-mode-leave-to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.985);
+}
+
+.compact-mode .topbar-content {
+    gap: 10px;
+}
+
+.compact-mode .collection-title {
+    min-width: fit-content;
+}
+
+.compact-mode .collection-search {
+    justify-content: flex-end;
+}
+
+.compact-mode .search-input-wrapper.always-visible {
+    height: 32px;
+    padding: 0 10px;
+}
+
+.compact-mode .search-input {
+    font-size: 12px;
+}
+
 .tabs {
     flex: 1;
     display: flex;
@@ -287,12 +430,6 @@ html[data-theme='dark'] .topbar {
     font-weight: 500;
 }
 
-.tab-text-full,
-.tab-text-short {
-    transition: opacity 0.3s ease;
-}
-
-/* ==================== 创建按钮 ==================== */
 .create-btn {
     width: 36px;
     height: 36px;
@@ -317,11 +454,30 @@ html[data-theme='dark'] .topbar {
     transform: scale(1.05);
 }
 
-.create-btn .icon {
-    font-size: 18px;
+.create-glyph {
+    width: 14px;
+    height: 14px;
+    position: relative;
+    display: inline-block;
 }
 
-/* 深色模式下的创建按钮 */
+.create-glyph::before,
+.create-glyph::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 14px;
+    height: 2px;
+    background: currentColor;
+    border-radius: 2px;
+    transform: translate(-50%, -50%);
+}
+
+.create-glyph::after {
+    transform: translate(-50%, -50%) rotate(90deg);
+}
+
 html[data-theme='dark'] .create-btn {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
@@ -330,7 +486,6 @@ html[data-theme='dark'] .create-btn:hover {
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
 }
 
-/* ==================== 响应式设计 ==================== */
 @media (max-width: 1200px) {
     .topbar {
         width: min(560px, calc(100vw - 32px));
@@ -340,6 +495,10 @@ html[data-theme='dark'] .create-btn:hover {
     .topbar.expanded {
         width: min(680px, calc(100vw - 32px));
         min-width: 0;
+    }
+
+    .topbar.collection-mode {
+        width: min(470px, calc(100vw - 32px));
     }
 
     .search-input-wrapper {
@@ -354,12 +513,22 @@ html[data-theme='dark'] .create-btn:hover {
         gap: 10px;
     }
 
-    .topbar.expanded {
+    .topbar-content {
+        gap: 10px;
+    }
+
+    .topbar.expanded,
+    .topbar.collection-mode {
         width: calc(100vw - 32px);
     }
 
-    .search-input-wrapper {
+    .search-input-wrapper,
+    .search-input-wrapper.always-visible {
         width: min(200px, 42vw);
+    }
+
+    .compact-mode .collection-search {
+        justify-content: flex-end;
     }
 
     .tab {
@@ -375,20 +544,34 @@ html[data-theme='dark'] .create-btn:hover {
 
 @media (max-width: 560px) {
     .topbar,
-    .topbar.expanded {
+    .topbar.expanded,
+    .topbar.collection-mode {
         width: calc(100vw - 20px);
         max-width: calc(100vw - 20px);
         padding: 0 12px;
         gap: 8px;
     }
 
-    .search-input-wrapper {
+    .topbar-content {
+        gap: 8px;
+    }
+
+    .search-input-wrapper,
+    .search-input-wrapper.always-visible {
         width: min(150px, 38vw);
+    }
+
+    .compact-mode .topbar-content {
+        gap: 8px;
     }
 
     .tab {
         padding: 6px 10px;
         font-size: 12px;
+    }
+
+    .collection-title-text {
+        font-size: 14px;
     }
 }
 </style>

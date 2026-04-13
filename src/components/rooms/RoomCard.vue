@@ -1,47 +1,48 @@
 <template>
     <div class="room-card">
-        <!-- 闁告绱曟晶鏍ㄧ▔鐠佸磭绉奸柨娑樼墢閸嬶綁宕欓弰蹇曠闁稿繈鍎查崺褔姊绘潏鍓х -->
         <div class="card-body" @click="handleClick">
-            <!-- 闁告绱曟晶鏍ㄥ緞閹绢喖鍔?-->
             <div class="card-header">
-                <!-- 闁规潙娼″Λ鍧楀炊閻愵剛鍨?-->
                 <div v-if="roomIcon" class="room-icon">
                     {{ roomIcon }}
                 </div>
-                
+
                 <div class="room-info">
                     <h3 class="room-name">{{ room.name }}</h3>
                     <div class="room-meta">
-                        <span class="creator">By {{ room.creator }}</span>
-                        <span class="separator">|</span>
-                        <span class="member-count">{{ room.memberCount }} members</span>
+                        <span class="creator">{{ room.creator || 'Unknown' }}</span>
+                        <span class="separator">·</span>
+                        <span class="member-count">{{ memberCountLabel }}</span>
                     </div>
                 </div>
-                
-                <!-- 闂傚懏鍔楅～鍡涙偐閼哥鍋?-->
+
                 <div class="privacy-badge" :class="room.isPrivate ? 'private' : 'public'">
-                    <span class="icon">{{ room.isPrivate ? 'P' : 'O' }}</span>
+                    <span class="icon">{{ room.isPrivate ? '🔒' : '🌐' }}</span>
                 </div>
-                
-                <!-- 闁衡偓閹増顥戦柟绋款樀閹?-->
-                <button 
+
+                <button
                     class="favorite-btn"
                     :class="{ 'is-favorite': isFavorited }"
-                    @click.stop="toggleFavorite"
                     :title="isFavorited ? t('rooms.unfavorite') : t('rooms.favorite')"
+                    @click.stop="toggleFavorite"
                 >
-                    *                </button>
+                    <svg class="favorite-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                            d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21z"
+                            :fill="isFavorited ? 'currentColor' : 'none'"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                            stroke-linejoin="round"
+                        />
+                    </svg>
+                </button>
             </div>
 
-            <!-- 闁告绱曟晶鏍礃閸涱収鍟?-->
             <div class="card-content">
                 <p class="room-description">{{ room.description || t('rooms.noDescription') }}</p>
             </div>
 
-            <!-- 闁告绱曟晶鏍ㄦ償閺囥垹鍔?-->
             <div class="card-footer">
                 <div class="tags">
-                    <!-- 闁告瑯浜滃﹢顏堝嫉婢跺顫栫痪顓у枦椤鎳濋崣澶嬵槯闁哄嫬澧介妵姘嚗閻ｅ瞼褰?-->
                     <span v-if="room.role === 'owner'" class="role-badge owner">
                         {{ t('rooms.roles.owner') }}
                     </span>
@@ -51,19 +52,17 @@
                     <span v-else-if="room.role === 'member'" class="role-badge member">
                         {{ t('rooms.roles.member') }}
                     </span>
-                    <!-- 闁哄牜浜滄慨鐐哄礂閵壯勭暠闁规潙娼″Λ鍧楁晬閸х晜le 濞?null 闁?undefined闁挎稑顦粭澶愬及閸撗佷粵濞寸姾顔婄紞宥咁嚗閻ｅ瞼褰?-->
                 </div>
-                
-                <!-- 闁告帞濞€濞呭酣骞愭径鎰唉闁挎稑鐗呯划宸搘ner闁?闁瑰瓨鍨瑰▓鎴﹀箣閸ф锛?濞戞搩鍘艰ぐ鑼喆娓氬﹦绀?-->
-                <button 
-                    v-if="showDeleteButton" 
+
+                <button
+                    v-if="showDeleteButton"
                     class="delete-btn"
-                    @click.stop="handleDelete"
                     :title="t('rooms.delete.deleteRoom')"
+                    @click.stop="handleDelete"
                 >
                     {{ t('rooms.delete.delete') }}
                 </button>
-                
+
                 <div class="last-active">
                     <span class="time">{{ formatTime(room.lastActive) }}</span>
                 </div>
@@ -73,8 +72,9 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { getFavoriteRooms, toggleFavoriteRoom } from '@/utils/storage'
 
 const { t } = useI18n()
 
@@ -86,63 +86,44 @@ const props = defineProps({
     showDelete: {
         type: Boolean,
         default: false
+    },
+    isFavorite: {
+        type: Boolean,
+        default: null
     }
 })
 
 const emit = defineEmits(['click', 'delete', 'favoriteChange'])
-
 const isFavorited = ref(false)
 
-// 婵☆偀鍋撻柡灞诲劜濡叉悂宕ラ敃鈧崙锟犲绩閹増顥?
 function checkFavoriteStatus() {
-    try {
-        const favorites = localStorage.getItem('favoriteRooms')
-        const favoriteList = favorites ? JSON.parse(favorites) : []
-        isFavorited.value = favoriteList.some(fav => fav.roomId === props.room.id)
-    } catch (e) {
-        console.error('Failed to check favorite status:', e)
-        isFavorited.value = false
+    if (typeof props.isFavorite === 'boolean') {
+        isFavorited.value = props.isFavorite
+        return
     }
+
+    isFavorited.value = getFavoriteRooms().some(fav => fav.roomId === props.room.id)
 }
 
 function toggleFavorite() {
     try {
-        const favorites = localStorage.getItem('favoriteRooms')
-        let favoriteList = favorites ? JSON.parse(favorites) : []
-        
-        if (isFavorited.value) {
-            // 闁告瑦鐗楃粔鐑藉绩閹増顥?
-            favoriteList = favoriteList.filter(fav => fav.roomId !== props.room.id)
-            isFavorited.value = false
-        } else {
-            // 婵烇綀顕ф慨鐐哄绩閹増顥?
-            favoriteList.push({
-                roomId: props.room.id,
-                addedAt: Date.now()
-            })
-            isFavorited.value = true
-        }
-        
-        localStorage.setItem('favoriteRooms', JSON.stringify(favoriteList))
+        isFavorited.value = toggleFavoriteRoom(props.room.id)
         emit('favoriteChange', props.room.id, isFavorited.value)
-    } catch (e) {
-        console.error('Failed to toggle favorite:', e)
+    } catch (error) {
+        console.error('Failed to toggle favorite:', error)
     }
 }
 
-onMounted(() => {
-    checkFavoriteStatus()
-})
+onMounted(checkFavoriteStatus)
+watch(() => props.room?.id, checkFavoriteStatus)
+watch(() => props.isFavorite, checkFavoriteStatus)
 
-// 闁规潙娼″Λ鍧楀炊閻愵剛鍨?
-const roomIcon = computed(() => {
-    return props.room.settings?.appearance?.icon || null
-})
-
-// 闁哄嫷鍨伴幆渚€寮伴崜褋浠涢柛鎺斿█濞呭酣骞愭径鎰唉
-const showDeleteButton = computed(() => {
-    return props.showDelete && props.room.role === 'owner'
-})
+const roomIcon = computed(() => props.room.settings?.appearance?.icon || null)
+const showDeleteButton = computed(() => props.showDelete && props.room.role === 'owner')
+const memberCountLabel = computed(() => t(
+    props.room.memberCount === 1 ? 'rooms.memberCount.one' : 'rooms.memberCount.other',
+    { count: props.room.memberCount ?? 0 }
+))
 
 function handleClick() {
     emit('click', props.room)
@@ -154,18 +135,18 @@ function handleDelete() {
 
 function formatTime(timestamp) {
     if (!timestamp) return ''
-    
+
     const now = Date.now()
     const diff = now - timestamp
     const minutes = Math.floor(diff / 60000)
     const hours = Math.floor(diff / 3600000)
     const days = Math.floor(diff / 86400000)
-    
+
     if (minutes < 1) return t('rooms.time.justNow')
     if (minutes < 60) return t('rooms.time.minutesAgo', { n: minutes })
     if (hours < 24) return t('rooms.time.hoursAgo', { n: hours })
     if (days < 7) return t('rooms.time.daysAgo', { n: days })
-    
+
     return new Date(timestamp).toLocaleDateString()
 }
 </script>
@@ -176,10 +157,11 @@ function formatTime(timestamp) {
     background: var(--bg-secondary);
     border-radius: 16px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                background-color 0.3s ease,
-                border-color 0.3s ease;
+    transition:
+        transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        background-color 0.3s ease,
+        border-color 0.3s ease;
     border: 1px solid var(--border-light);
     min-height: 180px;
     will-change: transform;
@@ -200,74 +182,22 @@ function formatTime(timestamp) {
     border-color: var(--accent-primary);
 }
 
-.delete-btn {
-    padding: 6px 14px;
-    border: none;
-    background: rgba(244, 67, 54, 0.1);
-    color: #f44336;
-    font-size: 13px;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    white-space: nowrap;
-    opacity: 0;
-}
-
-.room-card:hover .delete-btn {
-    opacity: 1;
-}
-
-.delete-btn:hover {
-    background: rgba(244, 67, 54, 0.2);
-    transform: scale(1.1);
-}
-
-.delete-btn:active {
-    transform: scale(0.95);
-}
-
 .room-card:active {
     transform: translateY(-2px) translateZ(0);
 }
 
-.dark .room-card {
+html[data-theme='dark'] .room-card {
     background: rgba(40, 40, 40, 0.6);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     border-color: rgba(255, 255, 255, 0.08);
 }
 
-.dark .room-card:hover {
+html[data-theme='dark'] .room-card:hover {
     background: rgba(45, 45, 45, 0.7);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
     border-color: var(--accent-primary);
 }
 
-.dark .privacy-badge.private {
-    background: rgba(255, 152, 0, 0.2);
-}
-
-.dark .privacy-badge.public {
-    background: rgba(76, 175, 80, 0.2);
-}
-
-.dark .role-badge.owner {
-    background: rgba(255, 193, 7, 0.25);
-    color: #ffb300;
-}
-
-.dark .role-badge.admin {
-    background: rgba(103, 126, 234, 0.25);
-    color: #8b9bef;
-}
-
-.dark .role-badge.member {
-    background: rgba(158, 158, 158, 0.25);
-}
-
-/* ==================== 闁告绱曟晶鏍ㄥ緞閹绢喖鍔?==================== */
 .card-header {
     display: flex;
     justify-content: space-between;
@@ -293,7 +223,7 @@ function formatTime(timestamp) {
     transform: scale(1.1);
 }
 
-.dark .room-icon {
+html[data-theme='dark'] .room-icon {
     background: linear-gradient(135deg, rgba(103, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
 }
 
@@ -318,9 +248,13 @@ function formatTime(timestamp) {
     gap: 6px;
     font-size: 13px;
     color: var(--text-secondary);
+    flex-wrap: nowrap;
+    min-width: 0;
 }
 
 .creator {
+    min-width: 0;
+    flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -328,13 +262,15 @@ function formatTime(timestamp) {
 
 .separator {
     opacity: 0.5;
+    font-weight: 600;
+    flex-shrink: 0;
 }
 
 .member-count {
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
-/* ==================== 闂傚懏鍔楅～鍡楊嚗閻ｅ瞼褰?==================== */
 .privacy-badge {
     width: 32px;
     height: 32px;
@@ -354,6 +290,14 @@ function formatTime(timestamp) {
     background: rgba(76, 175, 80, 0.1);
 }
 
+html[data-theme='dark'] .privacy-badge.private {
+    background: rgba(255, 152, 0, 0.2);
+}
+
+html[data-theme='dark'] .privacy-badge.public {
+    background: rgba(76, 175, 80, 0.2);
+}
+
 .favorite-btn {
     width: 32px;
     height: 32px;
@@ -361,28 +305,55 @@ function formatTime(timestamp) {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
     flex-shrink: 0;
-    background: rgba(255, 255, 255, 0.05);
-    border: none;
+    background: rgba(255, 193, 7, 0.08);
+    border: 1px solid rgba(255, 193, 7, 0.12);
     cursor: pointer;
     transition: all 0.2s;
-    filter: grayscale(100%);
-    opacity: 0.5;
+    color: rgba(184, 138, 0, 0.78);
+    opacity: 0.9;
 }
 
 .favorite-btn:hover {
-    opacity: 0.8;
+    opacity: 1;
     transform: scale(1.1);
+    background: rgba(255, 193, 7, 0.16);
+    border-color: rgba(255, 193, 7, 0.28);
 }
 
 .favorite-btn.is-favorite {
-    filter: grayscale(0%);
     opacity: 1;
+    color: #f4b400;
     background: rgba(255, 215, 0, 0.2);
+    border-color: rgba(255, 215, 0, 0.32);
 }
 
-/* ==================== 闁告绱曟晶鏍礃閸涱収鍟?==================== */
+.favorite-icon {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+
+html[data-theme='dark'] .favorite-btn {
+    background: rgba(255, 215, 0, 0.12);
+    border-color: rgba(255, 215, 0, 0.22);
+    color: rgba(255, 224, 130, 0.95);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+html[data-theme='dark'] .favorite-btn:hover {
+    background: rgba(255, 215, 0, 0.2);
+    border-color: rgba(255, 215, 0, 0.38);
+    color: #ffe082;
+}
+
+html[data-theme='dark'] .favorite-btn.is-favorite {
+    color: #ffd54f;
+    background: rgba(255, 215, 0, 0.24);
+    border-color: rgba(255, 215, 0, 0.4);
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.18);
+}
+
 .card-content {
     flex: 1;
     margin-bottom: 12px;
@@ -400,7 +371,6 @@ function formatTime(timestamp) {
     overflow: hidden;
 }
 
-/* ==================== 闁告绱曟晶鏍ㄦ償閺囥垹鍔?==================== */
 .card-footer {
     display: flex;
     justify-content: space-between;
@@ -437,12 +407,54 @@ function formatTime(timestamp) {
     color: var(--text-secondary);
 }
 
+html[data-theme='dark'] .role-badge.owner {
+    background: rgba(255, 193, 7, 0.25);
+    color: #ffb300;
+}
+
+html[data-theme='dark'] .role-badge.admin {
+    background: rgba(103, 126, 234, 0.25);
+    color: #8b9bef;
+}
+
+html[data-theme='dark'] .role-badge.member {
+    background: rgba(158, 158, 158, 0.25);
+}
+
+.delete-btn {
+    padding: 6px 14px;
+    border: none;
+    background: rgba(244, 67, 54, 0.1);
+    color: #f44336;
+    font-size: 13px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    opacity: 0;
+}
+
+.room-card:hover .delete-btn {
+    opacity: 1;
+}
+
+.delete-btn:hover {
+    background: rgba(244, 67, 54, 0.2);
+    transform: scale(1.1);
+}
+
+.delete-btn:active {
+    transform: scale(0.95);
+}
+
 .last-active {
     font-size: 12px;
     color: var(--text-tertiary);
 }
 
-/* ==================== 闁告繂绉寸花鎻掝嚕韫囨凹鍟庨悹?==================== */
 @media (max-width: 768px) {
     .room-card {
         padding: 16px;

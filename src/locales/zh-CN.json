@@ -108,6 +108,11 @@
         "createFirst": "创建第一个房间",
         "private": "私密房间",
         "members": "成员",
+        "byCreator": "创建者：{name}",
+        "memberCount": {
+            "one": "{count} 人",
+            "other": "{count} 人"
+        },
         "favorite": "收藏",
         "unfavorite": "取消收藏",
         "errors": {

@@ -1,17 +1,15 @@
 <template>
     <div class="history-panel">
-        <!-- 快照操作 -->
         <div class="snapshot-actions">
-            <button class="snapshot-btn" @click="createSnapshot" :disabled="isCreating">
+            <button class="snapshot-btn" :disabled="isCreating" @click="createSnapshot">
                 <span class="icon">📸</span>
                 <span class="text">{{ isCreating ? t('canvas.history.creating') : t('canvas.history.createSnapshot') }}</span>
             </button>
-            <span class="auto-save-hint" v-if="autoSaveEnabled">
+            <span v-if="autoSaveEnabled" class="auto-save-hint">
                 {{ t('canvas.history.autoSaveEnabled') }} ({{ autoSaveInterval }}s)
             </span>
         </div>
-        
-        <!-- 快照列表 -->
+
         <div v-if="snapshots.length > 0" class="snapshots-list">
             <h4 class="list-title">{{ t('canvas.history.snapshotList') }}</h4>
             <div
@@ -27,41 +25,48 @@
                         <span class="snapshot-time">{{ formatTime(snapshot.createdAt) }}</span>
                     </div>
                 </div>
+
                 <div class="snapshot-actions-inline">
-                    <button 
-                        class="action-btn small" 
-                        @click.stop="showRestoreConfirm(snapshot)"
+                    <button
+                        class="action-btn small"
                         :title="t('canvas.history.restore')"
+                        :aria-label="t('canvas.history.restore')"
+                        @click.stop="showRestoreConfirm(snapshot)"
                     >
-                        ↩️
+                        <svg class="action-icon" viewBox="0 0 20 20" aria-hidden="true">
+                            <path
+                                d="M10 3.5a6.5 6.5 0 1 1-5.22 10.38a.75.75 0 0 1 1.2-.9A5 5 0 1 0 5 10H3.56a.75.75 0 0 1 0-1.5H6.5A.75.75 0 0 1 7.25 9.25v2.94a.75.75 0 0 1-1.5 0v-1.37A6.47 6.47 0 0 1 10 3.5Zm-.75 3.25a.75.75 0 0 1 1.5 0v3.04l2.07 1.2a.75.75 0 1 1-.75 1.3l-2.44-1.41a.75.75 0 0 1-.38-.65V6.75Z"
+                                fill="currentColor"
+                            />
+                        </svg>
                     </button>
-                    <button 
-                        class="action-btn small danger" 
-                        @click.stop="showDeleteConfirm(snapshot.id)"
+                    <button
+                        class="action-btn small danger"
                         :title="t('canvas.history.delete')"
+                        :aria-label="t('canvas.history.delete')"
+                        @click.stop="showDeleteConfirm(snapshot.id)"
                     >
-                        🗑️
+                        <svg class="action-icon" viewBox="0 0 20 20" aria-hidden="true">
+                            <path
+                                d="M7.25 3A1.75 1.75 0 0 0 5.5 4.75V5H3.75a.75.75 0 0 0 0 1.5h.55l.64 8.03A2.25 2.25 0 0 0 7.18 16.75h5.64a2.25 2.25 0 0 0 2.24-2.22l.64-8.03h.55a.75.75 0 0 0 0-1.5H14.5v-.25A1.75 1.75 0 0 0 12.75 3h-5.5Zm5.75 2V4.75a.25.25 0 0 0-.25-.25h-5.5a.25.25 0 0 0-.25.25V5h6Zm-5 3a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0v-4A.75.75 0 0 1 8 8Zm4 .75a.75.75 0 0 0-1.5 0v4a.75.75 0 0 0 1.5 0v-4Z"
+                                fill="currentColor"
+                            />
+                        </svg>
                     </button>
                 </div>
             </div>
         </div>
-        
-        <!-- 空状态 -->
+
         <div v-else class="empty-state">
-            <span class="empty-icon">📚</span>
+            <span class="empty-icon">🕘</span>
             <span class="empty-text">{{ t('canvas.history.empty') }}</span>
             <span class="empty-hint">{{ t('canvas.history.emptyHint') }}</span>
         </div>
-        
-        <!-- 自动保存设置 -->
+
         <div class="auto-save-settings">
             <div class="setting-row">
                 <label class="setting-label">
-                    <input 
-                        type="checkbox" 
-                        v-model="autoSaveEnabled"
-                        @change="toggleAutoSave"
-                    />
+                    <input v-model="autoSaveEnabled" type="checkbox" @change="toggleAutoSave" />
                     <span>{{ t('canvas.history.autoSaveSnapshot') }}</span>
                 </label>
             </div>
@@ -75,16 +80,14 @@
                 </select>
             </div>
         </div>
-        
-        <!-- 恢复确认弹窗 -->
+
         <ConfirmDialog
             v-model="isRestoreDialogOpen"
             :title="t('canvas.history.restoreConfirmTitle')"
             :message="t('canvas.history.restoreConfirmMessage')"
             @confirm="confirmRestore"
         />
-        
-        <!-- 删除确认弹窗 -->
+
         <ConfirmDialog
             v-model="isDeleteDialogOpen"
             :title="t('canvas.history.deleteConfirmTitle')"
@@ -96,11 +99,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ConfirmDialog from '@/components/base/ConfirmDialog.vue'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const props = defineProps({
     snapshots: {
@@ -118,23 +121,18 @@ const emit = defineEmits(['create-snapshot', 'restore-snapshot', 'delete-snapsho
 const isCreating = ref(false)
 const activeSnapshotId = ref(null)
 const autoSaveEnabled = ref(false)
-const autoSaveInterval = ref(15)  // 默认 15 秒
+const autoSaveInterval = ref(15)
 let autoSaveTimer = null
 
-// 恢复/删除确认弹窗状态
 const isRestoreDialogOpen = ref(false)
 const isDeleteDialogOpen = ref(false)
 const pendingRestoreSnapshot = ref(null)
 const pendingDeleteId = ref(null)
 
-// 按时间排序的快照列表（最新在前）
 const sortedSnapshots = computed(() => {
-    return [...props.snapshots].sort((a, b) => {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    })
+    return [...props.snapshots].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 })
 
-// 创建快照
 async function createSnapshot() {
     isCreating.value = true
     try {
@@ -150,10 +148,9 @@ async function createSnapshot() {
     }
 }
 
-// 自动创建快照
 function autoCreateSnapshot() {
     if (!autoSaveEnabled.value) return
-    
+
     const snapshotId = `snapshot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     emit('create-snapshot', {
         id: snapshotId,
@@ -163,44 +160,36 @@ function autoCreateSnapshot() {
     })
 }
 
-// 预览快照
 function previewSnapshot(snapshot) {
     activeSnapshotId.value = snapshot.id
     emit('preview-snapshot', snapshot)
 }
 
-// 显示恢复确认弹窗
 function showRestoreConfirm(snapshot) {
     pendingRestoreSnapshot.value = snapshot
     isRestoreDialogOpen.value = true
 }
 
-// 确认恢复快照
 function confirmRestore() {
-    if (pendingRestoreSnapshot.value) {
-        emit('restore-snapshot', pendingRestoreSnapshot.value)
-        pendingRestoreSnapshot.value = null
-    }
+    if (!pendingRestoreSnapshot.value) return
+    emit('restore-snapshot', pendingRestoreSnapshot.value)
+    pendingRestoreSnapshot.value = null
 }
 
-// 显示删除确认弹窗
 function showDeleteConfirm(snapshotId) {
     pendingDeleteId.value = snapshotId
     isDeleteDialogOpen.value = true
 }
 
-// 确认删除快照
 function confirmDelete() {
-    if (pendingDeleteId.value) {
-        emit('delete-snapshot', pendingDeleteId.value)
-        if (activeSnapshotId.value === pendingDeleteId.value) {
-            activeSnapshotId.value = null
-        }
-        pendingDeleteId.value = null
+    if (!pendingDeleteId.value) return
+    emit('delete-snapshot', pendingDeleteId.value)
+    if (activeSnapshotId.value === pendingDeleteId.value) {
+        activeSnapshotId.value = null
     }
+    pendingDeleteId.value = null
 }
 
-// 切换自动保存
 function toggleAutoSave() {
     if (autoSaveEnabled.value) {
         startAutoSave()
@@ -209,68 +198,58 @@ function toggleAutoSave() {
     }
 }
 
-// 更新自动保存间隔
 function updateAutoSaveInterval() {
-    if (autoSaveEnabled.value) {
-        stopAutoSave()
-        startAutoSave()
-    }
+    if (!autoSaveEnabled.value) return
+    stopAutoSave()
+    startAutoSave()
 }
 
-// 启动自动保存
 function startAutoSave() {
-    stopAutoSave()  // 确保没有重复的定时器
-    autoSaveTimer = setInterval(() => {
+    stopAutoSave()
+    autoSaveTimer = window.setInterval(() => {
         autoCreateSnapshot()
     }, autoSaveInterval.value * 1000)
-    console.log('[HistoryPanel] Auto-save started:', autoSaveInterval.value, 's')
 }
 
-// 停止自动保存
 function stopAutoSave() {
-    if (autoSaveTimer) {
-        clearInterval(autoSaveTimer)
-        autoSaveTimer = null
-        console.log('[HistoryPanel] Auto-save stopped')
-    }
+    if (!autoSaveTimer) return
+    window.clearInterval(autoSaveTimer)
+    autoSaveTimer = null
 }
 
-// 格式化时间
 function formatTime(isoString) {
     const date = new Date(isoString)
     const now = new Date()
     const diff = now.getTime() - date.getTime()
-    
-    // 1 分钟内
+
     if (diff < 60 * 1000) {
-        return '刚刚'
+        return locale.value === 'zh-CN' ? '刚刚' : 'Just now'
     }
-    
-    // 1 小时内
+
     if (diff < 60 * 60 * 1000) {
         const mins = Math.floor(diff / (60 * 1000))
-        return `${mins} 分钟前`
+        return locale.value === 'zh-CN' ? `${mins} 分钟前` : `${mins} min ago`
     }
-    
-    // 今天
+
     if (date.toDateString() === now.toDateString()) {
-        return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        return date.toLocaleTimeString(locale.value === 'zh-CN' ? 'zh-CN' : 'en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+        })
     }
-    
-    // 更早
-    return date.toLocaleString('zh-CN', { 
-        month: 'numeric', 
+
+    return date.toLocaleString(locale.value === 'zh-CN' ? 'zh-CN' : 'en-US', {
+        month: 'numeric',
         day: 'numeric',
-        hour: '2-digit', 
+        hour: '2-digit',
         minute: '2-digit'
     })
 }
 
 onMounted(() => {
-    // 从 localStorage 恢复设置
     const savedAutoSave = localStorage.getItem('canvas_auto_save_enabled')
     const savedInterval = localStorage.getItem('canvas_auto_save_interval')
-    
+
     if (savedAutoSave === 'true') {
         autoSaveEnabled.value = true
         if (savedInterval) {
@@ -284,13 +263,12 @@ onUnmounted(() => {
     stopAutoSave()
 })
 
-// 保存设置到 localStorage
-watch(autoSaveEnabled, (val) => {
-    localStorage.setItem('canvas_auto_save_enabled', val.toString())
+watch(autoSaveEnabled, value => {
+    localStorage.setItem('canvas_auto_save_enabled', value.toString())
 })
 
-watch(autoSaveInterval, (val) => {
-    localStorage.setItem('canvas_auto_save_interval', val.toString())
+watch(autoSaveInterval, value => {
+    localStorage.setItem('canvas_auto_save_interval', value.toString())
 })
 </script>
 
@@ -302,7 +280,6 @@ watch(autoSaveInterval, (val) => {
     padding: 4px;
 }
 
-/* 快照操作 */
 .snapshot-actions {
     display: flex;
     flex-direction: column;
@@ -344,7 +321,6 @@ watch(autoSaveInterval, (val) => {
     text-align: center;
 }
 
-/* 快照列表 */
 .snapshots-list {
     display: flex;
     flex-direction: column;
@@ -416,41 +392,55 @@ watch(autoSaveInterval, (val) => {
 
 .snapshot-actions-inline {
     display: flex;
-    gap: 4px;
+    gap: 6px;
     opacity: 0;
     transition: opacity 0.2s;
 }
 
-.snapshot-item:hover .snapshot-actions-inline {
+.snapshot-item:hover .snapshot-actions-inline,
+.snapshot-item.active .snapshot-actions-inline {
     opacity: 1;
 }
 
 .action-btn {
-    padding: 6px 10px;
+    width: 30px;
+    height: 30px;
+    padding: 0;
     background: var(--bg-tertiary);
     border: 1px solid var(--border-color);
-    border-radius: 4px;
-    font-size: 12px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    flex-shrink: 0;
 }
 
 .action-btn:hover {
     background: var(--bg-secondary);
     border-color: var(--color-primary);
+    color: var(--text-primary);
 }
 
 .action-btn.small {
-    padding: 4px 6px;
-    font-size: 11px;
+    width: 28px;
+    height: 28px;
 }
 
 .action-btn.danger:hover {
     background: rgba(239, 68, 68, 0.1);
     border-color: rgba(239, 68, 68, 0.5);
+    color: #ef4444;
 }
 
-/* 空状态 */
+.action-icon {
+    width: 15px;
+    height: 15px;
+    display: block;
+}
+
 .empty-state {
     display: flex;
     flex-direction: column;
@@ -475,7 +465,6 @@ watch(autoSaveInterval, (val) => {
     color: var(--text-tertiary);
 }
 
-/* 自动保存设置 */
 .auto-save-settings {
     display: flex;
     flex-direction: column;
@@ -500,7 +489,7 @@ watch(autoSaveInterval, (val) => {
     cursor: pointer;
 }
 
-.setting-label input[type="checkbox"] {
+.setting-label input[type='checkbox'] {
     width: 16px;
     height: 16px;
 }

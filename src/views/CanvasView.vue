@@ -2,7 +2,28 @@
     <div class="canvas-view" :data-room-id="roomId">
         <WindowControls />
 
+        <div v-if="isRoomLoading" class="canvas-state">
+            <div class="canvas-state-card">
+                <div class="canvas-state-title">{{ t('canvas.loading') }}</div>
+            </div>
+        </div>
+
+        <div v-else-if="roomLoadError" class="canvas-state">
+            <div class="canvas-state-card">
+                <div class="canvas-state-title">{{ roomLoadError }}</div>
+                <div class="canvas-state-actions">
+                    <button class="canvas-state-btn secondary" @click="handleExit">
+                        {{ t('common.close') }}
+                    </button>
+                    <button class="canvas-state-btn" @click="retryRoomLoad">
+                        {{ t('common.retry') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <CanvasTopBar
+            v-if="isRoomReady"
             :room-id="roomId"
             :room-name="roomName"
             :is-syncing="isSyncing"
@@ -16,6 +37,7 @@
         />
 
         <Toolbox
+            v-if="isRoomReady"
             :active-tool="activeTool"
             :can-undo="canUndo"
             :can-redo="canRedo"
@@ -27,6 +49,7 @@
         />
 
         <div
+            v-if="isRoomReady"
             class="canvas-area"
             ref="canvasAreaRef"
             @dragover.prevent="handleCanvasDragOver"
@@ -95,7 +118,7 @@
         </div>
 
         <NodeEditorModal
-            v-if="editingNode"
+            v-if="isRoomReady && editingNode"
             :node-id="editingNode.id"
             :content="editingNode.content"
             @update="handleContentUpdate"
@@ -103,7 +126,7 @@
         />
 
         <component
-            v-if="editingCustomNode && editingCustomPlugin?.editor"
+            v-if="isRoomReady && editingCustomNode && editingCustomPlugin?.editor"
             :is="editingCustomPlugin.editor"
             :node-id="editingCustomNode.id"
             :content="editingCustomNode.content"
@@ -112,12 +135,14 @@
         />
 
         <MembersPanel
+            v-if="isRoomReady"
             v-model="isMembersPanelOpen"
             :room-id="roomId"
             :current-users="currentUsers"
         />
 
         <InputDialog
+            v-if="isRoomReady"
             v-model="isEdgeLabelDialogOpen"
             :title="t('canvas.edge.labelTitle')"
             :placeholder="t('canvas.edge.labelPlaceholder')"
@@ -126,6 +151,7 @@
         />
 
         <RightPanel
+            v-if="isRoomReady"
             :active-panel="activePanel"
             :is-collapsed="isPanelCollapsed"
             :room-id="roomId"
@@ -155,6 +181,7 @@
         />
 
         <StatusBar
+            v-if="isRoomReady"
             :zoom="zoom"
             :position="position"
             :selected-count="selectedCount"
@@ -166,12 +193,13 @@
         />
 
         <ChatPanel
+            v-if="isRoomReady"
             v-model="isChatPanelOpen"
             :messages="chatMessages"
             @send="handleSendMessage"
         />
 
-        <ChatBubbleContainer ref="bubbleContainerRef" />
+        <ChatBubbleContainer v-if="isRoomReady" ref="bubbleContainerRef" />
     </div>
 </template>
 
@@ -230,6 +258,9 @@ const editingCustomNodeId = ref<string | null>(null)
 
 const {
     roomName,
+    roomLoadError,
+    isRoomLoading,
+    isRoomReady,
     isSyncing,
     isOffline,
     isMembersPanelOpen,
@@ -243,7 +274,8 @@ const {
     chatMessages,
     unreadCount,
     handleExit,
-    handleSendMessage
+    handleSendMessage,
+    retryRoomLoad
 } = useCanvasRoom({
     roomId: props.roomId,
     t,
@@ -427,15 +459,26 @@ function handleNodeDelete(nodeIds: string[]) {
 
 function handleNodeCreate(createData: { x: number; y: number }) {
     const nodeId = `node-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    const colors = [
-        { fill: '#667eea', stroke: '#5568d3' },
-        { fill: '#48bb78', stroke: '#38a169' },
-        { fill: '#f56565', stroke: '#e53e3e' },
-        { fill: '#ed8936', stroke: '#dd6b20' },
-        { fill: '#9f7aea', stroke: '#805ad5' },
-        { fill: '#38b2ac', stroke: '#319795' }
-    ]
-    const fallbackColor = { fill: '#667eea', stroke: '#5568d3' }
+    const colors = isDark.value
+        ? [
+            { fill: '#47558f', stroke: '#6f82d6' },
+            { fill: '#2f6a55', stroke: '#49a37f' },
+            { fill: '#7a4b55', stroke: '#d97588' },
+            { fill: '#7b5a33', stroke: '#d39a4a' },
+            { fill: '#5d4e7f', stroke: '#a78bde' },
+            { fill: '#2f6770', stroke: '#4fb5c3' }
+        ]
+        : [
+            { fill: '#667eea', stroke: '#5568d3' },
+            { fill: '#48bb78', stroke: '#38a169' },
+            { fill: '#f56565', stroke: '#e53e3e' },
+            { fill: '#ed8936', stroke: '#dd6b20' },
+            { fill: '#9f7aea', stroke: '#805ad5' },
+            { fill: '#38b2ac', stroke: '#319795' }
+        ]
+    const fallbackColor = isDark.value
+        ? { fill: '#47558f', stroke: '#6f82d6' }
+        : { fill: '#667eea', stroke: '#5568d3' }
     const color = colors[Math.floor(Math.random() * colors.length)] || fallbackColor
 
     yjsNodes.createNode({
@@ -670,6 +713,59 @@ onUnmounted(() => {
     overflow: hidden;
     background: var(--canvas-bg);
     isolation: isolate;
+}
+
+.canvas-state {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 200;
+}
+
+.canvas-state-card {
+    min-width: 280px;
+    max-width: 420px;
+    padding: 24px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+    text-align: center;
+}
+
+html[data-theme='dark'] .canvas-state-card {
+    background: rgba(24, 24, 24, 0.92);
+}
+
+.canvas-state-title {
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.canvas-state-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.canvas-state-btn {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 10px;
+    background: var(--color-primary);
+    color: #fff;
+    cursor: pointer;
+}
+
+.canvas-state-btn.secondary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
 }
 
 @media (max-width: 768px) {

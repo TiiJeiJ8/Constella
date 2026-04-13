@@ -1,4 +1,4 @@
-import { computed, onMounted, provide, ref, watch, type Ref } from 'vue'
+import { computed, onMounted, onUnmounted, provide, ref, watch, type Ref } from 'vue'
 import { useYjs } from '@/composables/useYjs'
 import { useYjsNodes } from '@/composables/useYjsNodes'
 import { useYjsEdges } from '@/composables/useYjsEdges'
@@ -6,16 +6,13 @@ import { useYjsChat } from '@/composables/useYjsChat'
 import { useAwareness } from '@/composables/useAwareness'
 import { apiService } from '@/services/api'
 import { registerPlugins } from '@/plugins/register'
+import { getAccessToken, getUserId, getUsername, recordRecentVisit } from '@/utils/storage'
 
 interface UseCanvasRoomOptions {
     roomId: string
     t: (key: string) => string
     bubbleContainerRef: Ref<{ addBubble?: (message: unknown) => void } | null>
     emitNavigate: (view: string) => void
-}
-
-function getStoredToken() {
-    return localStorage.getItem('accessToken') || ''
 }
 
 function getUserName(t: (key: string) => string) {
@@ -27,22 +24,7 @@ function getUserName(t: (key: string) => string) {
             : `${settings.firstName} ${settings.lastName}`
     }
 
-    return localStorage.getItem('username') || settings.userId || localStorage.getItem('user_id') || t('common.anonymous')
-}
-
-function recordVisit(roomId: string) {
-    try {
-        const visits = localStorage.getItem('recentVisits')
-        let visitList = visits ? JSON.parse(visits) : []
-        visitList = visitList.filter((visit: { roomId: string }) => visit.roomId !== roomId)
-        visitList.unshift({
-            roomId,
-            lastVisit: Date.now()
-        })
-        localStorage.setItem('recentVisits', JSON.stringify(visitList.slice(0, 50)))
-    } catch (error) {
-        console.error('Failed to record visit:', error)
-    }
+    return getUsername() || settings.userId || getUserId() || t('common.anonymous')
 }
 
 export function useCanvasRoom(options: UseCanvasRoomOptions) {
@@ -53,6 +35,9 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
     })
 
     const roomName = ref('Loading Room...')
+    const roomLoadError = ref('')
+    const isRoomLoading = ref(true)
+    const isRoomReady = ref(false)
     const isSyncing = ref(false)
     const isOffline = ref(false)
     const isMembersPanelOpen = ref(false)
@@ -60,7 +45,7 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
 
     const yjs = useYjs({
         roomId,
-        token: getStoredToken(),
+        token: getAccessToken(),
         onConnect: () => {
             isSyncing.value = false
             isOffline.value = false
@@ -75,7 +60,7 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
         onDisconnect: () => {
             isOffline.value = true
         },
-        onSync: (synced) => {
+        onSync: synced => {
             isSyncing.value = !synced
 
             if (synced && yjs.doc) {
@@ -84,7 +69,7 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
                 yjsChat.initialize()
             }
         },
-        onError: (error) => {
+        onError: error => {
             console.error('[Canvas] Yjs error:', error)
             isOffline.value = true
         }
@@ -114,14 +99,14 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
 
     const yjsChat = useYjsChat({
         getDoc: () => yjs.doc,
-        userId: localStorage.getItem('user_id') || 'current',
+        userId: getUserId() || 'current',
         userName: getUserName(t)
     })
 
     const remoteCursors = computed(() => awareness.otherUsers.value)
     const currentUsers = computed(() => {
         const users = [
-            { id: localStorage.getItem('user_id') || 'current', name: getUserName(t), isMe: true }
+            { id: getUserId() || 'current', name: getUserName(t), isMe: true }
         ]
 
         remoteCursors.value.forEach(cursor => {
@@ -139,27 +124,54 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
     const unreadCount = computed(() => yjsChat.unreadCount.value)
 
     async function loadRoomData() {
+        isRoomLoading.value = true
+        roomLoadError.value = ''
+        isRoomReady.value = false
+
+        const fallbackName = `Room ${roomId.slice(0, 8)}`
+
         try {
-            const fallbackName = `Room ${roomId.slice(0, 8)}`
             const response = await apiService.getRoomById(roomId)
 
-            if (response.success) {
-                const apiRoomName = response.data?.room?.name || response.data?.name
-                if (typeof apiRoomName === 'string' && apiRoomName.trim()) {
-                    roomName.value = apiRoomName.trim()
-                    return
-                }
+            if (!response.success) {
+                roomName.value = fallbackName
+                roomLoadError.value = response.message || t('canvas.loadError')
+                return false
             }
 
-            roomName.value = fallbackName
+            const apiRoomName = response.data?.room?.name || response.data?.name
+            roomName.value = typeof apiRoomName === 'string' && apiRoomName.trim()
+                ? apiRoomName.trim()
+                : fallbackName
+
+            isRoomReady.value = true
+            return true
         } catch (error) {
             console.error('[Canvas] Failed to load room:', error)
-            roomName.value = `Room ${roomId.slice(0, 8)}`
+            roomName.value = fallbackName
+            roomLoadError.value = t('canvas.loadError')
+            return false
+        } finally {
+            isRoomLoading.value = false
         }
     }
 
     function handleExit() {
         emitNavigate('rooms')
+    }
+
+    function retryRoomLoad() {
+        void initializeRoom()
+    }
+
+    async function initializeRoom() {
+        yjs.disconnect()
+
+        const loaded = await loadRoomData()
+        if (!loaded) return
+
+        recordRecentVisit(roomId)
+        await yjs.connect()
     }
 
     function handleSendMessage(content: string) {
@@ -175,20 +187,25 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
         }
     })
 
-    watch(isChatPanelOpen, (isOpen) => {
+    watch(isChatPanelOpen, isOpen => {
         if (isOpen) {
             yjsChat.markAsRead()
         }
     })
 
     onMounted(() => {
-        loadRoomData()
-        recordVisit(roomId)
-        yjs.connect()
+        void initializeRoom()
+    })
+
+    onUnmounted(() => {
+        yjs.disconnect()
     })
 
     return {
         roomName,
+        roomLoadError,
+        isRoomLoading,
+        isRoomReady,
         isSyncing,
         isOffline,
         isMembersPanelOpen,
@@ -202,6 +219,7 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
         chatMessages,
         unreadCount,
         handleExit,
-        handleSendMessage
+        handleSendMessage,
+        retryRoomLoad
     }
 }
