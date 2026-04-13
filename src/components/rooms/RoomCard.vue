@@ -1,10 +1,10 @@
 <template>
     <div class="room-card">
-        <!-- 卡片主体（点击进入房间） -->
+        <!-- 闁告绱曟晶鏍ㄧ▔鐠佸磭绉奸柨娑樼墢閸嬶綁宕欓弰蹇曠闁稿繈鍎查崺褔姊绘潏鍓х -->
         <div class="card-body" @click="handleClick">
-            <!-- 卡片头部 -->
+            <!-- 闁告绱曟晶鏍ㄥ緞閹绢喖鍔?-->
             <div class="card-header">
-                <!-- 房间图标 -->
+                <!-- 闁规潙娼″Λ鍧楀炊閻愵剛鍨?-->
                 <div v-if="roomIcon" class="room-icon">
                     {{ roomIcon }}
                 </div>
@@ -12,57 +12,56 @@
                 <div class="room-info">
                     <h3 class="room-name">{{ room.name }}</h3>
                     <div class="room-meta">
-                        <span class="creator">👤 {{ room.creator }}</span>
-                        <span class="separator">·</span>
-                        <span class="member-count">👥 {{ room.memberCount }}</span>
+                        <span class="creator">By {{ room.creator }}</span>
+                        <span class="separator">|</span>
+                        <span class="member-count">{{ room.memberCount }} members</span>
                     </div>
                 </div>
                 
-                <!-- 隐私状态 -->
+                <!-- 闂傚懏鍔楅～鍡涙偐閼哥鍋?-->
                 <div class="privacy-badge" :class="room.isPrivate ? 'private' : 'public'">
-                    <span class="icon">{{ room.isPrivate ? '🔒' : '🌐' }}</span>
+                    <span class="icon">{{ room.isPrivate ? 'P' : 'O' }}</span>
                 </div>
                 
-                <!-- 收藏按钮 -->
+                <!-- 闁衡偓閹増顥戦柟绋款樀閹?-->
                 <button 
                     class="favorite-btn"
                     :class="{ 'is-favorite': isFavorited }"
                     @click.stop="toggleFavorite"
                     :title="isFavorited ? t('rooms.unfavorite') : t('rooms.favorite')"
                 >
-                    ⭐
-                </button>
+                    *                </button>
             </div>
 
-            <!-- 卡片内容 -->
+            <!-- 闁告绱曟晶鏍礃閸涱収鍟?-->
             <div class="card-content">
                 <p class="room-description">{{ room.description || t('rooms.noDescription') }}</p>
             </div>
 
-            <!-- 卡片底部 -->
+            <!-- 闁告绱曟晶鏍ㄦ償閺囥垹鍔?-->
             <div class="card-footer">
                 <div class="tags">
-                    <!-- 只在有明确角色时显示徽章 -->
+                    <!-- 闁告瑯浜滃﹢顏堝嫉婢跺顫栫痪顓у枦椤鎳濋崣澶嬵槯闁哄嫬澧介妵姘嚗閻ｅ瞼褰?-->
                     <span v-if="room.role === 'owner'" class="role-badge owner">
-                        👑 {{ t('rooms.roles.owner') }}
+                        {{ t('rooms.roles.owner') }}
                     </span>
                     <span v-else-if="room.role === 'admin'" class="role-badge admin">
-                        ⭐ {{ t('rooms.roles.admin') }}
+                        {{ t('rooms.roles.admin') }}
                     </span>
                     <span v-else-if="room.role === 'member'" class="role-badge member">
                         {{ t('rooms.roles.member') }}
                     </span>
-                    <!-- 未加入的房间（role 为 null 或 undefined）不显示任何徽章 -->
+                    <!-- 闁哄牜浜滄慨鐐哄礂閵壯勭暠闁规潙娼″Λ鍧楁晬閸х晜le 濞?null 闁?undefined闁挎稑顦粭澶愬及閸撗佷粵濞寸姾顔婄紞宥咁嚗閻ｅ瞼褰?-->
                 </div>
                 
-                <!-- 删除按钮（仅owner在"我的房间"中可见） -->
+                <!-- 闁告帞濞€濞呭酣骞愭径鎰唉闁挎稑鐗呯划宸搘ner闁?闁瑰瓨鍨瑰▓鎴﹀箣閸ф锛?濞戞搩鍘艰ぐ鑼喆娓氬﹦绀?-->
                 <button 
                     v-if="showDeleteButton" 
                     class="delete-btn"
                     @click.stop="handleDelete"
                     :title="t('rooms.delete.deleteRoom')"
                 >
-                    🗑️ {{ t('rooms.delete.delete') }}
+                    {{ t('rooms.delete.delete') }}
                 </button>
                 
                 <div class="last-active">
@@ -94,7 +93,7 @@ const emit = defineEmits(['click', 'delete', 'favoriteChange'])
 
 const isFavorited = ref(false)
 
-// 检查是否已收藏
+// 婵☆偀鍋撻柡灞诲劜濡叉悂宕ラ敃鈧崙锟犲绩閹増顥?
 function checkFavoriteStatus() {
     try {
         const favorites = localStorage.getItem('favoriteRooms')
@@ -106,18 +105,17 @@ function checkFavoriteStatus() {
     }
 }
 
-// 切换收藏状态
 function toggleFavorite() {
     try {
         const favorites = localStorage.getItem('favoriteRooms')
         let favoriteList = favorites ? JSON.parse(favorites) : []
         
         if (isFavorited.value) {
-            // 取消收藏
+            // 闁告瑦鐗楃粔鐑藉绩閹増顥?
             favoriteList = favoriteList.filter(fav => fav.roomId !== props.room.id)
             isFavorited.value = false
         } else {
-            // 添加收藏
+            // 婵烇綀顕ф慨鐐哄绩閹増顥?
             favoriteList.push({
                 roomId: props.room.id,
                 addedAt: Date.now()
@@ -136,12 +134,12 @@ onMounted(() => {
     checkFavoriteStatus()
 })
 
-// 房间图标
+// 闁规潙娼″Λ鍧楀炊閻愵剛鍨?
 const roomIcon = computed(() => {
     return props.room.settings?.appearance?.icon || null
 })
 
-// 是否显示删除按钮
+// 闁哄嫷鍨伴幆渚€寮伴崜褋浠涢柛鎺斿█濞呭酣骞愭径鎰唉
 const showDeleteButton = computed(() => {
     return props.showDelete && props.room.role === 'owner'
 })
@@ -269,7 +267,7 @@ function formatTime(timestamp) {
     background: rgba(158, 158, 158, 0.25);
 }
 
-/* ==================== 卡片头部 ==================== */
+/* ==================== 闁告绱曟晶鏍ㄥ緞閹绢喖鍔?==================== */
 .card-header {
     display: flex;
     justify-content: space-between;
@@ -336,7 +334,7 @@ function formatTime(timestamp) {
     white-space: nowrap;
 }
 
-/* ==================== 隐私徽章 ==================== */
+/* ==================== 闂傚懏鍔楅～鍡楊嚗閻ｅ瞼褰?==================== */
 .privacy-badge {
     width: 32px;
     height: 32px;
@@ -384,7 +382,7 @@ function formatTime(timestamp) {
     background: rgba(255, 215, 0, 0.2);
 }
 
-/* ==================== 卡片内容 ==================== */
+/* ==================== 闁告绱曟晶鏍礃閸涱収鍟?==================== */
 .card-content {
     flex: 1;
     margin-bottom: 12px;
@@ -402,7 +400,7 @@ function formatTime(timestamp) {
     overflow: hidden;
 }
 
-/* ==================== 卡片底部 ==================== */
+/* ==================== 闁告绱曟晶鏍ㄦ償閺囥垹鍔?==================== */
 .card-footer {
     display: flex;
     justify-content: space-between;
@@ -444,7 +442,7 @@ function formatTime(timestamp) {
     color: var(--text-tertiary);
 }
 
-/* ==================== 响应式设计 ==================== */
+/* ==================== 闁告繂绉寸花鎻掝嚕韫囨凹鍟庨悹?==================== */
 @media (max-width: 768px) {
     .room-card {
         padding: 16px;

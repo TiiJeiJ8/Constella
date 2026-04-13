@@ -2,29 +2,29 @@
     <Transition name="dialog-fade">
         <div v-if="modelValue" class="dialog-overlay" @click="handleOverlayClick">
             <div class="dialog-container" @click.stop>
-                <!-- 对话框头部 -->
+                <!-- 閻庣數顢婇惁钘夘浖閸℃ぜ浠堥梺?-->
                 <div class="dialog-header">
                     <h3 class="dialog-title">{{ t('joinRoom.title') }}</h3>
-                    <button class="close-btn" @click="handleClose">✕</button>
+                    <button class="close-btn" @click="handleClose">&times;</button>
                 </div>
 
-                <!-- 对话框内容 -->
+                <!-- 閻庣數顢婇惁钘夘浖閸℃鏁堕悗?-->
                 <div class="dialog-body">
-                    <!-- 房间信息 -->
+                    <!-- 闁规潙娼″Λ鎸庣┍閳╁啩绱?-->
                     <div v-if="room" class="room-info">
                         <div class="room-icon">{{ roomIcon }}</div>
                         <div class="room-details">
                             <h4 class="room-name">{{ room.name }}</h4>
                             <p class="room-meta">
-                                <span>👤 {{ room.creator }}</span>
-                                <span class="separator">·</span>
-                                <span>👥 {{ room.memberCount }}</span>
+                                <span>By {{ room.creator }}</span>
+                                <span class="separator">|</span>
+                                <span>{{ room.memberCount }} members</span>
                             </p>
                             <p v-if="room.description" class="room-description">{{ room.description }}</p>
                         </div>
                     </div>
 
-                    <!-- 密码输入 -->
+                    <!-- 閻庨潧妫涢悥婊勬綇閹惧啿寮?-->
                     <form @submit.prevent="handleSubmit">
                         <div class="form-group">
                             <label class="form-label">{{ t('joinRoom.password') }}</label>
@@ -42,7 +42,7 @@
                     </form>
                 </div>
 
-                <!-- 对话框底部 -->
+                <!-- 閻庣數顢婇惁钘夘浖閸℃淇洪梺?-->
                 <div class="dialog-footer">
                     <button class="btn btn-secondary" @click="handleClose" :disabled="loading">
                         {{ t('common.cancel') }}
@@ -77,17 +77,16 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'joined'])
 
-// 房间图标
+// 闁规潙娼″Λ鍧楀炊閻愵剛鍨?
 const roomIcon = computed(() => {
-    return props.room?.settings?.appearance?.icon || '🔒'
+    return props.room?.settings?.appearance?.icon || '#'
 })
 
-// 状态
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
 
-// 提交表单
+// 闁圭粯鍔掑锔炬偘閵娿儱绀?
 async function handleSubmit() {
     if (!password.value) {
         error.value = t('joinRoom.errors.passwordRequired')
@@ -111,11 +110,11 @@ async function handleSubmit() {
             handleClose()
             resetForm()
         } else {
-            // 处理错误
+            // 濠㈣泛瀚幃濠囨煥濞嗘帩鍤?
             if (response.errorCode === 'ROOM_WRONG_PASSWORD') {
                 error.value = t('joinRoom.errors.wrongPassword')
             } else if (response.errorCode === 'ROOM_ALREADY_MEMBER') {
-                // 如果已经是成员，说明列表数据过期，通知父组件刷新并进入
+                // 濠碘€冲€归悘澶婎啅閼碱剛鐥呴柡鍕靛灡閸ㄦ岸宕ㄥ鍫㈢閻犲洤鐡ㄥΣ鎴﹀礆濡ゅ嫨鈧啴寮悧鍫濈ウ閺夆晛娲﹀﹢锟犳晬瀹€鍕ㄥ亾濮樿京鍙€闁绘牕澧庣划宥嗙鐠哄搫鐓曢柡鍌涙緲閼荤喐娼诲☉妯哄汲
                 console.log('[JoinRoom] User is already a member, notifying parent')
                 emit('joined', props.room)
                 handleClose()
@@ -132,25 +131,22 @@ async function handleSubmit() {
     }
 }
 
-// 关闭对话框
 function handleClose() {
     emit('update:modelValue', false)
 }
 
-// 点击遮罩层关闭
 function handleOverlayClick() {
     if (!loading.value) {
         handleClose()
     }
 }
 
-// 重置表单
+// 闂佹彃绉堕悿鍡欐偘閵娿儱绀?
 function resetForm() {
     password.value = ''
     error.value = ''
 }
 
-// 监听对话框打开，重置表单
 watch(() => props.modelValue, (newVal) => {
     if (newVal) {
         resetForm()
@@ -159,7 +155,7 @@ watch(() => props.modelValue, (newVal) => {
 </script>
 
 <style scoped>
-/* ==================== 对话框遮罩 ==================== */
+/* ==================== 閻庣數顢婇惁钘夘浖閸℃稐绱曠紓?==================== */
 .dialog-overlay {
     position: fixed;
     top: 0;
@@ -175,7 +171,7 @@ watch(() => props.modelValue, (newVal) => {
     padding: 20px;
 }
 
-/* ==================== 对话框容器 ==================== */
+/* ==================== 閻庣數顢婇惁钘夘浖閸℃鍟囬柛?==================== */
 .dialog-container {
     background: var(--bg-primary);
     border-radius: 16px;
@@ -188,7 +184,7 @@ watch(() => props.modelValue, (newVal) => {
     transition: background-color 0.3s ease;
 }
 
-/* ==================== 对话框头部 ==================== */
+/* ==================== 閻庣數顢婇惁钘夘浖閸℃ぜ浠堥梺?==================== */
 .dialog-header {
     padding: 24px 24px 16px;
     border-bottom: 1px solid var(--border-light);
@@ -223,12 +219,12 @@ watch(() => props.modelValue, (newVal) => {
     color: var(--text-primary);
 }
 
-/* ==================== 对话框主体 ==================== */
+/* ==================== 閻庣數顢婇惁钘夘浖閸℃洖鐦滃ù?==================== */
 .dialog-body {
     padding: 24px;
 }
 
-/* ==================== 房间信息 ==================== */
+/* ==================== 闁规潙娼″Λ鎸庣┍閳╁啩绱?==================== */
 .room-info {
     display: flex;
     gap: 16px;
@@ -290,7 +286,7 @@ watch(() => props.modelValue, (newVal) => {
     -webkit-box-orient: vertical;
 }
 
-/* ==================== 表单 ==================== */
+/* ==================== 閻炴稏鍔屽畷?==================== */
 .form-group {
     margin-bottom: 20px;
 }
@@ -334,7 +330,7 @@ watch(() => props.modelValue, (newVal) => {
     margin-top: 6px;
 }
 
-/* ==================== 对话框底部 ==================== */
+/* ==================== 閻庣數顢婇惁钘夘浖閸℃淇洪梺?==================== */
 .dialog-footer {
     padding: 16px 24px;
     border-top: 1px solid var(--border-light);
@@ -394,7 +390,7 @@ watch(() => props.modelValue, (newVal) => {
     to { transform: rotate(360deg); }
 }
 
-/* ==================== 动画 ==================== */
+/* ==================== 闁告柣鍔庨弫?==================== */
 .dialog-fade-enter-active,
 .dialog-fade-leave-active {
     transition: opacity 0.3s ease;
@@ -416,7 +412,7 @@ watch(() => props.modelValue, (newVal) => {
     opacity: 0;
 }
 
-/* ==================== 响应式 ==================== */
+/* ==================== 闁告繂绉寸花鎻掝嚕?==================== */
 @media (max-width: 768px) {
     .dialog-container {
         max-width: 100%;

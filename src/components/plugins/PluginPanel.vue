@@ -11,8 +11,13 @@
                         <div class="plugin-panel-eyebrow">Constella</div>
                         <h2 class="plugin-panel-title">{{ title }}</h2>
                     </div>
-                    <button class="plugin-panel-close" @click="$emit('update:modelValue', false)" :aria-label="closeLabel">
-                        ×
+                    <button
+                        class="plugin-panel-close"
+                        :aria-label="closeLabel"
+                        :title="closeLabel"
+                        @click="$emit('update:modelValue', false)"
+                    >
+                        <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
 

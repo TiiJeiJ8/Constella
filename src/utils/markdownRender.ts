@@ -390,13 +390,13 @@ export function buildPrintableDocumentHtml(
     .document-body blockquote { padding: 0.9em 1.1em; border-left: 4px solid ${isLight ? '#9bb2d1' : '#5f7ba6'}; background: var(--quote); color: ${isLight ? '#2f3b4c' : 'rgba(229, 238, 252, 0.84)'}; }
     .document-body hr { border: 0; border-top: 1px solid var(--line); margin: 2em 0; }
     .document-body code { padding: 0.14em 0.38em; border-radius: 0.35em; background: var(--surface-alt); font-family: "JetBrains Mono", "Fira Code", monospace; font-size: 0.92em; }
-    .code-block-shell { margin: 1.2em 0; border-radius: 16px; overflow: hidden; background: var(--code-bg); color: var(--code-text); border: ${isLight ? 'none' : '1px solid rgba(255, 255, 255, 0.06)'}; box-shadow: ${isLight ? 'none' : 'inset 0 1px 0 rgba(255, 255, 255, 0.03)'}; page-break-inside: avoid; break-inside: avoid; }
+    .code-block-shell { margin: 1.2em 0; border-radius: 16px; overflow: visible; background: var(--code-bg); color: var(--code-text); border: ${isLight ? 'none' : '1px solid rgba(255, 255, 255, 0.06)'}; box-shadow: ${isLight ? 'none' : 'inset 0 1px 0 rgba(255, 255, 255, 0.03)'}; page-break-inside: avoid; break-inside: avoid; }
     .code-block-lang, .mermaid-block-lang { display: inline-flex; align-items: center; margin: 12px 12px 0; padding: 4px 10px; border-radius: 999px; font: 700 10px/1.2 "Segoe UI", system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
     .code-block-lang { background: ${isLight ? 'rgba(255, 255, 255, 0.72)' : 'rgba(191, 219, 254, 0.12)'}; color: ${isLight ? 'rgba(15, 23, 42, 0.52)' : '#bfdbfe'}; }
     .mermaid-block-lang { background: ${isLight ? 'rgba(255, 255, 255, 0.72)' : 'rgba(255, 255, 255, 0.08)'}; color: ${isLight ? 'rgba(15, 23, 42, 0.52)' : 'rgba(229, 238, 252, 0.68)'}; }
-    .document-body pre { overflow-x: auto; }
+    .document-body pre { overflow: visible; }
     .document-body .plain-text-document { white-space: pre-wrap; word-break: break-word; padding: 18px 20px; border-radius: 16px; background: var(--surface-alt); font-family: "JetBrains Mono", "Fira Code", monospace; }
-    .document-body pre code { display: block; padding: 16px 18px 20px; background: transparent; color: inherit; }
+    .document-body pre code { display: block; width: 100%; padding: 16px 18px 20px; background: transparent; color: inherit; white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; }
     .document-body .hljs { background: transparent; color: var(--code-text); }
     .document-body .hljs-keyword, .document-body .hljs-doctag { color: ${isLight ? '#8250df' : '#c792ea'}; }
     .document-body .hljs-string, .document-body .hljs-attribute, .document-body .hljs-template-string { color: ${isLight ? '#116329' : '#ecc48d'}; }
@@ -416,7 +416,7 @@ export function buildPrintableDocumentHtml(
     .mermaid-wrapper svg { max-width: 100%; width: auto; height: auto; display: block; margin: 12px auto 0; overflow: visible; }
     .mermaid-wrapper.mermaid-fit-width svg { max-height: none; }
     .mermaid-wrapper.mermaid-fit-page svg { max-height: var(--mermaid-content-max-height); }
-    .mermaid-wrapper::-webkit-scrollbar, .mermaid-wrapper *::-webkit-scrollbar { display: none; width: 0; height: 0; }
+    .code-block-shell::-webkit-scrollbar, .code-block-shell *::-webkit-scrollbar, .mermaid-wrapper::-webkit-scrollbar, .mermaid-wrapper *::-webkit-scrollbar { display: none; width: 0; height: 0; }
     .mermaid-fallback { white-space: pre-wrap; }
     .mermaid text, .mermaid .label, .mermaid .nodeLabel, .mermaid .edgeLabel, .mermaid .edgeLabel p, .mermaid .edgeLabel span, .mermaid .cluster-label text, .mermaid .cluster-label span, .mermaid .mindmap-node .label, .mermaid .mindmap-node text, .mermaid .mindmap-node foreignObject, .mermaid .mindmap-node foreignObject div { fill: ${isLight ? '#172033' : '#e5eefc'} !important; color: ${isLight ? '#172033' : '#e5eefc'} !important; }
     .mermaid .edgeLabel rect, .mermaid .labelBkg { fill: ${isLight ? 'rgba(255, 255, 255, 0.96)' : 'rgba(23, 24, 28, 0.92)'} !important; }
@@ -434,7 +434,7 @@ export function buildPrintableDocumentHtml(
       body { padding: var(--page-pad-y) var(--page-pad-x); }
       .document-shell { width: 100%; max-width: none; padding: 0; box-shadow: none; border-radius: 0; background: transparent; }
       a { color: inherit; text-decoration: none; }
-      .mermaid-wrapper, .mermaid-wrapper * { scrollbar-width: none !important; }
+      .code-block-shell, .code-block-shell * , .mermaid-wrapper, .mermaid-wrapper * { scrollbar-width: none !important; }
     }
   </style>
 </head>

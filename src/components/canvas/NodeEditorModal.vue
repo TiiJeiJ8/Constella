@@ -2,7 +2,7 @@
     <Teleport to="body">
         <Transition name="modal-fade">
             <div
-                v-if="true"
+                v-if="isEditorVisible"
                 ref="overlayRef"
                 class="editor-overlay"
                 tabindex="-1"
@@ -63,7 +63,242 @@
                                 >
                                     {{ t('canvas.editor.exportAction') }}
                                 </button>
-                                <button class="close-btn" :title="t('canvas.editor.closeHint')" @click="handleClose">
+                                <div v-if="isMarkdown" class="editor-settings-shell">
+                                    <button
+                                        type="button"
+                                        class="header-action-btn icon-only"
+                                        :class="{ active: isPreviewSettingsOpen }"
+                                        :title="previewSettingsTitle"
+                                        :aria-label="previewSettingsTitle"
+                                        @click="isPreviewSettingsOpen = !isPreviewSettingsOpen"
+                                    >
+                                        <svg class="header-action-icon" viewBox="0 0 20 20" aria-hidden="true">
+                                            <path
+                                                d="M4 5.25A1.25 1.25 0 1 1 4 7.75A1.25 1.25 0 0 1 4 5.25Zm4 .5a.75.75 0 0 1 .75-.75h7a.75.75 0 0 1 0 1.5h-7A.75.75 0 0 1 8 5.75Zm8 6a1.25 1.25 0 1 1 0 2.5a1.25 1.25 0 0 1 0-2.5Zm-11.75.5a.75.75 0 0 1 .75-.75h7a.75.75 0 0 1 0 1.5h-7a.75.75 0 0 1-.75-.75Z"
+                                                fill="currentColor"
+                                            />
+                                        </svg>
+                                    </button>
+                                    <Transition name="settings-pop">
+                                    <div v-if="isPreviewSettingsOpen" class="editor-settings-menu" @pointerdown.stop>
+                                        <div class="editor-settings-section">
+                                            <div class="editor-settings-group-title">{{ editorPanelTitle }}</div>
+                                            <div class="editor-settings-grid">
+                                                <div class="editor-settings-item">
+                                                    <div class="editor-settings-row editor-settings-row-spread">
+                                                        <div class="editor-settings-label">{{ editorFontSizeLabel }}</div>
+                                                        <span class="editor-settings-value">{{ editorFontSize }}px</span>
+                                                    </div>
+                                                    <input
+                                                        v-model.number="editorFontSize"
+                                                        class="editor-settings-slider"
+                                                        type="range"
+                                                        min="13"
+                                                        max="22"
+                                                        step="1"
+                                                    />
+                                                </div>
+                                                <div class="editor-settings-item">
+                                                    <div class="editor-settings-row editor-settings-row-spread">
+                                                        <div class="editor-settings-label">{{ editorLetterSpacingLabel }}</div>
+                                                        <span class="editor-settings-value">{{ editorLetterSpacing.toFixed(2) }}px</span>
+                                                    </div>
+                                                    <input
+                                                        v-model.number="editorLetterSpacing"
+                                                        class="editor-settings-slider"
+                                                        type="range"
+                                                        min="0"
+                                                        max="1.5"
+                                                        step="0.05"
+                                                    />
+                                                </div>
+                                                <div class="editor-settings-item">
+                                                    <div class="editor-settings-label">{{ editorLineHeightLabel }}</div>
+                                                    <div class="editor-settings-row">
+                                                        <button
+                                                            v-for="option in editorLineHeightOptions"
+                                                            :key="option.id"
+                                                            type="button"
+                                                            class="editor-settings-chip"
+                                                            :class="{ active: editorLineHeightMode === option.id }"
+                                                            @click="editorLineHeightMode = option.id"
+                                                        >
+                                                            {{ option.label }}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="editor-settings-item">
+                                                    <div class="editor-settings-row editor-settings-row-spread">
+                                                        <div class="editor-settings-label">{{ highlightCurrentLineLabel }}</div>
+                                                        <button
+                                                            type="button"
+                                                            class="editor-settings-toggle"
+                                                            :class="{ active: highlightCurrentLine }"
+                                                            @click="highlightCurrentLine = !highlightCurrentLine"
+                                                        >
+                                                            <span class="editor-settings-toggle-knob" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="editor-settings-section">
+                                            <div class="editor-settings-group-title">{{ previewPanelTitle }}</div>
+                                            <div class="editor-settings-grid">
+                                                <div class="editor-settings-item">
+                                                    <div class="editor-settings-row editor-settings-row-spread">
+                                                        <div class="editor-settings-label">{{ previewFontSizeLabel }}</div>
+                                                        <span class="editor-settings-value">{{ previewFontSize }}px</span>
+                                                    </div>
+                                                    <input
+                                                        v-model.number="previewFontSize"
+                                                        class="editor-settings-slider"
+                                                        type="range"
+                                                        min="13"
+                                                        max="22"
+                                                        step="1"
+                                                    />
+                                                </div>
+                                                <div class="editor-settings-item">
+                                                    <div class="editor-settings-row editor-settings-row-spread">
+                                                        <div class="editor-settings-label">{{ previewLetterSpacingLabel }}</div>
+                                                        <span class="editor-settings-value">{{ previewLetterSpacing.toFixed(2) }}px</span>
+                                                    </div>
+                                                    <input
+                                                        v-model.number="previewLetterSpacing"
+                                                        class="editor-settings-slider"
+                                                        type="range"
+                                                        min="0"
+                                                        max="1.5"
+                                                        step="0.05"
+                                                    />
+                                                </div>
+                                                <div class="editor-settings-item">
+                                                    <div class="editor-settings-label">{{ paragraphSpacingLabel }}</div>
+                                                    <div class="editor-settings-row">
+                                                        <button
+                                                            v-for="option in previewParagraphSpacingOptions"
+                                                            :key="option.id"
+                                                            type="button"
+                                                            class="editor-settings-chip"
+                                                            :class="{ active: previewParagraphSpacing === option.id }"
+                                                            @click="previewParagraphSpacing = option.id"
+                                                        >
+                                                            {{ option.label }}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="editor-settings-section">
+                                            <div class="editor-settings-group-title">{{ appearancePanelTitle }}</div>
+                                            <div class="editor-settings-grid">
+                                                <div class="editor-settings-item">
+                                                    <div class="editor-settings-row editor-settings-row-spread">
+                                                        <div class="editor-settings-label">{{ compactToolbarLabel }}</div>
+                                                        <button
+                                                            type="button"
+                                                            class="editor-settings-toggle"
+                                                            :class="{ active: compactToolbar }"
+                                                            @click="compactToolbar = !compactToolbar"
+                                                        >
+                                                            <span class="editor-settings-toggle-knob" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="editor-settings-item">
+                                                    <div class="editor-settings-label">{{ splitRatioLabel }}</div>
+                                                    <div class="editor-settings-row">
+                                                        <button
+                                                            v-for="option in splitRatioOptions"
+                                                            :key="option.id"
+                                                            type="button"
+                                                            class="editor-settings-chip"
+                                                            :class="{ active: splitRatio === option.id }"
+                                                            @click="splitRatio = option.id"
+                                                        >
+                                                            {{ option.label }}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="editor-settings-section">
+                                            <div class="editor-settings-group-title">{{ diagramPanelTitle }}</div>
+                                            <div class="editor-settings-grid">
+                                                <div class="editor-settings-item">
+                                                    <div class="editor-settings-label">{{ mermaidWidthLabel }}</div>
+                                                    <div class="editor-settings-row">
+                                                        <button
+                                                            type="button"
+                                                            class="editor-settings-chip"
+                                                            :class="{ active: previewMermaidScaleMode === 'fit-width' }"
+                                                            @click="previewMermaidScaleMode = 'fit-width'"
+                                                        >
+                                                            {{ fitWidthLabel }}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            class="editor-settings-chip"
+                                                            :class="{ active: previewMermaidScaleMode === 'native' }"
+                                                            @click="previewMermaidScaleMode = 'native'"
+                                                        >
+                                                            {{ originalWidthLabel }}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="editor-settings-item">
+                                                    <div class="editor-settings-row editor-settings-row-spread">
+                                                        <div class="editor-settings-label">{{ scaleLabel }}</div>
+                                                        <span class="editor-settings-value">{{ previewMermaidScalePercent }}%</span>
+                                                    </div>
+                                                    <input
+                                                        v-model.number="previewMermaidScalePercent"
+                                                        class="editor-settings-slider"
+                                                        type="range"
+                                                        :min="EXPORT_PDF_MERMAID_SCALE_MIN"
+                                                        :max="EXPORT_PDF_MERMAID_SCALE_MAX"
+                                                        :step="EXPORT_PDF_MERMAID_SCALE_STEP"
+                                                    />
+                                                    <div class="editor-settings-row">
+                                                        <button
+                                                            v-for="percent in previewMermaidScalePresets"
+                                                            :key="percent"
+                                                            type="button"
+                                                            class="editor-settings-chip"
+                                                            :class="{ active: previewMermaidScalePercent === percent }"
+                                                            @click="previewMermaidScalePercent = percent"
+                                                        >
+                                                            {{ percent }}%
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="editor-settings-item">
+                                                    <div class="editor-settings-label">{{ densityLabel }}</div>
+                                                    <div class="editor-settings-row">
+                                                        <button
+                                                            v-for="option in previewMermaidDensityOptions"
+                                                            :key="option.id"
+                                                            type="button"
+                                                            class="editor-settings-chip"
+                                                            :class="{ active: previewMermaidDensity === option.id }"
+                                                            @click="previewMermaidDensity = option.id"
+                                                        >
+                                                            {{ option.label }}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="editor-settings-footer">
+                                            <button type="button" class="editor-settings-reset" @click="resetEditorSettings">
+                                                {{ resetSettingsLabel }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    </Transition>
+                                </div>
+                                <button class="close-btn" :title="t('canvas.editor.closeHint')" :aria-label="t('canvas.editor.closeHint')" @click="handleClose">
                                     <span>&times;</span>
                                 </button>
                                 <input
@@ -76,8 +311,41 @@
                             </div>
                         </div>
 
-                        <div class="editor-body" :class="editorBodyClass">
-                            <div v-if="showEditorPane" class="edit-pane">
+                        <div class="editor-body" :class="editorBodyClass" @pointerdown="handleWorkspacePointerDown">
+                            <div
+                                v-if="showPreviewPane && outlineItems.length > 0"
+                                ref="outlineShellRef"
+                                class="editor-outline-shell"
+                                :class="{ open: outlineOpen }"
+                                @pointerdown.stop
+                            >
+                                <button
+                                    type="button"
+                                    class="outline-toggle"
+                                    :class="{ open: outlineOpen, armed: outlineHintActive }"
+                                    @click="outlineOpen = !outlineOpen"
+                                >
+                                    <span class="outline-toggle-icon">{{ outlineOpen ? '‹' : '›' }}</span>
+                                </button>
+
+                                <Transition name="outline-float">
+                                    <aside v-if="outlineOpen" class="outline-pane">
+                                        <div class="outline-header">{{ outlineTitle }}</div>
+                                        <button
+                                            v-for="item in outlineItems"
+                                            :key="item.id"
+                                            type="button"
+                                            class="outline-item"
+                                            :class="[`level-${item.level}`, { active: activeOutlineId === item.id }]"
+                                            @click="scrollToOutlineItem(item)"
+                                        >
+                                            {{ item.text }}
+                                        </button>
+                                    </aside>
+                                </Transition>
+                            </div>
+
+                            <div v-if="showEditorPane" class="edit-pane" :style="editPaneStyle">
                                 <div class="pane-header-row">
                                     <div class="pane-header">{{ t('canvas.editor.edit') }}</div>
                                     <div v-if="isMarkdown && activeCodeFence" class="pane-subtools">
@@ -101,10 +369,11 @@
                                         :key="action.id"
                                         type="button"
                                         class="toolbar-button"
+                                        :class="{ compact: compactToolbar }"
                                         :title="action.description"
                                         @click="action.action"
                                     >
-                                        <span class="toolbar-button-label">{{ action.label }}</span>
+                                        <span class="toolbar-button-label">{{ compactToolbar ? getToolbarDisplayIcon(action) : action.label }}</span>
                                     </button>
                                 </div>
 
@@ -112,6 +381,7 @@
                                     <textarea
                                         ref="textareaRef"
                                         class="editor-textarea"
+                                        :style="editorTextareaStyle"
                                         :value="localContent"
                                         :placeholder="placeholder"
                                         spellcheck="false"
@@ -174,7 +444,7 @@
 
                             </div>
 
-                            <div v-if="showPreviewPane" class="preview-pane">
+                            <div v-if="showPreviewPane" class="preview-pane" :style="previewPaneStyle">
                                 <div class="pane-header-row preview-pane-header">
                                     <div class="pane-header">{{ t('canvas.editor.preview') }}</div>
                                     <div class="preview-stats">
@@ -184,10 +454,11 @@
                                 </div>
 
                                 <div class="preview-layout">
-                                    <div ref="previewRef" class="preview-content" @click="handlePreviewClick" @wheel="markPreviewIntent" @pointerdown="markPreviewIntent" @scroll="handlePreviewScroll">
+                                    <div ref="previewRef" class="preview-content" :style="previewContentStyle" @click="handlePreviewClick" @wheel="markPreviewIntent" @pointerdown="markPreviewIntent" @scroll="handlePreviewScroll">
                                         <div v-if="previewBlocks.length === 0" class="preview-empty">
                                             {{ t('canvas.editor.previewArea') }}
                                         </div>
+                                        <div v-else class="preview-top-spacer" aria-hidden="true" />
                                         <div
                                             v-for="block in previewBlocks"
                                             :id="block.anchorId"
@@ -220,11 +491,17 @@
                         </div>
                     </div>
                 </Transition>
-                <div v-if="showPreviewPane && outlineItems.length > 0" class="outline-floating-shell">
+                <div
+                    v-if="showPreviewPane && outlineItems.length > 0"
+                    class="outline-floating-shell"
+                    @pointerdown.stop
+                >
                     <button
                         type="button"
                         class="outline-toggle"
                         :class="{ open: outlineOpen, armed: outlineHintActive }"
+                        :title="outlineTitle"
+                        :aria-label="outlineTitle"
                         @click="outlineOpen = !outlineOpen"
                     >
                         <span class="outline-toggle-icon">{{ outlineOpen ? '‹' : '›' }}</span>
@@ -232,7 +509,7 @@
 
                     <Transition name="outline-float">
                         <aside v-if="outlineOpen" class="outline-pane">
-                            <div class="outline-header">Outline</div>
+                            <div class="outline-header">{{ outlineTitle }}</div>
                             <button
                                 v-for="item in outlineItems"
                                 :key="item.id"
@@ -254,7 +531,7 @@
                         :aria-label="backToTopTitle"
                         @click="handleBackToTop"
                     >
-                        <span class="to-top-icon">Top</span>
+                        <span class="to-top-icon">{{ locale === 'zh-CN' ? '顶部' : 'Top' }}</span>
                     </button>
                 </div>
             </div>
@@ -300,16 +577,20 @@ import type { MermaidConfig } from 'mermaid'
 import { pluginCatalogVersion, pluginRegistry, type NodeContent } from '@/plugins'
 import DocumentExportPanel from '@/components/canvas/DocumentExportPanel.vue'
 import {
+    EXPORT_PDF_MERMAID_SCALE_MAX,
+    EXPORT_PDF_MERMAID_SCALE_MIN,
+    EXPORT_PDF_MERMAID_SCALE_STEP,
     exportDocument,
     type ExportTheme,
     type ExportPanelSettings,
-    type ExportPanelThemeMode
+    type ExportPanelThemeMode,
+    type ExportPdfMermaidDensity
 } from '@/utils/documentExport'
 import { deriveDocumentTitle, sanitizeFilename } from '@/utils/markdownRender'
 import { useToast } from '@/utils/useToast'
 import type { UserState } from '../../composables/useAwareness'
 
-const { t, te } = useI18n()
+const { t, te, locale } = useI18n()
 const toast = useToast()
 
 type MermaidThemeMode = 'light' | 'dark'
@@ -413,6 +694,16 @@ function getMermaidDiagramLabel(source: string): string {
     return `Mermaid · ${matched?.[1] ?? 'Diagram'}`
 }
 
+function isGanttMermaidSource(source: string) {
+    const firstMeaningfulLine = source
+        .split('\n')
+        .map(line => line.trim())
+        .find(line => Boolean(line))
+        ?.toLowerCase() ?? ''
+
+    return /^gantt\b/.test(firstMeaningfulLine)
+}
+
 mermaid.initialize(getMermaidConfig('dark'))
 
 interface SlashCommand {
@@ -450,6 +741,9 @@ interface EditorBlockMetric {
     start: number
     end: number
     length: number
+    lineStart: number
+    lineEnd: number
+    lineCount: number
 }
 
 interface OutlineItem {
@@ -463,6 +757,7 @@ interface OutlineItem {
 interface ToolbarAction {
     id: string
     label: string
+    icon: string
     description: string
     action: () => void
 }
@@ -474,6 +769,25 @@ interface CodeFenceContext {
 }
 
 type EditorViewMode = 'edit' | 'split' | 'preview'
+type PreviewMermaidScaleMode = 'fit-width' | 'native'
+type EditorLineHeightMode = 'compact' | 'standard' | 'relaxed'
+type PreviewParagraphSpacingMode = 'compact' | 'standard' | 'relaxed'
+type SplitRatioMode = 'editor-wide' | 'balanced' | 'preview-wide'
+
+interface StoredPreviewSessionState {
+    contentHash: string
+    visibleBlockIds: string[]
+    previewScrollTop: number
+    editorScrollTop: number
+}
+
+interface NodeEditorPreviewGlobalState {
+    htmlCache: Map<string, string>
+    sessionByNodeId: Map<string, StoredPreviewSessionState>
+}
+
+const MAX_PREVIEW_HTML_CACHE_ENTRIES = 400
+const MAX_PREVIEW_SESSION_ENTRIES = 40
 
 const props = defineProps<{
     nodeId: string
@@ -510,12 +824,40 @@ const outlineHintActive = ref(false)
 const editorScrollTop = ref(0)
 const previewScrollTop = ref(0)
 const isExportPanelOpen = ref(false)
+const isPreviewSettingsOpen = ref(false)
 const viewMode = ref<EditorViewMode>('edit')
 const editorSelectionStart = ref(0)
 const forceSingleColumn = ref(false)
 const activeImagePreview = ref<{ src: string; alt: string } | null>(null)
+const previewMermaidScaleMode = ref<PreviewMermaidScaleMode>('fit-width')
+const previewMermaidScalePercent = ref(100)
+const previewMermaidDensity = ref<ExportPdfMermaidDensity>('compact')
+const isEditorVisible = ref(true)
+const editorFontSize = ref(15)
+const editorLetterSpacing = ref(0)
+const editorLineHeightMode = ref<EditorLineHeightMode>('standard')
+const highlightCurrentLine = ref(false)
+const previewFontSize = ref(15)
+const previewLetterSpacing = ref(0)
+const previewParagraphSpacing = ref<PreviewParagraphSpacingMode>('standard')
+const compactToolbar = ref(false)
+const splitRatio = ref<SplitRatioMode>('balanced')
 
-const previewCache = new Map<string, string>()
+const NODE_EDITOR_PREVIEW_GLOBAL_KEY = '__constellaNodeEditorPreviewState'
+const nodeEditorPreviewGlobalState = (() => {
+    const scope = globalThis as typeof globalThis & {
+        [NODE_EDITOR_PREVIEW_GLOBAL_KEY]?: NodeEditorPreviewGlobalState
+    }
+    if (!scope[NODE_EDITOR_PREVIEW_GLOBAL_KEY]) {
+        scope[NODE_EDITOR_PREVIEW_GLOBAL_KEY] = {
+            htmlCache: new Map<string, string>(),
+            sessionByNodeId: new Map<string, StoredPreviewSessionState>()
+        }
+    }
+    return scope[NODE_EDITOR_PREVIEW_GLOBAL_KEY]!
+})()
+
+const previewCache = nodeEditorPreviewGlobalState.htmlCache
 const mathPlaceholders = new Map<string, string>()
 const codePlaceholders = new Map<string, string>()
 const markdownUtils = new MarkdownIt().utils
@@ -525,13 +867,23 @@ let placeholderCounter = 0
 let mermaidCounter = 0
 let previewObserver: IntersectionObserver | null = null
 let previewSyncFrame: number | null = null
+let previewRealignFrame: number | null = null
 let pendingEditorScrollTop = 0
 let syncingSource: 'editor' | null = null
 let editorLayoutResizeObserver: ResizeObserver | null = null
+let previewBlockResizeObserver: ResizeObserver | null = null
+let restoringPreviewSession = false
+let closeEmitTimer: number | null = null
+let pendingPreviewSessionRestore: StoredPreviewSessionState | null = null
+let hasRestoredPreviewSession = false
 
 const VIEW_MODE_STORAGE_KEY = 'constella.node-editor.view-mode'
+const PREVIEW_MERMAID_SETTINGS_STORAGE_KEY = 'constella.node-editor.preview-mermaid-settings'
+const EDITOR_SETTINGS_STORAGE_KEY = 'constella.node-editor.settings'
 const SINGLE_COLUMN_BREAKPOINT = 1180
 const SCROLL_TOP_VISIBILITY_THRESHOLD = 220
+const PREVIEW_TOP_SPACER_PX = 170
+const EDITOR_CLOSE_ANIMATION_MS = 220
 
 const md = new MarkdownIt({
     html: false,
@@ -674,6 +1026,50 @@ function hashText(text: string): string {
     return Math.abs(hash).toString(36)
 }
 
+function getCurrentPreviewContentHash() {
+    return hashText(localContent.value)
+}
+
+function touchPreviewCacheEntry(key: string, value?: string) {
+    const hasValue = previewCache.has(key)
+    const resolvedValue = value ?? previewCache.get(key)
+    if (resolvedValue == null) return null
+    if (hasValue) {
+        previewCache.delete(key)
+    }
+    previewCache.set(key, resolvedValue)
+    while (previewCache.size > MAX_PREVIEW_HTML_CACHE_ENTRIES) {
+        const oldestKey = previewCache.keys().next().value
+        if (typeof oldestKey !== 'string') break
+        previewCache.delete(oldestKey)
+    }
+    return resolvedValue
+}
+
+function getStoredPreviewSessionState() {
+    const stored = nodeEditorPreviewGlobalState.sessionByNodeId.get(props.nodeId)
+    if (!stored) return null
+    nodeEditorPreviewGlobalState.sessionByNodeId.delete(props.nodeId)
+    nodeEditorPreviewGlobalState.sessionByNodeId.set(props.nodeId, stored)
+    if (stored.contentHash !== getCurrentPreviewContentHash()) return null
+    return stored
+}
+
+function persistPreviewSessionState() {
+    nodeEditorPreviewGlobalState.sessionByNodeId.delete(props.nodeId)
+    nodeEditorPreviewGlobalState.sessionByNodeId.set(props.nodeId, {
+        contentHash: getCurrentPreviewContentHash(),
+        visibleBlockIds: Array.from(visiblePreviewBlockIds.value),
+        previewScrollTop: previewScrollTop.value,
+        editorScrollTop: editorScrollTop.value
+    })
+    while (nodeEditorPreviewGlobalState.sessionByNodeId.size > MAX_PREVIEW_SESSION_ENTRIES) {
+        const oldestKey = nodeEditorPreviewGlobalState.sessionByNodeId.keys().next().value
+        if (typeof oldestKey !== 'string') break
+        nodeEditorPreviewGlobalState.sessionByNodeId.delete(oldestKey)
+    }
+}
+
 function splitMarkdownBlocks(text: string): string[] {
     if (!text.trim()) return []
     const blocks: string[] = []
@@ -758,7 +1154,39 @@ const backToTopTarget = computed<'none' | 'editor' | 'preview' | 'both'>(() => {
     return showEditorPane.value && editorScrollTop.value > SCROLL_TOP_VISIBILITY_THRESHOLD ? 'editor' : 'none'
 })
 const showBackToTopButton = computed(() => backToTopTarget.value !== 'none')
+const previewSettingsTitle = computed(() => locale.value === 'zh-CN' ? '预览设置' : 'Preview settings')
+const editorPanelTitle = computed(() => locale.value === 'zh-CN' ? '编辑区' : 'Editor')
+const previewPanelTitle = computed(() => locale.value === 'zh-CN' ? '预览区' : 'Preview')
+const appearancePanelTitle = computed(() => locale.value === 'zh-CN' ? '外观' : 'Appearance')
+const diagramPanelTitle = computed(() => locale.value === 'zh-CN' ? '图表' : 'Diagram')
+const editorFontSizeLabel = computed(() => locale.value === 'zh-CN' ? '字号' : 'Font size')
+const editorLetterSpacingLabel = computed(() => locale.value === 'zh-CN' ? '字间距' : 'Letter spacing')
+const editorLineHeightLabel = computed(() => locale.value === 'zh-CN' ? '行高' : 'Line height')
+const highlightCurrentLineLabel = computed(() => locale.value === 'zh-CN' ? '高亮当前行' : 'Highlight current line')
+const previewFontSizeLabel = computed(() => locale.value === 'zh-CN' ? '预览字号' : 'Preview font size')
+const previewLetterSpacingLabel = computed(() => locale.value === 'zh-CN' ? '字间距' : 'Letter spacing')
+const paragraphSpacingLabel = computed(() => locale.value === 'zh-CN' ? '段落间距' : 'Paragraph spacing')
+const compactToolbarLabel = computed(() => locale.value === 'zh-CN' ? '隐藏工具栏文案' : 'Icon-only toolbar')
+const splitRatioLabel = computed(() => locale.value === 'zh-CN' ? '分栏比例' : 'Split ratio')
+const resetSettingsLabel = computed(() => locale.value === 'zh-CN' ? '恢复默认' : 'Reset')
+const mermaidWidthLabel = computed(() => locale.value === 'zh-CN' ? 'Mermaid 宽度' : 'Mermaid width')
+const fitWidthLabel = computed(() => locale.value === 'zh-CN' ? '适应宽度' : 'Fit width')
+const originalWidthLabel = computed(() => locale.value === 'zh-CN' ? '原始宽度' : 'Original width')
+const scaleLabel = computed(() => locale.value === 'zh-CN' ? '缩放' : 'Scale')
+const densityLabel = computed(() => locale.value === 'zh-CN' ? '密度' : 'Density')
+const compactLabel = computed(() => locale.value === 'zh-CN' ? '紧凑' : 'Compact')
+const standardLabel = computed(() => locale.value === 'zh-CN' ? '标准' : 'Standard')
+const relaxedLabel = computed(() => locale.value === 'zh-CN' ? '宽松' : 'Relaxed')
+const editorWideLabel = computed(() => locale.value === 'zh-CN' ? '55 / 45' : '55 / 45')
+const balancedLabel = computed(() => locale.value === 'zh-CN' ? '50 / 50' : '50 / 50')
+const previewWideLabel = computed(() => locale.value === 'zh-CN' ? '45 / 55' : '45 / 55')
+const outlineTitle = computed(() => locale.value === 'zh-CN' ? '目录' : 'Outline')
 const backToTopTitle = computed(() => {
+    if (locale.value === 'zh-CN') {
+        if (backToTopTarget.value === 'preview') return '回到顶部（预览）'
+        if (backToTopTarget.value === 'editor') return '回到顶部（编辑器）'
+        return '回到顶部'
+    }
     if (backToTopTarget.value === 'both') return 'Back to top'
     if (backToTopTarget.value === 'preview') return 'Back to top (Preview)'
     if (backToTopTarget.value === 'editor') return 'Back to top (Editor)'
@@ -767,6 +1195,110 @@ const backToTopTitle = computed(() => {
 const placeholder = computed(() => isMarkdown.value ? t('canvas.editor.markdownPlaceholder') : t('canvas.editor.textPlaceholder'))
 const slashMenuStyle = computed(() => ({ top: `${slashMenuPosition.value.top}px`, left: `${slashMenuPosition.value.left}px` }))
 const editingUsers = computed(() => awareness.otherUsers.value.filter(user => user.selection?.includes(props.nodeId)))
+const previewMermaidScalePresets = [EXPORT_PDF_MERMAID_SCALE_MIN, 80, 90, 100, EXPORT_PDF_MERMAID_SCALE_MAX]
+const previewMermaidDensityOptions = computed<Array<{ id: ExportPdfMermaidDensity; label: string }>>(() => [
+    { id: 'compact', label: compactLabel.value },
+    { id: 'standard', label: standardLabel.value }
+])
+const editorLineHeightOptions = computed<Array<{ id: EditorLineHeightMode; label: string }>>(() => [
+    { id: 'compact', label: compactLabel.value },
+    { id: 'standard', label: standardLabel.value },
+    { id: 'relaxed', label: relaxedLabel.value }
+])
+const previewParagraphSpacingOptions = computed<Array<{ id: PreviewParagraphSpacingMode; label: string }>>(() => [
+    { id: 'compact', label: compactLabel.value },
+    { id: 'standard', label: standardLabel.value },
+    { id: 'relaxed', label: relaxedLabel.value }
+])
+const splitRatioOptions = computed<Array<{ id: SplitRatioMode; label: string }>>(() => [
+    { id: 'editor-wide', label: editorWideLabel.value },
+    { id: 'balanced', label: balancedLabel.value },
+    { id: 'preview-wide', label: previewWideLabel.value }
+])
+
+const editorLineHeightValueMap: Record<EditorLineHeightMode, number> = {
+    compact: 1.6,
+    standard: 1.8,
+    relaxed: 2.05
+}
+
+const previewParagraphSpacingValueMap: Record<PreviewParagraphSpacingMode, string> = {
+    compact: '0.6em',
+    standard: '0.85em',
+    relaxed: '1.15em'
+}
+
+const previewLineHeightValueMap: Record<PreviewParagraphSpacingMode, number> = {
+    compact: 1.6,
+    standard: 1.8,
+    relaxed: 2.02
+}
+
+const previewBlockGapValueMap: Record<PreviewParagraphSpacingMode, string> = {
+    compact: '12px',
+    standard: '18px',
+    relaxed: '26px'
+}
+
+const splitRatioValueMap: Record<SplitRatioMode, { editor: string; preview: string }> = {
+    'editor-wide': { editor: '55%', preview: '45%' },
+    balanced: { editor: '50%', preview: '50%' },
+    'preview-wide': { editor: '45%', preview: '55%' }
+}
+
+const editorTextareaStyle = computed(() => {
+    const lineHeightMultiplier = editorLineHeightValueMap[editorLineHeightMode.value]
+    const lineHeightPx = editorFontSize.value * lineHeightMultiplier
+    const currentLineIndex = localContent.value.slice(0, editorSelectionStart.value).split('\n').length - 1
+    const currentLineTop = 20 + (currentLineIndex * lineHeightPx) - editorScrollTop.value
+    return {
+        fontSize: `${editorFontSize.value}px`,
+        letterSpacing: `${editorLetterSpacing.value.toFixed(2)}px`,
+        lineHeight: lineHeightMultiplier.toString(),
+        backgroundImage: highlightCurrentLine.value
+            ? 'linear-gradient(90deg, rgba(96, 165, 250, 0.12), rgba(96, 165, 250, 0.04) 72%, rgba(96, 165, 250, 0))'
+            : 'none',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: `0 ${Math.max(0, currentLineTop)}px`,
+        backgroundSize: `100% ${lineHeightPx}px`,
+        boxShadow: highlightCurrentLine.value ? `inset 3px 0 0 rgba(96, 165, 250, 0.42)` : 'none'
+    }
+})
+
+const previewContentStyle = computed(() => ({
+    fontSize: `${previewFontSize.value}px`,
+    letterSpacing: `${previewLetterSpacing.value.toFixed(2)}px`,
+    lineHeight: previewLineHeightValueMap[previewParagraphSpacing.value].toString(),
+    '--preview-paragraph-spacing': previewParagraphSpacingValueMap[previewParagraphSpacing.value],
+    '--preview-block-gap': previewBlockGapValueMap[previewParagraphSpacing.value]
+}))
+
+const editPaneStyle = computed(() => {
+    if (!(showEditorPane.value && showPreviewPane.value) || forceSingleColumn.value) return undefined
+    return { flexBasis: splitRatioValueMap[splitRatio.value].editor }
+})
+
+const previewPaneStyle = computed(() => {
+    if (!(showEditorPane.value && showPreviewPane.value) || forceSingleColumn.value) return undefined
+    return { flexBasis: splitRatioValueMap[splitRatio.value].preview }
+})
+
+function getToolbarDisplayIcon(action: ToolbarAction) {
+    const iconMap: Record<string, string> = {
+        h1: 'H1',
+        h2: 'H2',
+        bullet: '-',
+        todo: '[ ]',
+        quote: '""',
+        code: '</>',
+        math: 'fx',
+        table: '[]',
+        link: '@',
+        flow: '->'
+    }
+
+    return iconMap[action.id] ?? action.icon ?? action.label
+}
 
 const remoteCursors = computed<RemoteCursor[]>(() => {
     if (!textareaRef.value) return []
@@ -836,11 +1368,16 @@ const editorBlockMetrics = computed<EditorBlockMetric[]>(() => {
         const end = start + block.length
         cursor = end
         const id = `preview-block-${index}-${hashText(block)}`
+        const lineStart = getLineIndexForOffset(start)
+        const lineEnd = getLineIndexForOffset(Math.max(start, end - 1))
         return {
             id,
             start,
             end,
-            length: Math.max(1, end - start)
+            length: Math.max(1, end - start),
+            lineStart,
+            lineEnd,
+            lineCount: Math.max(1, (lineEnd - lineStart) + 1)
         }
     })
 })
@@ -854,6 +1391,32 @@ const lineStartOffsets = computed(() => {
     }
     return offsets
 })
+
+function getLineIndexForOffset(offset: number) {
+    const offsets = lineStartOffsets.value
+    let low = 0
+    let high = offsets.length - 1
+
+    while (low <= high) {
+        const mid = Math.floor((low + high) / 2)
+        const lineStart = offsets[mid] ?? 0
+        const nextLineStart = mid < offsets.length - 1 ? (offsets[mid + 1] ?? Number.POSITIVE_INFINITY) : Number.POSITIVE_INFINITY
+
+        if (offset < lineStart) {
+            high = mid - 1
+            continue
+        }
+
+        if (offset >= nextLineStart) {
+            low = mid + 1
+            continue
+        }
+
+        return mid
+    }
+
+    return Math.max(0, offsets.length - 1)
+}
 
 const outlineItems = computed<OutlineItem[]>(() => {
     const items: OutlineItem[] = []
@@ -879,11 +1442,12 @@ const previewBlocks = computed<PreviewBlock[]>(() => {
         const id = `preview-block-${index}-${hashText(block)}`
         const isHeavy = isHeavyBlock(block)
         const shouldDefer = isHeavy && !visiblePreviewBlockIds.value.has(id) && !previewCache.has(block)
+        const cachedHtml = shouldDefer ? null : touchPreviewCacheEntry(block)
         const html = shouldDefer
             ? ''
-            : (previewCache.get(block) ?? (() => {
+            : (cachedHtml ?? (() => {
                 const rendered = renderMarkdown(block)
-                previewCache.set(block, rendered)
+                touchPreviewCacheEntry(block, rendered)
                 return rendered
             })())
 
@@ -907,16 +1471,16 @@ const activePreviewBlockId = computed(() => {
 })
 
 const toolbarActions = computed<ToolbarAction[]>(() => [
-    { id: 'h1', label: 'H1', description: 'Insert heading 1', action: () => prependToCurrentLine('# ') },
-    { id: 'h2', label: 'H2', description: 'Insert heading 2', action: () => prependToCurrentLine('## ') },
-    { id: 'bullet', label: '• List', description: 'Insert bullet list', action: () => prependToCurrentLine('- ') },
-    { id: 'todo', label: 'Todo', description: 'Insert checklist item', action: () => prependToCurrentLine('- [ ] ') },
-    { id: 'quote', label: 'Quote', description: 'Insert quote block', action: () => prependToCurrentLine('> ') },
-    { id: 'code', label: 'Code', description: 'Insert fenced code block', action: () => insertSnippet('```\n\n```', 4) },
-    { id: 'math', label: 'Math', description: 'Insert inline math', action: () => wrapSelection('$', '$', 'formula') },
-    { id: 'table', label: 'Table', description: 'Insert markdown table', action: () => insertSnippet('| Col 1 | Col 2 |\n| --- | --- |\n| Item | Item |') },
-    { id: 'link', label: 'Link', description: 'Wrap selection with a link', action: () => wrapSelection('[', '](https://)', 'text') },
-    { id: 'flow', label: 'Flow', description: 'Insert mermaid flowchart', action: () => insertSnippet('```mermaid\nflowchart TD\n    A[Start] --> B{Decision}\n    B -->|Yes| C[Done]\n    B -->|No| D[Retry]\n```', 13) }
+    { id: 'h1', label: 'H1', icon: 'H1', description: 'Insert heading 1', action: () => prependToCurrentLine('# ') },
+    { id: 'h2', label: 'H2', icon: 'H2', description: 'Insert heading 2', action: () => prependToCurrentLine('## ') },
+    { id: 'bullet', label: '• List', icon: '•', description: 'Insert bullet list', action: () => prependToCurrentLine('- ') },
+    { id: 'todo', label: 'Todo', icon: '✓', description: 'Insert checklist item', action: () => prependToCurrentLine('- [ ] ') },
+    { id: 'quote', label: 'Quote', icon: '"', description: 'Insert quote block', action: () => prependToCurrentLine('> ') },
+    { id: 'code', label: 'Code', icon: '</>', description: 'Insert fenced code block', action: () => insertSnippet('```\n\n```', 4) },
+    { id: 'math', label: 'Math', icon: '∑', description: 'Insert inline math', action: () => wrapSelection('$', '$', 'formula') },
+    { id: 'table', label: 'Table', icon: '▦', description: 'Insert markdown table', action: () => insertSnippet('| Col 1 | Col 2 |\n| --- | --- |\n| Item | Item |') },
+    { id: 'link', label: 'Link', icon: '🔗', description: 'Wrap selection with a link', action: () => wrapSelection('[', '](https://)', 'text') },
+    { id: 'flow', label: 'Flow', icon: '⇢', description: 'Insert mermaid flowchart', action: () => insertSnippet('```mermaid\nflowchart TD\n    A[Start] --> B{Decision}\n    B -->|Yes| C[Done]\n    B -->|No| D[Retry]\n```', 13) }
 ])
 
 const slashCommands = computed<SlashCommand[]>(() => [
@@ -1091,6 +1655,7 @@ async function handleImportFileChange(event: Event) {
 }
 
 function syncPreviewFromEditor() {
+    if (restoringPreviewSession) return
     const textarea = textareaRef.value
     const preview = previewRef.value
     if (!textarea || !preview) return
@@ -1100,15 +1665,12 @@ function syncPreviewFromEditor() {
     if (previewSyncFrame !== null) return
     previewSyncFrame = requestAnimationFrame(() => {
         const lineHeight = 27
-        const anchorLine = Math.max(
-            0,
-            Math.min(
-                lineStartOffsets.value.length - 1,
-                Math.floor((pendingEditorScrollTop + (textarea.clientHeight * 0.32)) / lineHeight)
-            )
-        )
-        const visibleCharIndex = Math.min(localContent.value.length, lineStartOffsets.value[anchorLine] ?? 0)
-        let safeBlockIndex = metrics.findIndex(metric => visibleCharIndex <= metric.end)
+        const totalLines = Math.max(1, lineStartOffsets.value.length)
+        const anchorLine = Math.max(0, Math.min(
+            totalLines - 1,
+            Math.floor((pendingEditorScrollTop + (textarea.clientHeight * 0.24)) / lineHeight)
+        ))
+        let safeBlockIndex = metrics.findIndex(metric => anchorLine <= metric.lineEnd)
         if (safeBlockIndex === -1) safeBlockIndex = metrics.length - 1
         const currentMetric = metrics[safeBlockIndex]
         if (!currentMetric) {
@@ -1121,18 +1683,21 @@ function syncPreviewFromEditor() {
             return
         }
 
-        const blockProgress = Math.min(1, Math.max(0, (visibleCharIndex - currentMetric.start) / currentMetric.length))
+        const blockProgress = Math.min(1, Math.max(
+            0,
+            (anchorLine - currentMetric.lineStart) / Math.max(1, currentMetric.lineCount)
+        ))
         const currentTop = currentElement.offsetTop
         const currentHeight = currentElement.offsetHeight
         const nextMetric = safeBlockIndex < metrics.length - 1 ? metrics[safeBlockIndex + 1] : undefined
         const nextElement = safeBlockIndex < metrics.length - 1
             ? preview.querySelector<HTMLElement>(`[data-preview-block-id="${nextMetric?.id ?? ''}"]`)
             : null
-        const nextTop = nextElement?.offsetTop ?? currentTop + currentHeight
+        const nextTop = nextElement?.offsetTop ?? (currentTop + currentHeight)
         const interpolatedTop = currentTop + ((nextTop - currentTop) * blockProgress)
-        const targetScrollTop = Math.max(0, interpolatedTop - (preview.clientHeight * 0.16))
+        const targetScrollTop = Math.max(0, interpolatedTop - PREVIEW_TOP_SPACER_PX - (preview.clientHeight * 0.2))
         syncingSource = 'editor'
-        preview.scrollTop = targetScrollTop
+        preview.scrollTop = Math.round(targetScrollTop)
         updateActiveOutline()
         previewSyncFrame = null
         window.setTimeout(() => {
@@ -1177,12 +1742,55 @@ function handlePreviewScroll() {
     const preview = previewRef.value
     previewScrollTop.value = preview?.scrollTop ?? 0
     updateActiveOutline()
+    persistPreviewSessionState()
+}
+
+function handleWorkspacePointerDown(event: PointerEvent) {
+    const target = event.target
+    if (!(target instanceof HTMLElement)) return
+    if (outlineOpen.value && !target.closest('.outline-floating-shell')) {
+        outlineOpen.value = false
+    }
+    if (isPreviewSettingsOpen.value && !target.closest('.editor-settings-shell')) {
+        isPreviewSettingsOpen.value = false
+    }
+}
+
+function requestPreviewRealignment() {
+    if (restoringPreviewSession) return
+    if (!showEditorPane.value || !showPreviewPane.value) return
+    if (previewRealignFrame !== null) return
+    previewRealignFrame = requestAnimationFrame(() => {
+        previewRealignFrame = null
+        syncPreviewFromEditor()
+    })
+}
+
+function setupPreviewBlockResizeObserver() {
+    previewBlockResizeObserver?.disconnect()
+    previewBlockResizeObserver = null
+
+    if (typeof ResizeObserver === 'undefined') return
+    const preview = previewRef.value
+    if (!preview) return
+
+    previewBlockResizeObserver = new ResizeObserver((entries) => {
+        if (entries.length === 0) return
+        requestPreviewRealignment()
+    })
+
+    preview.querySelectorAll<HTMLElement>('[data-preview-block-id]').forEach((element) => {
+        previewBlockResizeObserver?.observe(element)
+    })
 }
 
 function handleEditorScroll() {
     const textarea = textareaRef.value
     editorScrollTop.value = textarea?.scrollTop ?? 0
-    syncPreviewFromEditor()
+    if (!restoringPreviewSession) {
+        syncPreviewFromEditor()
+    }
+    persistPreviewSessionState()
 }
 
 function markEditorIntent() {
@@ -1240,16 +1848,19 @@ function decoratePreviewImages() {
             img.addEventListener('load', () => {
                 img.classList.remove('is-error')
                 img.nextElementSibling?.classList.contains('preview-image-fallback') && img.nextElementSibling.remove()
+                requestPreviewRealignment()
             })
             img.addEventListener('error', () => {
                 img.classList.add('is-error')
                 createImageFallback(img)
+                requestPreviewRealignment()
             })
         }
 
         if (img.complete && img.naturalWidth === 0) {
             img.classList.add('is-error')
             createImageFallback(img)
+            requestPreviewRealignment()
         }
     })
 }
@@ -1269,9 +1880,169 @@ function readStoredViewMode(): EditorViewMode {
     return 'split'
 }
 
+function readStoredPreviewMermaidSettings() {
+    try {
+        const raw = window.localStorage.getItem(PREVIEW_MERMAID_SETTINGS_STORAGE_KEY)
+        if (!raw) return
+        const parsed = JSON.parse(raw) as {
+            scaleMode?: PreviewMermaidScaleMode
+            scalePercent?: number
+            density?: ExportPdfMermaidDensity
+        }
+
+        if (parsed.scaleMode === 'fit-width' || parsed.scaleMode === 'native') {
+            previewMermaidScaleMode.value = parsed.scaleMode
+        }
+
+        if (typeof parsed.scalePercent === 'number') {
+            previewMermaidScalePercent.value = Math.min(
+                EXPORT_PDF_MERMAID_SCALE_MAX,
+                Math.max(EXPORT_PDF_MERMAID_SCALE_MIN, Math.round(parsed.scalePercent))
+            )
+        }
+
+        if (parsed.density === 'compact' || parsed.density === 'standard') {
+            previewMermaidDensity.value = parsed.density
+        }
+    } catch {}
+}
+
+function readStoredEditorSettings() {
+    try {
+        const raw = window.localStorage.getItem(EDITOR_SETTINGS_STORAGE_KEY)
+        if (!raw) return
+        const parsed = JSON.parse(raw) as {
+            editorFontSize?: number
+            editorLetterSpacing?: number
+            editorLineHeightMode?: EditorLineHeightMode
+            highlightCurrentLine?: boolean
+            previewFontSize?: number
+            previewLetterSpacing?: number
+            previewParagraphSpacing?: PreviewParagraphSpacingMode
+            compactToolbar?: boolean
+            splitRatio?: SplitRatioMode
+        }
+
+        if (typeof parsed.editorFontSize === 'number') {
+            editorFontSize.value = Math.min(22, Math.max(13, Math.round(parsed.editorFontSize)))
+        }
+        if (typeof parsed.editorLetterSpacing === 'number') {
+            editorLetterSpacing.value = Math.min(1.5, Math.max(0, Number(parsed.editorLetterSpacing)))
+        }
+        if (parsed.editorLineHeightMode && parsed.editorLineHeightMode in editorLineHeightValueMap) {
+            editorLineHeightMode.value = parsed.editorLineHeightMode
+        }
+        if (typeof parsed.highlightCurrentLine === 'boolean') {
+            highlightCurrentLine.value = parsed.highlightCurrentLine
+        }
+        if (typeof parsed.previewFontSize === 'number') {
+            previewFontSize.value = Math.min(22, Math.max(13, Math.round(parsed.previewFontSize)))
+        }
+        if (typeof parsed.previewLetterSpacing === 'number') {
+            previewLetterSpacing.value = Math.min(1.5, Math.max(0, Number(parsed.previewLetterSpacing)))
+        }
+        if (parsed.previewParagraphSpacing && parsed.previewParagraphSpacing in previewParagraphSpacingValueMap) {
+            previewParagraphSpacing.value = parsed.previewParagraphSpacing
+        }
+        if (typeof parsed.compactToolbar === 'boolean') {
+            compactToolbar.value = parsed.compactToolbar
+        }
+        if (parsed.splitRatio && parsed.splitRatio in splitRatioValueMap) {
+            splitRatio.value = parsed.splitRatio
+        }
+    } catch {}
+}
+
+function persistEditorSettings() {
+    try {
+        window.localStorage.setItem(EDITOR_SETTINGS_STORAGE_KEY, JSON.stringify({
+            editorFontSize: editorFontSize.value,
+            editorLetterSpacing: editorLetterSpacing.value,
+            editorLineHeightMode: editorLineHeightMode.value,
+            highlightCurrentLine: highlightCurrentLine.value,
+            previewFontSize: previewFontSize.value,
+            previewLetterSpacing: previewLetterSpacing.value,
+            previewParagraphSpacing: previewParagraphSpacing.value,
+            compactToolbar: compactToolbar.value,
+            splitRatio: splitRatio.value
+        }))
+    } catch {}
+}
+
+function resetEditorSettings() {
+    editorFontSize.value = 15
+    editorLetterSpacing.value = 0
+    editorLineHeightMode.value = 'standard'
+    highlightCurrentLine.value = false
+    previewFontSize.value = 15
+    previewLetterSpacing.value = 0
+    previewParagraphSpacing.value = 'standard'
+    compactToolbar.value = false
+    splitRatio.value = 'balanced'
+}
+
+function getPreviewMermaidSvgSize(svg: SVGSVGElement) {
+    const viewBox = svg.viewBox?.baseVal
+    if (viewBox?.width && viewBox?.height) {
+        return { width: viewBox.width, height: viewBox.height }
+    }
+
+    const width = Number(svg.getAttribute('width')) || svg.getBoundingClientRect().width || svg.clientWidth || 0
+    const height = Number(svg.getAttribute('height')) || svg.getBoundingClientRect().height || svg.clientHeight || 0
+    return { width, height }
+}
+
+function applyPreviewMermaidSettings() {
+    const preview = previewRef.value
+    if (!preview) return
+
+    preview.style.setProperty('--preview-mermaid-padding-top', previewMermaidDensity.value === 'compact' ? '38px' : '44px')
+    preview.style.setProperty('--preview-mermaid-padding-side', previewMermaidDensity.value === 'compact' ? '18px' : '24px')
+    preview.style.setProperty('--preview-mermaid-padding-bottom', previewMermaidDensity.value === 'compact' ? '18px' : '24px')
+    preview.style.setProperty('--preview-mermaid-margin', previewMermaidDensity.value === 'compact' ? '1.25em 0' : '1.6em 0')
+
+    const wrappers = preview.querySelectorAll<HTMLElement>('.mermaid-wrapper')
+    wrappers.forEach((wrapper) => {
+        const svg = wrapper.querySelector<SVGSVGElement>('svg')
+        if (!svg) return
+        wrapper.classList.remove('is-wide-mermaid')
+        svg.style.removeProperty('width')
+        svg.style.removeProperty('height')
+        svg.style.removeProperty('max-width')
+        svg.style.removeProperty('min-width')
+        svg.style.removeProperty('transform')
+        svg.style.removeProperty('transform-origin')
+
+        const { width, height } = getPreviewMermaidSvgSize(svg)
+        if (!width || !height) return
+
+        const wrapperWidth = Math.max(1, wrapper.clientWidth - 4)
+        const baseScale = previewMermaidScalePercent.value / 100
+        const widthScale = wrapperWidth / width
+        const scaledNaturalWidth = Math.max(1, width * baseScale)
+        const scaledNaturalHeight = Math.max(1, height * baseScale)
+        const fitScale = Math.min(widthScale, 1) * baseScale
+        const fittedWidth = Math.max(1, width * fitScale)
+        const fittedHeight = Math.max(1, height * fitScale)
+        if (previewMermaidScaleMode.value === 'fit-width') {
+            svg.style.width = `${fittedWidth}px`
+            svg.style.height = `${fittedHeight}px`
+            svg.style.maxWidth = 'none'
+            return
+        }
+
+        wrapper.classList.add('is-wide-mermaid')
+        svg.style.width = `${scaledNaturalWidth}px`
+        svg.style.height = `${scaledNaturalHeight}px`
+        svg.style.maxWidth = 'none'
+        svg.style.minWidth = `${scaledNaturalWidth}px`
+    })
+}
+
 function updateLayoutMode() {
     const width = editorContainerRef.value?.clientWidth ?? window.innerWidth
     forceSingleColumn.value = width < SINGLE_COLUMN_BREAKPOINT
+    applyPreviewMermaidSettings()
 }
 
 function animateScrollTop(element: HTMLElement, targetScrollTop: number, duration = 220) {
@@ -1393,6 +2164,7 @@ function handleCursorChange() {
     if (!textarea) return
     editorSelectionStart.value = textarea.selectionStart
     awareness.updateTextCursor?.(props.nodeId, textarea.selectionStart, textarea.selectionEnd)
+    syncPreviewFromEditor()
 }
 
 function checkSlashCommand(textarea: HTMLTextAreaElement) {
@@ -1643,24 +2415,67 @@ function scrollToOutlineItem(item: OutlineItem) {
     focusEditorAtBlock(item.blockId)
 }
 
+function restorePreviewSessionIfNeeded() {
+    if (hasRestoredPreviewSession || !pendingPreviewSessionRestore) return
+    const textarea = textareaRef.value
+    const preview = previewRef.value
+    if (!textarea || !preview) return
+
+    restoringPreviewSession = true
+    const session = pendingPreviewSessionRestore
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            textarea.scrollTop = session.editorScrollTop
+            preview.scrollTop = session.previewScrollTop
+            editorScrollTop.value = textarea.scrollTop
+            previewScrollTop.value = preview.scrollTop
+            updateActiveOutline()
+            persistPreviewSessionState()
+            hasRestoredPreviewSession = true
+            pendingPreviewSessionRestore = null
+            restoringPreviewSession = false
+        })
+    })
+}
+
 async function renderMermaidDiagrams() {
     await nextTick()
     const preview = previewRef.value
     if (!preview) return
-    const mermaidElements = preview.querySelectorAll('.mermaid')
+    const mermaidElements = Array.from(preview.querySelectorAll<HTMLElement>('.mermaid'))
     if (mermaidElements.length > 0) {
         try {
             const themeMode: MermaidThemeMode = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
             mermaid.initialize(getMermaidConfig(themeMode))
-            await mermaid.run({
-                nodes: mermaidElements as NodeListOf<HTMLElement>,
-                suppressErrors: true
-            })
+            const ganttElements = mermaidElements.filter(element => isGanttMermaidSource(element.textContent?.trim() ?? ''))
+            const standardElements = mermaidElements.filter(element => !ganttElements.includes(element))
+
+            if (standardElements.length > 0) {
+                await mermaid.run({
+                    nodes: standardElements,
+                    suppressErrors: true
+                })
+            }
+
+            for (const element of ganttElements) {
+                const source = element.textContent?.trim()
+                if (!source) continue
+                try {
+                    const renderId = `mermaid-preview-gantt-${mermaidCounter++}`
+                    const result = await mermaid.render(renderId, source)
+                    element.outerHTML = result.svg
+                } catch (ganttError) {
+                    console.warn('[Mermaid] Gantt preview render error:', ganttError)
+                }
+            }
         } catch (error) {
             console.warn('[Mermaid] Render error:', error)
         }
     }
+    applyPreviewMermaidSettings()
     decoratePreviewImages()
+    restorePreviewSessionIfNeeded()
+    requestPreviewRealignment()
 }
 
 function setupPreviewObserver() {
@@ -1694,12 +2509,19 @@ function setupPreviewObserver() {
         previewObserver?.observe(element)
     })
 
+    setupPreviewBlockResizeObserver()
     updateActiveOutline()
 }
 
 function handleClose() {
+    if (!isEditorVisible.value) return
     awareness.updateTextCursor?.('', -1, -1)
-    emit('close')
+    isEditorVisible.value = false
+    if (closeEmitTimer !== null) window.clearTimeout(closeEmitTimer)
+    closeEmitTimer = window.setTimeout(() => {
+        closeEmitTimer = null
+        emit('close')
+    }, EDITOR_CLOSE_ANIMATION_MS)
 }
 
 function getExportTheme(): ExportTheme {
@@ -1790,15 +2612,21 @@ async function handleExportConfirm(settings: ExportPanelSettings) {
 onMounted(() => {
     localContent.value = props.content.data || ''
     viewMode.value = readStoredViewMode()
+    readStoredPreviewMermaidSettings()
+    readStoredEditorSettings()
     nextTick(() => {
+        const storedSession = getStoredPreviewSessionState()
+        pendingPreviewSessionRestore = storedSession
+        hasRestoredPreviewSession = false
         overlayRef.value?.focus()
         textareaRef.value?.focus()
         editorSelectionStart.value = textareaRef.value?.selectionStart ?? 0
-        editorScrollTop.value = textareaRef.value?.scrollTop ?? 0
-        previewScrollTop.value = previewRef.value?.scrollTop ?? 0
+        editorScrollTop.value = storedSession?.editorScrollTop ?? (textareaRef.value?.scrollTop ?? 0)
+        previewScrollTop.value = storedSession?.previewScrollTop ?? (previewRef.value?.scrollTop ?? 0)
         updateLayoutMode()
         setupPreviewObserver()
         renderMermaidDiagrams()
+        restorePreviewSessionIfNeeded()
     })
     if (typeof ResizeObserver !== 'undefined' && editorContainerRef.value) {
         editorLayoutResizeObserver = new ResizeObserver(() => {
@@ -1835,15 +2663,59 @@ watch(viewMode, (mode) => {
     } catch {}
 })
 
+watch([previewMermaidScaleMode, previewMermaidScalePercent, previewMermaidDensity], ([scaleMode, scalePercent, density]) => {
+    previewMermaidScalePercent.value = Math.min(
+        EXPORT_PDF_MERMAID_SCALE_MAX,
+        Math.max(EXPORT_PDF_MERMAID_SCALE_MIN, Math.round(scalePercent))
+    )
+    applyPreviewMermaidSettings()
+    requestPreviewRealignment()
+    try {
+        window.localStorage.setItem(PREVIEW_MERMAID_SETTINGS_STORAGE_KEY, JSON.stringify({
+            scaleMode,
+            scalePercent: previewMermaidScalePercent.value,
+            density
+        }))
+    } catch {}
+})
+
+watch([
+    editorFontSize,
+    editorLetterSpacing,
+    editorLineHeightMode,
+    highlightCurrentLine,
+    previewFontSize,
+    previewLetterSpacing,
+    previewParagraphSpacing,
+    compactToolbar,
+    splitRatio
+], () => {
+    editorFontSize.value = Math.min(22, Math.max(13, Math.round(editorFontSize.value)))
+    previewFontSize.value = Math.min(22, Math.max(13, Math.round(previewFontSize.value)))
+    editorLetterSpacing.value = Math.min(1.5, Math.max(0, Number(editorLetterSpacing.value)))
+    previewLetterSpacing.value = Math.min(1.5, Math.max(0, Number(previewLetterSpacing.value)))
+    persistEditorSettings()
+    requestPreviewRealignment()
+}, { deep: false })
+
 watch(rawBlocks, async () => {
-    visiblePreviewBlockIds.value = new Set()
+    const restorableSession = !hasRestoredPreviewSession ? (pendingPreviewSessionRestore ?? getStoredPreviewSessionState()) : null
+    if (restorableSession && !pendingPreviewSessionRestore) {
+        pendingPreviewSessionRestore = restorableSession
+    }
+    const nextVisibleIds = restorableSession
+        ? restorableSession.visibleBlockIds.filter(id => rawBlocks.value.some((block, index) => `preview-block-${index}-${hashText(block)}` === id))
+        : []
+    visiblePreviewBlockIds.value = new Set(nextVisibleIds)
     activeOutlineId.value = outlineItems.value[0]?.id ?? ''
     await nextTick()
     setupPreviewObserver()
     renderMermaidDiagrams()
+    restorePreviewSessionIfNeeded()
 }, { flush: 'post' })
 
 watch(visiblePreviewBlockIds, () => {
+    persistPreviewSessionState()
     renderMermaidDiagrams()
 }, { flush: 'post' })
 
@@ -1854,21 +2726,30 @@ watch(outlineItems, (items) => {
 })
 
 onUnmounted(() => {
+    persistPreviewSessionState()
+    if (closeEmitTimer !== null) {
+        window.clearTimeout(closeEmitTimer)
+        closeEmitTimer = null
+    }
     if (previewSyncFrame !== null) {
         cancelAnimationFrame(previewSyncFrame)
     }
+    if (previewRealignFrame !== null) {
+        cancelAnimationFrame(previewRealignFrame)
+    }
     previewObserver?.disconnect()
     editorLayoutResizeObserver?.disconnect()
+    previewBlockResizeObserver?.disconnect()
     window.removeEventListener('resize', updateLayoutMode)
     awareness.updateTextCursor?.('', -1, -1)
 })
 </script>
 
 <style scoped>
-.editor-overlay { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0, 0, 0, 0.85); }
-.editor-container { width: 100%; height: 100%; max-width: 1440px; max-height: 100%; display: flex; flex-direction: column; overflow: hidden; border-radius: 16px; background: #17181c; box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5); }
+.editor-overlay { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: stretch; justify-content: stretch; padding: 0; background: rgba(0, 0, 0, 0.92); }
+.editor-container { width: 100vw; height: 100vh; max-width: none; max-height: none; display: flex; flex-direction: column; overflow: hidden; border-radius: 0; background: #17181c; box-shadow: none; }
 .editor-header, .editor-footer { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; background: rgba(255, 255, 255, 0.03); }
-.editor-header { border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.editor-header { position: relative; z-index: 40; border-bottom: 1px solid rgba(255, 255, 255, 0.08); overflow: visible; }
 .editor-footer { border-top: 1px solid rgba(255, 255, 255, 0.08); }
 .header-left, .header-actions, .footer-right, .collab-users, .pane-header-row, .pane-subtools, .editor-toolbar, .preview-stats, .view-mode-switch { display: flex; align-items: center; }
 .header-left { gap: 10px; }
@@ -1877,17 +2758,45 @@ onUnmounted(() => {
 .view-mode-btn:hover { color: rgba(255, 255, 255, 0.9); }
 .view-mode-btn.active { background: rgba(96, 165, 250, 0.18); color: #dbeafe; box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.16); }
 .header-actions { gap: 10px; }
+.editor-settings-shell { position: relative; z-index: 50; }
+.editor-settings-menu { position: absolute; top: calc(100% + 10px); right: 0; z-index: 80; width: min(420px, calc(100vw - 32px)); max-height: min(72vh, 760px); overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; padding: 14px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; background: rgba(15, 18, 24, 0.98); box-shadow: 0 22px 44px rgba(0, 0, 0, 0.3); backdrop-filter: blur(16px); }
+.editor-settings-section + .editor-settings-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.editor-settings-group-title { margin-bottom: 8px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.84); }
+.editor-settings-grid { display: grid; gap: 8px; }
+.editor-settings-item { display: grid; gap: 6px; padding: 4px 0; border-radius: 0; background: transparent; }
+.editor-settings-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255, 255, 255, 0.48); }
+.editor-settings-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.editor-settings-row-spread { align-items: center; justify-content: space-between; }
+.editor-settings-chip { border: none; padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.74); font-size: 12px; cursor: pointer; transition: background 0.18s ease, color 0.18s ease; }
+.editor-settings-chip.active { background: rgba(96, 165, 250, 0.18); color: #dbeafe; }
+.editor-settings-value { font-size: 12px; color: rgba(255, 255, 255, 0.74); }
+.editor-settings-slider { width: 100%; margin-top: 8px; accent-color: #60a5fa; }
+.editor-settings-toggle { position: relative; width: 42px; height: 24px; border: none; border-radius: 999px; background: rgba(255, 255, 255, 0.12); cursor: pointer; transition: background 0.18s ease; }
+.editor-settings-toggle.active { background: rgba(96, 165, 250, 0.26); }
+.editor-settings-toggle-knob { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #ffffff; transition: transform 0.18s ease; }
+.editor-settings-toggle.active .editor-settings-toggle-knob { transform: translateX(18px); }
+.editor-settings-footer { display: flex; justify-content: flex-end; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.editor-settings-reset { border: none; padding: 8px 12px; border-radius: 10px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.82); font-size: 12px; font-weight: 700; cursor: pointer; transition: background 0.18s ease, color 0.18s ease; }
+.editor-settings-reset:hover { background: rgba(255, 255, 255, 0.14); color: #ffffff; }
+.settings-pop-enter-active,
+.settings-pop-leave-active { transition: opacity 0.18s ease, transform 0.22s ease; transform-origin: top right; }
+.settings-pop-enter-from,
+.settings-pop-leave-to { opacity: 0; transform: translateY(-8px) scale(0.98); }
+.editor-settings-menu::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .type-icon { font-size: 20px; }
 .type-label { font-size: 16px; font-weight: 600; color: rgba(255, 255, 255, 0.92); }
 .collab-users { gap: 0; margin-left: 14px; padding-left: 14px; border-left: 1px solid rgba(255, 255, 255, 0.08); }
 .collab-avatar { width: 28px; height: 28px; margin-left: -8px; border: 2px solid #17181c; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 700; }
 .collab-avatar:first-child { margin-left: 0; }
 .header-action-btn { min-width: 56px; height: 32px; padding: 0 12px; border: none; border-radius: 8px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.72); cursor: pointer; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; transition: background 0.15s ease, color 0.15s ease; }
+.header-action-btn.icon-only { min-width: 32px; width: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; letter-spacing: 0; text-transform: none; }
+.header-action-btn.active { color: #dbeafe; background: rgba(96, 165, 250, 0.18); box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.16); }
+.header-action-icon { width: 16px; height: 16px; display: block; }
 .header-action-btn.primary { background: rgba(96, 165, 250, 0.16); color: #dbeafe; }
 .close-btn { width: 32px; height: 32px; border: none; border-radius: 8px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.72); cursor: pointer; transition: background 0.15s ease, color 0.15s ease; }
 .header-action-btn:hover,
 .close-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.14); }
-.editor-body { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+.editor-body { flex: 1; min-height: 0; display: flex; overflow: hidden; position: relative; }
 .editor-body.split-view { gap: 1px; background: rgba(255, 255, 255, 0.08); }
 .editor-body.edit-only .edit-pane,
 .editor-body.preview-only .preview-pane { flex: 1 1 100%; }
@@ -1896,8 +2805,8 @@ onUnmounted(() => {
         radial-gradient(circle at top, rgba(96, 165, 250, 0.08), transparent 38%),
         linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
 }
-.editor-body.split-view .edit-pane { flex: 0 1 52%; }
-.editor-body.split-view .preview-pane { flex: 0 1 48%; }
+.editor-body.split-view .edit-pane { flex: 0 1 50%; }
+.editor-body.split-view .preview-pane { flex: 0 1 50%; }
 .edit-pane, .preview-pane { min-width: 0; display: flex; flex: 1; flex-direction: column; position: relative; background: #17181c; }
 .editor-body.preview-only .preview-pane-header { justify-content: center; padding: 18px 24px 8px; border-bottom: none; background: transparent; }
 .editor-body.preview-only .preview-stats { display: none; }
@@ -1920,6 +2829,7 @@ onUnmounted(() => {
 .editor-toolbar { gap: 8px; flex-wrap: wrap; padding: 12px 18px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015)); }
 .toolbar-button, .code-language-chip, .outline-item, .outline-toggle, .to-top-button { border: none; cursor: pointer; transition: background 0.22s ease, color 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease; }
 .toolbar-button { padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.76); }
+.toolbar-button.compact { min-width: 34px; padding: 6px 0; justify-content: center; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 11px; letter-spacing: 0.02em; }
 .toolbar-button:hover, .code-language-chip:hover, .outline-item:hover, .outline-toggle:hover, .to-top-button:hover { transform: translateY(-1px); background: rgba(96, 165, 250, 0.16); color: #dbeafe; box-shadow: 0 10px 24px rgba(37, 99, 235, 0.16); }
 .toolbar-button-label { font-size: 12px; font-weight: 600; }
 .code-language-chip { padding: 3px 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.72); font-size: 10px; line-height: 1.45; text-transform: lowercase; }
@@ -1929,7 +2839,9 @@ onUnmounted(() => {
 .editor-textarea { resize: none; border: none; outline: none; background: transparent; color: rgba(255, 255, 255, 0.92); caret-color: #60a5fa; font-family: 'JetBrains Mono', 'Fira Code', monospace; }
 .editor-textarea::placeholder { color: rgba(255, 255, 255, 0.25); }
 .preview-layout { position: relative; flex: 1; min-height: 0; display: flex; }
-.outline-floating-shell { position: absolute; top: 50%; left: 28px; z-index: 12; display: flex; align-items: center; gap: 10px; transform: translateY(-50%); }
+.editor-outline-shell { display: none; }
+.editor-outline-shell.open { display: none; }
+.outline-floating-shell { position: fixed; top: 50%; left: 18px; z-index: 18; display: flex; align-items: center; gap: 10px; transform: translateY(-50%); pointer-events: auto; }
 .outline-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; min-height: 120px; padding: 14px 0; border-radius: 999px; opacity: 0.72; background: rgba(20, 24, 31, 0.58); color: rgba(255, 255, 255, 0.68); backdrop-filter: blur(16px); box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16); }
 .outline-toggle.armed { background: rgba(20, 24, 31, 0.78); color: rgba(255, 255, 255, 0.9); box-shadow: 0 16px 32px rgba(0, 0, 0, 0.22); }
 .outline-toggle.open { opacity: 1; background: rgba(59, 130, 246, 0.2); color: #dbeafe; box-shadow: 0 14px 34px rgba(37, 99, 235, 0.18); }
@@ -1942,15 +2854,24 @@ onUnmounted(() => {
 @media (max-width: 900px) {
     .to-top-shell { right: 22px; bottom: 76px; }
 }
+@media (max-width: 1280px) {
+    .outline-pane { width: 208px; }
+}
+@media (max-width: 960px) {
+    .editor-body.split-view { flex-direction: column; }
+    .editor-body.split-view .edit-pane,
+    .editor-body.split-view .preview-pane { flex: 1 1 50%; }
+}
 .outline-pane { width: 240px; max-height: min(66vh, 560px); overflow-y: auto; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; padding: 14px 12px 14px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; background: rgba(20, 24, 31, 0.82); box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24); backdrop-filter: blur(18px); }
 .outline-header { margin-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.35); }
 .outline-item { width: 100%; padding: 8px 10px; border-radius: 10px; background: transparent; color: rgba(255, 255, 255, 0.68); text-align: left; font-size: 12px; line-height: 1.4; }
 .outline-item.active { background: rgba(96, 165, 250, 0.16); color: #dbeafe; box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.16); }
 .outline-item.level-2 { padding-left: 18px; }
 .outline-item.level-3, .outline-item.level-4, .outline-item.level-5, .outline-item.level-6 { padding-left: 26px; }
-.preview-content { flex: 1; min-width: 0; color: rgba(255, 255, 255, 0.92); scroll-behavior: smooth; }
+.preview-content { --preview-mermaid-padding-top: 38px; --preview-mermaid-padding-side: 18px; --preview-mermaid-padding-bottom: 18px; --preview-mermaid-margin: 1.25em 0; --preview-paragraph-spacing: 0.85em; --preview-block-gap: 18px; flex: 1; width: min(100%, 940px); min-width: 0; margin: 0 auto; color: rgba(255, 255, 255, 0.92); scroll-behavior: smooth; }
 .preview-empty { color: rgba(255, 255, 255, 0.34); font-style: italic; }
-.preview-block { position: relative; margin-bottom: 18px; border-radius: 14px; opacity: 0; transform: translateY(10px) scale(0.992); animation: preview-block-enter 0.26s ease forwards; transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.22s ease; }
+.preview-top-spacer { height: 28px; pointer-events: none; }
+.preview-block { position: relative; margin-bottom: var(--preview-block-gap); border-radius: 14px; opacity: 0; transform: translateY(10px) scale(0.992); animation: preview-block-enter 0.26s ease forwards; transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.22s ease; }
 .preview-block:hover { transform: translateY(-1px); }
 .preview-block.active { background: linear-gradient(135deg, rgba(96, 165, 250, 0.045), rgba(96, 165, 250, 0.015)); box-shadow: 0 0 0 1px rgba(147, 197, 253, 0.08), 0 8px 18px rgba(37, 99, 235, 0.04); }
 .preview-block.is-heavy:not(.is-deferred) { background: transparent; }
@@ -1991,7 +2912,7 @@ onUnmounted(() => {
 .preview-content :deep(h1) { margin: 0.5em 0; font-size: 1.8em; font-weight: 700; }
 .preview-content :deep(h2) { margin: 0.5em 0; font-size: 1.45em; font-weight: 700; }
 .preview-content :deep(h3) { margin: 0.5em 0; font-size: 1.18em; font-weight: 700; }
-.preview-content :deep(p) { margin: 0.85em 0; }
+.preview-content :deep(p) { margin: var(--preview-paragraph-spacing) 0; }
 .preview-content :deep(code) { padding: 2px 6px; border-radius: 5px; background: rgba(255, 255, 255, 0.08); font-size: 0.92em; font-family: 'JetBrains Mono', monospace; }
 .preview-content :deep(.hljs) { color: #d6deeb; background: transparent; }
 .preview-content :deep(.hljs-keyword), .preview-content :deep(.hljs-selector-tag), .preview-content :deep(.hljs-literal), .preview-content :deep(.hljs-title.function_) { color: #c792ea; }
@@ -2003,10 +2924,10 @@ onUnmounted(() => {
 .preview-content :deep(.hljs-meta), .preview-content :deep(.hljs-meta .hljs-keyword), .preview-content :deep(.hljs-doctag) { color: #89ddff; }
 .preview-content :deep(.code-block-shell) { position: relative; margin: 1em 0; border-radius: 14px; background: transparent; border: none; box-shadow: none; overflow: visible; }
 .preview-content :deep(.code-block-lang) { position: absolute; top: 10px; left: 12px; z-index: 1; display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.68); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-.preview-content :deep(pre) { margin: 0; padding: 38px 16px 16px; overflow-x: auto; border-radius: 14px; background: rgba(15, 18, 24, 0.72); border: 1px solid rgba(255, 255, 255, 0.06); white-space: pre-wrap; }
-.preview-content :deep(pre code) { display: block; padding: 0; background: transparent; white-space: pre-wrap; }
-.preview-content :deep(blockquote) { margin: 1em 0; padding-left: 16px; border-left: 4px solid rgba(255, 255, 255, 0.18); color: rgba(255, 255, 255, 0.7); }
-.preview-content :deep(ul), .preview-content :deep(ol) { margin: 0.8em 0; padding-left: 1.5em; }
+.preview-content :deep(pre) { margin: 0; padding: 38px 16px 16px; overflow-x: auto; overflow-y: hidden; border-radius: 14px; background: rgba(15, 18, 24, 0.72); border: 1px solid rgba(255, 255, 255, 0.06); white-space: pre; }
+.preview-content :deep(pre code) { display: block; width: max-content; min-width: 100%; padding: 0; background: transparent; white-space: pre; word-break: normal; overflow-wrap: normal; }
+.preview-content :deep(blockquote) { margin: var(--preview-paragraph-spacing) 0; padding-left: 16px; border-left: 4px solid rgba(255, 255, 255, 0.18); color: rgba(255, 255, 255, 0.7); }
+.preview-content :deep(ul), .preview-content :deep(ol) { margin: var(--preview-paragraph-spacing) 0; padding-left: 1.5em; }
 .preview-content :deep(a) { color: #60a5fa; text-decoration: none; }
 .preview-content :deep(img) { display: block; max-width: min(100%, 780px); max-height: min(52vh, 560px); width: auto; height: auto; margin: 1.1em auto; border-radius: 16px; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18); background: rgba(255, 255, 255, 0.03); object-fit: contain; cursor: zoom-in; transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease; }
 .preview-content :deep(img:hover) { transform: translateY(-1px); box-shadow: 0 22px 44px rgba(0, 0, 0, 0.22); }
@@ -2021,10 +2942,13 @@ onUnmounted(() => {
 .preview-content :deep(th) { font-weight: 700; background: rgba(255, 255, 255, 0.04); }
 .preview-content :deep(.katex-block) { display: flex; justify-content: center; margin: 1.2em 0; padding: 1em; border-radius: 12px; background: rgba(255, 255, 255, 0.03); overflow-x: auto; }
 .preview-content :deep(.katex-error) { padding: 2px 6px; border-radius: 6px; color: #fca5a5; background: rgba(239, 68, 68, 0.1); }
-.preview-content :deep(.mermaid-wrapper) { position: relative; margin: 1.25em 0; padding: 38px 18px 18px; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; background: rgba(255, 255, 255, 0.03); overflow: auto; break-inside: avoid; }
+.preview-content :deep(.mermaid-wrapper) { position: relative; display: flex; justify-content: center; width: fit-content; max-width: 100%; margin: var(--preview-mermaid-margin); margin-left: auto; margin-right: auto; padding: var(--preview-mermaid-padding-top) var(--preview-mermaid-padding-side) var(--preview-mermaid-padding-bottom); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; background: rgba(255, 255, 255, 0.03); overflow: auto; break-inside: avoid; }
 .preview-content :deep(.mermaid-block-lang) { position: absolute; top: 10px; left: 12px; z-index: 1; display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.68); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-.preview-content :deep(.mermaid) { display: flex; justify-content: center; min-width: fit-content; }
+.preview-content :deep(.mermaid) { display: flex; justify-content: center; width: fit-content; max-width: 100%; min-width: 0; margin: 0 auto; }
 .preview-content :deep(.mermaid svg) { display: block; width: auto !important; max-width: 100%; height: auto; margin: 0 auto; }
+.preview-content :deep(.mermaid-wrapper.is-wide-mermaid) { width: 100%; margin-left: 0; margin-right: 0; overflow-x: auto; overflow-y: hidden; justify-content: flex-start; }
+.preview-content :deep(.mermaid-wrapper.is-wide-mermaid .mermaid) { justify-content: flex-start; min-width: max-content; }
+.preview-content :deep(.mermaid-wrapper.is-wide-mermaid .mermaid svg) { max-width: none !important; width: auto !important; min-width: max-content; margin: 0; }
 .preview-content :deep(.mermaid text),
 .preview-content :deep(.mermaid .label),
 .preview-content :deep(.mermaid .nodeLabel),
@@ -2082,6 +3006,8 @@ onUnmounted(() => {
 .modal-scale-leave-active { transition: all 0.16s ease-in; }
 .modal-scale-enter-from { opacity: 0; transform: scale(0.96); }
 .modal-scale-leave-to { opacity: 0; transform: scale(0.985); }
+.modal-fade-leave-active .editor-container { transition: opacity 0.18s ease, transform 0.22s ease; }
+.modal-fade-leave-to .editor-container { opacity: 0; transform: scale(0.985) translateY(10px); }
 @keyframes cursor-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 @keyframes preview-block-enter { from { opacity: 0; transform: translateY(10px) scale(0.992); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes placeholder-sheen { from { transform: translateX(-120%); } to { transform: translateX(120%); } }
@@ -2115,6 +3041,18 @@ html[data-theme='light'] .view-mode-switch { background: rgba(0, 0, 0, 0.04); }
 html[data-theme='light'] .view-mode-btn { color: rgba(15, 23, 42, 0.52); }
 html[data-theme='light'] .view-mode-btn:hover { color: rgba(15, 23, 42, 0.84); }
 html[data-theme='light'] .view-mode-btn.active { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.12); }
+html[data-theme='light'] .editor-settings-menu { border-color: rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.98); box-shadow: 0 18px 42px rgba(0, 0, 0, 0.12); }
+html[data-theme='light'] .editor-settings-section + .editor-settings-section { border-top-color: rgba(0, 0, 0, 0.08); }
+html[data-theme='light'] .editor-settings-group-title { color: rgba(0, 0, 0, 0.86); }
+html[data-theme='light'] .editor-settings-label { color: rgba(0, 0, 0, 0.48); }
+html[data-theme='light'] .editor-settings-chip { background: rgba(0, 0, 0, 0.06); color: rgba(0, 0, 0, 0.72); }
+html[data-theme='light'] .editor-settings-chip.active { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
+html[data-theme='light'] .editor-settings-value { color: rgba(0, 0, 0, 0.68); }
+html[data-theme='light'] .editor-settings-toggle { background: rgba(0, 0, 0, 0.08); }
+html[data-theme='light'] .editor-settings-toggle.active { background: rgba(59, 130, 246, 0.24); }
+html[data-theme='light'] .editor-settings-footer { border-top-color: rgba(0, 0, 0, 0.08); }
+html[data-theme='light'] .editor-settings-reset { background: rgba(0, 0, 0, 0.06); color: rgba(0, 0, 0, 0.78); }
+html[data-theme='light'] .editor-settings-reset:hover { background: rgba(0, 0, 0, 0.1); color: rgba(0, 0, 0, 0.92); }
 html[data-theme='light'] .collab-users { border-color: rgba(0, 0, 0, 0.08); }
 html[data-theme='light'] .collab-avatar { border-color: #ffffff; }
 html[data-theme='light'] .header-action-btn, html[data-theme='light'] .close-btn, html[data-theme='light'] .toolbar-button, html[data-theme='light'] .code-language-chip, html[data-theme='light'] .cmd-icon { background: rgba(0, 0, 0, 0.06); color: rgba(0, 0, 0, 0.72); }
