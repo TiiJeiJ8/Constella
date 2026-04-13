@@ -7,7 +7,7 @@
                 class="editor-overlay"
                 tabindex="-1"
                 @click.self="handleClose"
-                @keydown.esc.stop="handleClose"
+                @keydown.esc.stop="handleOverlayEscape"
                 @mousemove="handleOverlayPointerMove"
                 @mouseleave="handleOverlayPointerLeave"
             >
@@ -296,6 +296,128 @@
                                             </button>
                                         </div>
                                     </div>
+                                    </Transition>
+                                </div>
+                                <div class="editor-search-shell">
+                                    <button
+                                        type="button"
+                                        class="header-action-btn icon-only"
+                                        :class="{ active: searchBarOpen }"
+                                        :title="searchButtonTitle"
+                                        :aria-label="searchButtonTitle"
+                                        @click="toggleSearchBar"
+                                    >
+                                        <svg class="header-action-icon" viewBox="0 0 20 20" aria-hidden="true">
+                                            <path
+                                                d="M8.75 3.5a5.25 5.25 0 1 0 0 10.5a5.25 5.25 0 0 0 0-10.5Zm-6.75 5.25a6.75 6.75 0 1 1 12.153 4.097l3.5 3.5a.75.75 0 1 1-1.06 1.06l-3.5-3.5A6.75 6.75 0 0 1 2 8.75Z"
+                                                fill="currentColor"
+                                            />
+                                        </svg>
+                                    </button>
+                                    <Transition name="settings-pop">
+                                        <div v-if="searchBarOpen" class="editor-search-panel" @pointerdown.stop>
+                                            <div class="editor-search-row">
+                                                <input
+                                                    ref="searchInputRef"
+                                                    v-model="searchQuery"
+                                                    class="editor-search-input"
+                                                    type="text"
+                                                    :placeholder="searchPlaceholder"
+                                                    @keydown.stop="handleSearchInputKeyDown"
+                                                />
+                                                <div class="editor-search-scope">
+                                                    <button
+                                                        type="button"
+                                                        class="editor-search-scope-btn"
+                                                        :class="{ active: searchScope === 'current' }"
+                                                        @click="searchScope = 'current'"
+                                                    >
+                                                        {{ searchCurrentLabel }}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        class="editor-search-scope-btn"
+                                                        :class="{ active: searchScope === 'room' }"
+                                                        @click="searchScope = 'room'"
+                                                    >
+                                                        {{ searchRoomLabel }}
+                                                    </button>
+                                                </div>
+                                                <button type="button" class="editor-search-close" :aria-label="closeSearchLabel" @click="closeSearchBar">
+                                                    ×
+                                                </button>
+                                            </div>
+                                            <div class="editor-search-options">
+                                                <button type="button" class="editor-search-option" :class="{ active: searchMatchCase }" @click="searchMatchCase = !searchMatchCase">
+                                                    {{ searchMatchCaseLabel }}
+                                                </button>
+                                                <button type="button" class="editor-search-option" :class="{ active: searchWholeWord }" @click="searchWholeWord = !searchWholeWord">
+                                                    {{ searchWholeWordLabel }}
+                                                </button>
+                                                <button type="button" class="editor-search-option" :class="{ active: searchUseRegex }" @click="searchUseRegex = !searchUseRegex">
+                                                    {{ searchRegexLabel }}
+                                                </button>
+                                                <button
+                                                    v-if="searchScope === 'current'"
+                                                    type="button"
+                                                    class="editor-search-option"
+                                                    :class="{ active: replaceBarOpen }"
+                                                    :title="replaceButtonTitle"
+                                                    @click="toggleReplaceBar"
+                                                >
+                                                    {{ replaceLabel }}
+                                                </button>
+                                            </div>
+                                            <div v-if="replaceBarOpen && searchScope === 'current'" class="editor-search-row replace-row">
+                                                <input
+                                                    ref="replaceInputRef"
+                                                    v-model="replaceQuery"
+                                                    class="editor-search-input"
+                                                    type="text"
+                                                    :placeholder="replacePlaceholder"
+                                                    @keydown.stop="handleReplaceInputKeyDown"
+                                                />
+                                                <button type="button" class="editor-search-nav compact" :disabled="!hasCurrentSearchMatches" @click="replaceCurrentSearchMatch()">
+                                                    {{ replaceLabel }}
+                                                </button>
+                                                <button type="button" class="editor-search-nav compact" :disabled="!hasCurrentSearchMatches" @click="replaceAllSearchMatches()">
+                                                    {{ replaceAllLabel }}
+                                                </button>
+                                            </div>
+                                            <div class="editor-search-meta">
+                                                <template v-if="searchScope === 'current'">
+                                                    {{ currentSearchStatusLabel }}
+                                                </template>
+                                                <template v-else>
+                                                    {{ roomSearchStatusLabel }}
+                                                </template>
+                                            </div>
+                                            <div v-if="searchScope === 'room' && replaceBarOpen" class="editor-search-meta">
+                                                {{ roomReplaceHintLabel }}
+                                            </div>
+                                            <div v-if="searchScope === 'current'" class="editor-search-actions">
+                                                <button type="button" class="editor-search-nav" :disabled="!hasCurrentSearchMatches" @click="jumpToCurrentSearchMatch(-1)">
+                                                    {{ searchPrevLabel }}
+                                                </button>
+                                                <button type="button" class="editor-search-nav" :disabled="!hasCurrentSearchMatches" @click="jumpToCurrentSearchMatch(1)">
+                                                    {{ searchNextLabel }}
+                                                </button>
+                                            </div>
+                                            <div v-else-if="roomSearchResults.length > 0" class="editor-search-results">
+                                                <button
+                                                    v-for="(result, index) in roomSearchResults"
+                                                    :key="`${result.nodeId}-${result.matchIndex}`"
+                                                    type="button"
+                                                    class="editor-search-result"
+                                                    :class="{ active: index === activeRoomSearchIndex }"
+                                                    @click="jumpToRoomSearchResult(index)"
+                                                >
+                                                    <span class="editor-search-result-title" v-html="result.titleHtml" />
+                                                    <span class="editor-search-result-snippet">{{ result.snippet }}</span>
+                                                    <span class="editor-search-result-meta">{{ result.matchCount }} match<span v-if="result.matchCount > 1">es</span></span>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </Transition>
                                 </div>
                                 <button class="close-btn" :title="t('canvas.editor.closeHint')" :aria-label="t('canvas.editor.closeHint')" @click="handleClose">
@@ -792,11 +914,13 @@ const MAX_PREVIEW_SESSION_ENTRIES = 40
 const props = defineProps<{
     nodeId: string
     content: NodeContent
+    allNodes?: Array<{ id: string; content: NodeContent }>
 }>()
 
 const emit = defineEmits<{
     (e: 'update', nodeId: string, data: string): void
     (e: 'close'): void
+    (e: 'jump-to-node', nodeId: string): void
 }>()
 
 const awareness = inject<{
@@ -811,7 +935,19 @@ const importInputRef = ref<HTMLInputElement | null>(null)
 const previewRef = ref<HTMLDivElement | null>(null)
 const slashMenuRef = ref<HTMLDivElement | null>(null)
 const imageLightboxRef = ref<HTMLDivElement | null>(null)
+const searchInputRef = ref<HTMLInputElement | null>(null)
+const replaceInputRef = ref<HTMLInputElement | null>(null)
 const localContent = ref('')
+const searchBarOpen = ref(false)
+const replaceBarOpen = ref(false)
+const searchScope = ref<'current' | 'room'>('current')
+const searchQuery = ref('')
+const replaceQuery = ref('')
+const searchMatchCase = ref(false)
+const searchWholeWord = ref(false)
+const searchUseRegex = ref(false)
+const currentSearchIndex = ref(0)
+const activeRoomSearchIndex = ref(0)
 const showSlashMenu = ref(false)
 const slashMenuPosition = ref({ top: 0, left: 0 })
 const selectedCommandIndex = ref(0)
@@ -842,6 +978,14 @@ const previewLetterSpacing = ref(0)
 const previewParagraphSpacing = ref<PreviewParagraphSpacingMode>('standard')
 const compactToolbar = ref(false)
 const splitRatio = ref<SplitRatioMode>('balanced')
+
+type RoomSearchResult = {
+    nodeId: string
+    titleHtml: string
+    snippet: string
+    matchIndex: number
+    matchCount: number
+}
 
 const NODE_EDITOR_PREVIEW_GLOBAL_KEY = '__constellaNodeEditorPreviewState'
 const nodeEditorPreviewGlobalState = (() => {
@@ -1245,6 +1389,150 @@ const splitRatioValueMap: Record<SplitRatioMode, { editor: string; preview: stri
     balanced: { editor: '50%', preview: '50%' },
     'preview-wide': { editor: '45%', preview: '55%' }
 }
+
+const searchButtonTitle = computed(() => locale.value === 'zh-CN' ? '查找（Ctrl+F）' : 'Find (Ctrl+F)')
+const replaceButtonTitle = computed(() => locale.value === 'zh-CN' ? '替换（Ctrl+H）' : 'Replace (Ctrl+H)')
+const searchPlaceholder = computed(() => locale.value === 'zh-CN' ? '搜索当前节点或整个房间' : 'Search this node or the whole room')
+const replacePlaceholder = computed(() => locale.value === 'zh-CN' ? '替换为' : 'Replace with')
+const searchCurrentLabel = computed(() => locale.value === 'zh-CN' ? '当前节点' : 'Current')
+const searchRoomLabel = computed(() => locale.value === 'zh-CN' ? '整个房间' : 'Room')
+const closeSearchLabel = computed(() => locale.value === 'zh-CN' ? '关闭搜索' : 'Close search')
+const searchPrevLabel = computed(() => locale.value === 'zh-CN' ? '上一处' : 'Previous')
+const searchNextLabel = computed(() => locale.value === 'zh-CN' ? '下一处' : 'Next')
+const searchMatchCaseLabel = computed(() => locale.value === 'zh-CN' ? '区分大小写' : 'Match case')
+const searchWholeWordLabel = computed(() => locale.value === 'zh-CN' ? '全字匹配' : 'Whole word')
+const searchRegexLabel = computed(() => locale.value === 'zh-CN' ? '正则' : 'Regex')
+const replaceLabel = computed(() => locale.value === 'zh-CN' ? '替换' : 'Replace')
+const replaceAllLabel = computed(() => locale.value === 'zh-CN' ? '全部替换' : 'Replace all')
+const roomReplaceHintLabel = computed(() => locale.value === 'zh-CN' ? '房间范围暂不支持替换' : 'Replace is only available in the current node')
+
+type SearchMatch = { start: number; end: number; text: string }
+
+const trimmedSearchQuery = computed(() => searchQuery.value.trim())
+const searchPatternError = computed(() => {
+    if (!trimmedSearchQuery.value) return ''
+    if (!searchUseRegex.value) return ''
+    try {
+        // eslint-disable-next-line no-new
+        new RegExp(trimmedSearchQuery.value, searchMatchCase.value ? '' : 'i')
+        return ''
+    } catch (error) {
+        return error instanceof Error ? error.message : 'Invalid regular expression'
+    }
+})
+
+function escapeRegExp(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function escapeHtml(value: string) {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+}
+
+function createSearchRegExp(global = true) {
+    const query = trimmedSearchQuery.value
+    if (!query || searchPatternError.value) return null
+
+    const source = searchUseRegex.value ? query : escapeRegExp(query)
+    const wrappedSource = searchWholeWord.value ? `\\b(?:${source})\\b` : source
+    const flags = `${global ? 'g' : ''}${searchMatchCase.value ? '' : 'i'}`
+
+    try {
+        return new RegExp(wrappedSource, flags)
+    } catch {
+        return null
+    }
+}
+
+function collectMatches(content: string): SearchMatch[] {
+    const regex = createSearchRegExp(true)
+    if (!regex) return []
+
+    const matches: SearchMatch[] = []
+    let match: RegExpExecArray | null = regex.exec(content)
+
+    while (match) {
+        const text = match[0] ?? ''
+        const start = match.index
+        const end = start + text.length
+        matches.push({ start, end, text })
+        if (text.length === 0) {
+            regex.lastIndex += 1
+        }
+        match = regex.exec(content)
+    }
+
+    return matches
+}
+
+const currentSearchMatches = computed(() => collectMatches(localContent.value))
+
+const hasCurrentSearchMatches = computed(() => currentSearchMatches.value.length > 0)
+
+const currentSearchStatusLabel = computed(() => {
+    if (!trimmedSearchQuery.value) {
+        return locale.value === 'zh-CN' ? '输入关键词后可在当前节点中跳转' : 'Type to find matches in this node'
+    }
+    if (searchPatternError.value) {
+        return locale.value === 'zh-CN' ? `正则无效：${searchPatternError.value}` : `Invalid regex: ${searchPatternError.value}`
+    }
+    if (!hasCurrentSearchMatches.value) {
+        return locale.value === 'zh-CN' ? '当前节点无结果' : 'No matches in this node'
+    }
+
+    return locale.value === 'zh-CN'
+        ? `${currentSearchIndex.value + 1} / ${currentSearchMatches.value.length}`
+        : `${currentSearchIndex.value + 1} of ${currentSearchMatches.value.length}`
+})
+
+const roomSearchResults = computed<RoomSearchResult[]>(() => {
+    if (!trimmedSearchQuery.value || searchPatternError.value) return []
+
+    return (props.allNodes || [])
+        .flatMap(node => {
+            const data = String(node.content?.data || '')
+            const matches = collectMatches(data)
+            if (matches.length === 0) return []
+
+            const lines = data.split('\n').map(line => line.trim()).filter(Boolean)
+            const title = lines[0] || (locale.value === 'zh-CN' ? `节点 ${node.id.slice(-6)}` : `Node ${node.id.slice(-6)}`)
+            const firstMatch = matches[0]!
+            const matchIndex = firstMatch.start
+            const snippetStart = Math.max(0, matchIndex - 24)
+            const snippetEnd = Math.min(data.length, firstMatch.end + 36)
+            const snippet = data.slice(snippetStart, snippetEnd).replace(/\s+/g, ' ').trim()
+
+            return [{
+                nodeId: node.id,
+                titleHtml: escapeHtml(title),
+                snippet: snippet || title,
+                matchIndex,
+                matchCount: matches.length
+            }]
+        })
+        .slice(0, 20)
+})
+
+const roomSearchStatusLabel = computed(() => {
+    if (!trimmedSearchQuery.value) {
+        return locale.value === 'zh-CN' ? '可搜索房间内所有节点内容' : 'Search across all node contents in this room'
+    }
+    if (searchPatternError.value) {
+        return locale.value === 'zh-CN' ? `正则无效：${searchPatternError.value}` : `Invalid regex: ${searchPatternError.value}`
+    }
+    if (roomSearchResults.value.length === 0) {
+        return locale.value === 'zh-CN' ? '房间内无结果' : 'No room-wide matches'
+    }
+
+    return locale.value === 'zh-CN'
+        ? `找到 ${roomSearchResults.value.length} 个节点，回车可跳转`
+        : `${roomSearchResults.value.length} matching nodes, press Enter to jump`
+})
 
 const editorTextareaStyle = computed(() => {
     const lineHeightMultiplier = editorLineHeightValueMap[editorLineHeightMode.value]
@@ -2340,6 +2628,48 @@ function handlePairing(event: KeyboardEvent): boolean {
 }
 
 function handleKeyDown(event: KeyboardEvent) {
+    if (replaceBarOpen.value && event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
+        replaceBarOpen.value = false
+        focusSearchInput()
+        return
+    }
+
+    if (searchBarOpen.value && event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
+        closeSearchBar()
+        return
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
+        event.preventDefault()
+        openSearchBar()
+        return
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'h') {
+        event.preventDefault()
+        openReplaceBar()
+        return
+    }
+    if (event.key === 'F3') {
+        event.preventDefault()
+        if (!searchBarOpen.value) {
+            openSearchBar()
+            return
+        }
+        if (searchScope.value === 'room') {
+            const nextIndex = event.shiftKey
+                ? Math.max(activeRoomSearchIndex.value - 1, 0)
+                : Math.min(activeRoomSearchIndex.value + 1, Math.max(0, roomSearchResults.value.length - 1))
+            jumpToRoomSearchResult(nextIndex)
+            return
+        }
+        jumpToCurrentSearchMatch(event.shiftKey ? -1 : 1)
+        return
+    }
+
     if (showSlashMenu.value) {
         if (event.key === 'ArrowDown') {
             event.preventDefault()
@@ -2413,6 +2743,185 @@ function scrollToOutlineItem(item: OutlineItem) {
     activeOutlineId.value = item.id
     previewRef.value?.querySelector<HTMLElement>(`#${item.anchorId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     focusEditorAtBlock(item.blockId)
+}
+
+function focusSearchInput() {
+    nextTick(() => {
+        searchInputRef.value?.focus()
+        searchInputRef.value?.select()
+    })
+}
+
+function focusReplaceInput() {
+    nextTick(() => {
+        replaceInputRef.value?.focus()
+        replaceInputRef.value?.select()
+    })
+}
+
+function openSearchBar(scope: 'current' | 'room' = 'current') {
+    searchBarOpen.value = true
+    searchScope.value = scope
+    focusSearchInput()
+}
+
+function openReplaceBar() {
+    openSearchBar('current')
+    replaceBarOpen.value = true
+    focusReplaceInput()
+}
+
+function toggleReplaceBar() {
+    replaceBarOpen.value = !replaceBarOpen.value
+    if (replaceBarOpen.value) {
+        focusReplaceInput()
+    } else {
+        focusSearchInput()
+    }
+}
+
+function toggleSearchBar() {
+    if (searchBarOpen.value) {
+        closeSearchBar()
+        return
+    }
+    openSearchBar()
+}
+
+function closeSearchBar() {
+    searchBarOpen.value = false
+    replaceBarOpen.value = false
+    textareaRef.value?.focus()
+}
+
+function handleOverlayEscape() {
+    if (searchBarOpen.value) {
+        closeSearchBar()
+        return
+    }
+    handleClose()
+}
+
+function revealCurrentSearchMatch(index: number) {
+    const textarea = textareaRef.value
+    const match = currentSearchMatches.value[index]
+    if (!textarea || !match) return
+
+    currentSearchIndex.value = index
+    textarea.focus()
+    textarea.setSelectionRange(match.start, match.end)
+    editorSelectionStart.value = match.start
+
+    requestAnimationFrame(() => {
+        const before = localContent.value.slice(0, match.start)
+        const lineIndex = before.split('\n').length - 1
+        const lineHeight = editorFontSize.value * editorLineHeightValueMap[editorLineHeightMode.value]
+        const targetScrollTop = Math.max(0, (lineIndex * lineHeight) - (textarea.clientHeight * 0.4))
+        textarea.scrollTop = targetScrollTop
+        editorScrollTop.value = targetScrollTop
+    })
+}
+
+function jumpToCurrentSearchMatch(direction = 1) {
+    const count = currentSearchMatches.value.length
+    if (count === 0) return
+    const nextIndex = (currentSearchIndex.value + direction + count) % count
+    revealCurrentSearchMatch(nextIndex)
+}
+
+function getReplacementForMatch(match: SearchMatch) {
+    const singleRegex = createSearchRegExp(false)
+    if (!singleRegex) return match.text
+    return match.text.replace(singleRegex, replaceQuery.value)
+}
+
+function replaceCurrentSearchMatch() {
+    const match = currentSearchMatches.value[currentSearchIndex.value]
+    if (!match) return
+
+    const replacement = getReplacementForMatch(match)
+    const nextValue = `${localContent.value.slice(0, match.start)}${replacement}${localContent.value.slice(match.end)}`
+    const nextCursor = match.start + replacement.length
+    setEditorValue(nextValue, nextCursor, nextCursor)
+}
+
+function replaceAllSearchMatches() {
+    const regex = createSearchRegExp(true)
+    if (!regex) return
+
+    const nextValue = localContent.value.replace(regex, (...args) => {
+        const matched = String(args[0] ?? '')
+        const singleRegex = createSearchRegExp(false)
+        return singleRegex ? matched.replace(singleRegex, replaceQuery.value) : replaceQuery.value
+    })
+
+    if (nextValue === localContent.value) return
+    setEditorValue(nextValue, textareaRef.value?.selectionStart ?? 0)
+}
+
+function jumpToRoomSearchResult(index = activeRoomSearchIndex.value) {
+    const result = roomSearchResults.value[index]
+    if (!result) return
+    activeRoomSearchIndex.value = index
+    searchScope.value = 'current'
+    emit('jump-to-node', result.nodeId)
+}
+
+function handleSearchInputKeyDown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
+        closeSearchBar()
+        return
+    }
+
+    if (searchScope.value === 'room') {
+        if (event.key === 'ArrowDown') {
+            event.preventDefault()
+            event.stopPropagation()
+            activeRoomSearchIndex.value = Math.min(activeRoomSearchIndex.value + 1, Math.max(0, roomSearchResults.value.length - 1))
+            return
+        }
+        if (event.key === 'ArrowUp') {
+            event.preventDefault()
+            event.stopPropagation()
+            activeRoomSearchIndex.value = Math.max(activeRoomSearchIndex.value - 1, 0)
+            return
+        }
+        if (event.key === 'Enter') {
+            event.preventDefault()
+            event.stopPropagation()
+            jumpToRoomSearchResult()
+            return
+        }
+        return
+    }
+
+    if (event.key === 'Enter') {
+        event.preventDefault()
+        event.stopPropagation()
+        jumpToCurrentSearchMatch(event.shiftKey ? -1 : 1)
+    }
+}
+
+function handleReplaceInputKeyDown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
+        replaceBarOpen.value = false
+        focusSearchInput()
+        return
+    }
+
+    if (event.key === 'Enter') {
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.shiftKey) {
+            replaceAllSearchMatches()
+            return
+        }
+        replaceCurrentSearchMatch()
+    }
 }
 
 function restorePreviewSessionIfNeeded() {
@@ -2650,6 +3159,30 @@ watch(() => props.content.data, (newData) => {
     }
 })
 
+watch([trimmedSearchQuery, searchMatchCase, searchWholeWord, searchUseRegex], () => {
+    currentSearchIndex.value = 0
+    activeRoomSearchIndex.value = 0
+})
+
+watch(currentSearchMatches, (matches) => {
+    if (matches.length === 0) {
+        currentSearchIndex.value = 0
+        return
+    }
+
+    currentSearchIndex.value = Math.min(currentSearchIndex.value, matches.length - 1)
+})
+
+watch(roomSearchResults, (results) => {
+    activeRoomSearchIndex.value = Math.min(activeRoomSearchIndex.value, Math.max(0, results.length - 1))
+})
+
+watch(searchScope, (scope) => {
+    if (scope !== 'current') {
+        replaceBarOpen.value = false
+    }
+})
+
 watch(() => props.content.kind, (kind) => {
     viewMode.value = kind === 'markdown' ? readStoredViewMode() : 'edit'
     editorScrollTop.value = textareaRef.value?.scrollTop ?? 0
@@ -2758,6 +3291,31 @@ onUnmounted(() => {
 .view-mode-btn:hover { color: rgba(255, 255, 255, 0.9); }
 .view-mode-btn.active { background: rgba(96, 165, 250, 0.18); color: #dbeafe; box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.16); }
 .header-actions { gap: 10px; }
+.editor-search-shell { position: relative; z-index: 55; }
+.editor-search-panel { position: absolute; top: calc(100% + 10px); right: 0; z-index: 90; width: min(420px, calc(100vw - 32px)); padding: 12px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; background: rgba(15, 18, 24, 0.98); box-shadow: 0 22px 44px rgba(0, 0, 0, 0.3); backdrop-filter: blur(16px); }
+.editor-search-row { display: flex; align-items: center; gap: 8px; }
+.editor-search-row.replace-row { margin-top: 10px; }
+.editor-search-input { flex: 1; min-width: 0; height: 36px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; background: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.92); font-size: 13px; outline: none; }
+.editor-search-input:focus { border-color: rgba(96, 165, 250, 0.68); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14); }
+.editor-search-scope { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); }
+.editor-search-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.editor-search-option { border: none; padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.66); font-size: 12px; font-weight: 700; cursor: pointer; transition: background 0.18s ease, color 0.18s ease; }
+.editor-search-option.active { background: rgba(96, 165, 250, 0.18); color: #dbeafe; }
+.editor-search-scope-btn, .editor-search-nav, .editor-search-result, .editor-search-close { border: none; cursor: pointer; }
+.editor-search-scope-btn { min-width: 64px; height: 30px; padding: 0 10px; border-radius: 999px; background: transparent; color: rgba(255, 255, 255, 0.62); font-size: 12px; font-weight: 700; }
+.editor-search-scope-btn.active { background: rgba(96, 165, 250, 0.18); color: #dbeafe; }
+.editor-search-close { width: 30px; height: 30px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.72); font-size: 18px; line-height: 1; }
+.editor-search-meta { margin-top: 10px; color: rgba(255, 255, 255, 0.52); font-size: 12px; }
+.editor-search-actions { display: flex; gap: 8px; margin-top: 10px; }
+.editor-search-nav { flex: 1; height: 32px; border-radius: 10px; background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.82); font-size: 12px; font-weight: 700; }
+.editor-search-nav.compact { flex: 0 0 auto; min-width: 84px; padding: 0 12px; }
+.editor-search-nav:disabled { cursor: not-allowed; opacity: 0.45; }
+.editor-search-results { display: grid; gap: 8px; margin-top: 10px; max-height: min(48vh, 360px); overflow-y: auto; }
+.editor-search-result { display: grid; gap: 4px; width: 100%; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.82); text-align: left; }
+.editor-search-result.active { background: rgba(96, 165, 250, 0.16); color: #dbeafe; box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.16); }
+.editor-search-result-title { font-size: 12px; font-weight: 700; }
+.editor-search-result-snippet { color: rgba(255, 255, 255, 0.56); font-size: 12px; line-height: 1.45; }
+.editor-search-result-meta { color: rgba(255, 255, 255, 0.42); font-size: 11px; }
 .editor-settings-shell { position: relative; z-index: 50; }
 .editor-settings-menu { position: absolute; top: calc(100% + 10px); right: 0; z-index: 80; width: min(420px, calc(100vw - 32px)); max-height: min(72vh, 760px); overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; padding: 14px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; background: rgba(15, 18, 24, 0.98); box-shadow: 0 22px 44px rgba(0, 0, 0, 0.3); backdrop-filter: blur(16px); }
 .editor-settings-section + .editor-settings-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
@@ -3041,6 +3599,7 @@ html[data-theme='light'] .view-mode-switch { background: rgba(0, 0, 0, 0.04); }
 html[data-theme='light'] .view-mode-btn { color: rgba(15, 23, 42, 0.52); }
 html[data-theme='light'] .view-mode-btn:hover { color: rgba(15, 23, 42, 0.84); }
 html[data-theme='light'] .view-mode-btn.active { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.12); }
+html[data-theme='light'] .editor-search-panel { border-color: rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.98); box-shadow: 0 18px 42px rgba(0, 0, 0, 0.12); }
 html[data-theme='light'] .editor-settings-menu { border-color: rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.98); box-shadow: 0 18px 42px rgba(0, 0, 0, 0.12); }
 html[data-theme='light'] .editor-settings-section + .editor-settings-section { border-top-color: rgba(0, 0, 0, 0.08); }
 html[data-theme='light'] .editor-settings-group-title { color: rgba(0, 0, 0, 0.86); }
@@ -3053,6 +3612,14 @@ html[data-theme='light'] .editor-settings-toggle.active { background: rgba(59, 1
 html[data-theme='light'] .editor-settings-footer { border-top-color: rgba(0, 0, 0, 0.08); }
 html[data-theme='light'] .editor-settings-reset { background: rgba(0, 0, 0, 0.06); color: rgba(0, 0, 0, 0.78); }
 html[data-theme='light'] .editor-settings-reset:hover { background: rgba(0, 0, 0, 0.1); color: rgba(0, 0, 0, 0.92); }
+html[data-theme='light'] .editor-search-input { border-color: rgba(0, 0, 0, 0.08); background: rgba(0, 0, 0, 0.03); color: rgba(0, 0, 0, 0.88); }
+html[data-theme='light'] .editor-search-scope { background: rgba(0, 0, 0, 0.06); }
+html[data-theme='light'] .editor-search-option { background: rgba(0, 0, 0, 0.05); color: rgba(0, 0, 0, 0.62); }
+html[data-theme='light'] .editor-search-scope-btn { color: rgba(0, 0, 0, 0.6); }
+html[data-theme='light'] .editor-search-scope-btn.active, html[data-theme='light'] .editor-search-option.active { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
+html[data-theme='light'] .editor-search-close, html[data-theme='light'] .editor-search-nav, html[data-theme='light'] .editor-search-result { background: rgba(0, 0, 0, 0.05); color: rgba(0, 0, 0, 0.82); }
+html[data-theme='light'] .editor-search-meta, html[data-theme='light'] .editor-search-result-snippet, html[data-theme='light'] .editor-search-result-meta { color: rgba(0, 0, 0, 0.54); }
+html[data-theme='light'] .editor-search-result.active { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.12); }
 html[data-theme='light'] .collab-users { border-color: rgba(0, 0, 0, 0.08); }
 html[data-theme='light'] .collab-avatar { border-color: #ffffff; }
 html[data-theme='light'] .header-action-btn, html[data-theme='light'] .close-btn, html[data-theme='light'] .toolbar-button, html[data-theme='light'] .code-language-chip, html[data-theme='light'] .cmd-icon { background: rgba(0, 0, 0, 0.06); color: rgba(0, 0, 0, 0.72); }

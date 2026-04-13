@@ -121,7 +121,9 @@
             v-if="isRoomReady && editingNode"
             :node-id="editingNode.id"
             :content="editingNode.content"
+            :all-nodes="canvasNodes"
             @update="handleContentUpdate"
+            @jump-to-node="handleJumpToNode"
             @close="handleCloseEditor"
         />
 
@@ -204,7 +206,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { pluginCatalogVersion, pluginRegistry } from '@/plugins'
 import { useCanvasAssets } from '@/composables/useCanvasAssets'
@@ -550,22 +552,41 @@ function handleContentUpdate(nodeId: string, data: string) {
     yjsNodes.updateNodeContent(nodeId, data)
 }
 
-function handleNodeDblClick(nodeId: string) {
+function openNodeEditor(nodeId: string) {
     const node = canvasNodes.value.find(item => item.id === nodeId)
-    if (!node) return
+    if (!node) return false
 
     const kind = node.content?.kind || 'blank'
-    if (kind === 'blank') return
+    if (kind === 'blank') return false
 
     const plugin = pluginRegistry.get(kind)
-    if (!plugin?.meta?.editable) return
-    if (plugin.onDblClick?.(node.content)) return
+    if (!plugin?.meta?.editable) return false
+    if (plugin.onDblClick?.(node.content)) return false
+
+    editingNodeId.value = null
+    editingCustomNodeId.value = null
 
     if (plugin.editor) {
         editingCustomNodeId.value = nodeId
     } else {
         editingNodeId.value = nodeId
     }
+
+    return true
+}
+
+function handleNodeDblClick(nodeId: string) {
+    openNodeEditor(nodeId)
+}
+
+function handleJumpToNode(nodeId: string) {
+    const node = canvasNodes.value.find(item => item.id === nodeId)
+    if (!node) return
+
+    openNodeEditor(nodeId)
+    nextTick(() => {
+        canvasStageRef.value?.focusNode?.(nodeId)
+    })
 }
 
 function handleCustomEditorUpdate(nodeId: string, contentPatch: Record<string, unknown>) {

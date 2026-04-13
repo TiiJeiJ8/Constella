@@ -1334,6 +1334,29 @@ function selectNode(nodeId) {
     updateTransformer()
 }
 
+function focusNode(nodeId) {
+    const node = (props.yjsNodes || []).find(item => item.id === nodeId)
+    if (!node) return false
+
+    const scale = Math.max(stageConfig.value.scaleX || 1, 0.01)
+    const centerX = node.x + (node.width / 2)
+    const centerY = node.y + (node.height / 2)
+
+    stageConfig.value.x = (stageConfig.value.width / 2) - (centerX * scale)
+    stageConfig.value.y = (stageConfig.value.height / 2) - (centerY * scale)
+
+    selectedNodeIds.value.clear()
+    selectedNodeIds.value.add(nodeId)
+    emitSelection()
+    scheduleStageTransformEmit()
+
+    nextTick(() => {
+        updateTransformer()
+    })
+
+    return true
+}
+
 // 获取 Konva Stage 实例
 function getStage() {
     return stageRef.value?.getNode() || null
@@ -1342,6 +1365,7 @@ function getStage() {
 // 暴露方法给父组件
 defineExpose({
     selectNode,
+    focusNode,
     getStage
 })
 </script>
