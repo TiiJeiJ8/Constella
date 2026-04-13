@@ -57,3 +57,23 @@ export interface DevelopmentPluginRecord {
     sourcePath: string
     manifest: PluginPackageManifest
 }
+
+export type PluginDiagnosticSeverity = 'error' | 'warning' | 'info'
+
+export type PluginDiagnosticSource = 'builtin' | 'installed' | 'development'
+
+export interface PluginDiagnosticRecord {
+    id: string
+    source: PluginDiagnosticSource
+    severity: PluginDiagnosticSeverity
+    scope: 'electron' | 'runtime'
+    stage: 'watch' | 'manifest' | 'i18n' | 'module-load' | 'registration' | 'unknown'
+    pluginId?: string
+    pluginName?: string
+    sourcePath?: string
+    filePath?: string
+    nodeKind?: string
+    message: string
+    detail?: string
+    timestamp: string
+}

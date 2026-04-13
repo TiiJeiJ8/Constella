@@ -1,9 +1,19 @@
 import { i18n } from '@/locales'
+import { useToast } from '@/utils/useToast'
 import { pluginRegistry, type PluginI18nMessages } from './index'
-import { refreshDevelopmentPluginsCatalog, refreshInstalledPluginsCatalog } from './installed'
+import {
+    refreshDevelopmentPluginDiagnostics,
+    refreshDevelopmentPluginsCatalog,
+    refreshInstalledPluginsCatalog,
+    subscribeDevelopmentPluginChanges
+} from './installed'
 import { registerDevelopmentPluginsRuntime, registerInstalledPluginsRuntime } from './runtime'
 
 let hasRegistered = false
+let developmentPluginReloadToken = `${Date.now()}`
+let hasBoundDevelopmentPluginWatcher = false
+let developmentPluginReloadTimer: number | null = null
+const toast = useToast()
 
 function isDeveloperModeEnabled(): boolean {
     try {
@@ -24,6 +34,7 @@ function registerPluginI18n(messages?: PluginI18nMessages) {
 
 async function performPluginRegistration() {
     console.log('[Plugins] Starting auto-discovery...')
+    pluginRegistry.clearPluginDiagnostics()
 
     const pluginModules = import.meta.glob<any>('./**/index.ts', { eager: true })
     const builtinKinds: string[] = []
@@ -49,8 +60,9 @@ async function performPluginRegistration() {
     }
 
     const developmentPlugins = await refreshDevelopmentPluginsCatalog()
+    await refreshDevelopmentPluginDiagnostics()
     if (isDeveloperModeEnabled()) {
-        await registerDevelopmentPluginsRuntime(developmentPlugins)
+        await registerDevelopmentPluginsRuntime(developmentPlugins, developmentPluginReloadToken)
     }
 
     const installedPlugins = await refreshInstalledPluginsCatalog()
@@ -60,13 +72,42 @@ async function performPluginRegistration() {
 }
 
 export async function registerPlugins() {
+    bindDevelopmentPluginWatcher()
     if (hasRegistered) return
     hasRegistered = true
     await performPluginRegistration()
 }
 
 export async function reloadPlugins() {
+    developmentPluginReloadToken = `${Date.now()}`
     pluginRegistry.clear()
     hasRegistered = false
     await registerPlugins()
+}
+
+function bindDevelopmentPluginWatcher() {
+    if (hasBoundDevelopmentPluginWatcher) return
+    hasBoundDevelopmentPluginWatcher = true
+
+    subscribeDevelopmentPluginChanges(async payload => {
+        if (!isDeveloperModeEnabled()) {
+            return
+        }
+
+        if (developmentPluginReloadTimer !== null) {
+            window.clearTimeout(developmentPluginReloadTimer)
+        }
+
+        developmentPluginReloadTimer = window.setTimeout(async () => {
+            developmentPluginReloadTimer = null
+            try {
+                await reloadPlugins()
+                const changedTarget = payload.changedPath || payload.sourcePath
+                toast.info(`Development plugin reloaded: ${changedTarget}`)
+            } catch (error) {
+                const message = error instanceof Error ? error.message : String(error)
+                toast.error(`Development plugin reload failed: ${message}`)
+            }
+        }, 220)
+    })
 }

@@ -57,23 +57,106 @@ function pathToFileUrl(filePath: string): string {
     throw new Error(`Unsupported plugin file path: ${filePath}`)
 }
 
-function createAsyncPluginComponent(moduleFilePath: string, exportHints: string[]): Component {
-    const moduleUrl = pathToFileUrl(moduleFilePath)
+function createPluginDiagnosticId(
+    pluginId: string,
+    stage: 'i18n' | 'module-load' | 'registration',
+    filePath?: string,
+    nodeKind?: string
+): string {
+    return `${pluginId}:${stage}:${filePath || ''}:${nodeKind || ''}`
+}
 
-    return defineAsyncComponent(async () => {
-        const importedModule = await import(/* @vite-ignore */ moduleUrl)
-        for (const exportName of exportHints) {
-            const candidate = importedModule?.[exportName]
-            if (candidate) {
-                return candidate
+function reportPluginDiagnostic(args: {
+    source: 'installed' | 'development'
+    severity?: 'error' | 'warning' | 'info'
+    stage: 'i18n' | 'module-load' | 'registration'
+    pluginId: string
+    pluginName?: string
+    sourcePath?: string
+    filePath?: string
+    nodeKind?: string
+    message: string
+    detail?: string
+}) {
+    pluginRegistry.reportPluginDiagnostic({
+        id: createPluginDiagnosticId(args.pluginId, args.stage, args.filePath, args.nodeKind),
+        source: args.source,
+        severity: args.severity || 'error',
+        scope: 'runtime',
+        stage: args.stage,
+        pluginId: args.pluginId,
+        pluginName: args.pluginName,
+        sourcePath: args.sourcePath,
+        filePath: args.filePath,
+        nodeKind: args.nodeKind,
+        message: args.message,
+        detail: args.detail,
+        timestamp: new Date().toISOString()
+    })
+}
+
+function createAsyncPluginComponent(
+    moduleFilePath: string,
+    exportHints: string[],
+    diagnosticMeta: {
+        source: 'installed' | 'development'
+        pluginId: string
+        pluginName?: string
+        sourcePath?: string
+        nodeKind?: string
+    },
+    cacheBustKey?: string
+): Component {
+    const rawModuleUrl = pathToFileUrl(moduleFilePath)
+    const moduleUrl = cacheBustKey ? `${rawModuleUrl}${rawModuleUrl.includes('?') ? '&' : '?'}t=${encodeURIComponent(cacheBustKey)}` : rawModuleUrl
+
+    return defineAsyncComponent({
+        loader: async () => {
+            try {
+                const importedModule = await import(/* @vite-ignore */ moduleUrl)
+                for (const exportName of exportHints) {
+                    const candidate = importedModule?.[exportName]
+                    if (candidate) {
+                        return candidate
+                    }
+                }
+
+                if (importedModule?.default) {
+                    return importedModule.default
+                }
+
+                throw new Error(`No compatible Vue component export found in ${rawModuleUrl}`)
+            } catch (error) {
+                const message = error instanceof Error ? error.message : String(error)
+                reportPluginDiagnostic({
+                    source: diagnosticMeta.source,
+                    stage: 'module-load',
+                    pluginId: diagnosticMeta.pluginId,
+                    pluginName: diagnosticMeta.pluginName,
+                    sourcePath: diagnosticMeta.sourcePath,
+                    filePath: moduleFilePath,
+                    nodeKind: diagnosticMeta.nodeKind,
+                    message,
+                    detail: error instanceof Error ? error.stack : undefined
+                })
+                throw error
             }
+        },
+        onError(error, _retry, fail) {
+            const message = error instanceof Error ? error.message : String(error)
+            reportPluginDiagnostic({
+                source: diagnosticMeta.source,
+                stage: 'module-load',
+                pluginId: diagnosticMeta.pluginId,
+                pluginName: diagnosticMeta.pluginName,
+                sourcePath: diagnosticMeta.sourcePath,
+                filePath: moduleFilePath,
+                nodeKind: diagnosticMeta.nodeKind,
+                message,
+                detail: error instanceof Error ? error.stack : undefined
+            })
+            fail()
         }
-
-        if (importedModule?.default) {
-            return importedModule.default
-        }
-
-        throw new Error(`No compatible Vue component export found in ${moduleUrl}`)
     })
 }
 
@@ -90,6 +173,17 @@ async function loadPluginI18nBundle(installedPlugin: InstalledPluginRecord): Pro
                 }
                 return [locale, await response.json()] as const
             } catch (error) {
+                const filePath = joinPluginFilePath(installedPlugin.installDir, relativePath)
+                reportPluginDiagnostic({
+                    source: 'installed',
+                    stage: 'i18n',
+                    pluginId: installedPlugin.id,
+                    pluginName: installedPlugin.name,
+                    sourcePath: installedPlugin.installDir,
+                    filePath,
+                    message: `Failed to load i18n bundle for ${locale}: ${error instanceof Error ? error.message : String(error)}`,
+                    detail: error instanceof Error ? error.stack : undefined
+                })
                 console.warn(`[Plugins] Failed to load plugin i18n ${installedPlugin.id}:${locale}`, error)
                 return null
             }
@@ -117,6 +211,16 @@ async function loadExternalPluginI18nBundle(
                 }
                 return [locale, await response.json()] as const
             } catch (error) {
+                const filePath = joinPluginFilePath(baseDir, relativePath)
+                reportPluginDiagnostic({
+                    source: 'development',
+                    stage: 'i18n',
+                    pluginId,
+                    sourcePath: baseDir,
+                    filePath,
+                    message: `Failed to load i18n bundle for ${locale}: ${error instanceof Error ? error.message : String(error)}`,
+                    detail: error instanceof Error ? error.stack : undefined
+                })
                 console.warn(`[Plugins] Failed to load plugin i18n ${pluginId}:${locale}`, error)
                 return null
             }
@@ -148,12 +252,26 @@ function buildRuntimePlugin(installedPlugin: InstalledPluginRecord, nodeManifest
         },
         renderer: createAsyncPluginComponent(
             joinPluginFilePath(installedPlugin.installDir, nodeManifest.renderer),
-            ['renderer', 'RendererComponent', 'default']
+            ['renderer', 'RendererComponent', 'default'],
+            {
+                source: 'installed',
+                pluginId: installedPlugin.id,
+                pluginName: installedPlugin.name,
+                sourcePath: installedPlugin.installDir,
+                nodeKind: nodeManifest.kind
+            }
         ),
         editor: nodeManifest.editor
             ? createAsyncPluginComponent(
                 joinPluginFilePath(installedPlugin.installDir, nodeManifest.editor),
-                ['editor', 'EditorComponent', 'default']
+                ['editor', 'EditorComponent', 'default'],
+                {
+                    source: 'installed',
+                    pluginId: installedPlugin.id,
+                    pluginName: installedPlugin.name,
+                    sourcePath: installedPlugin.installDir,
+                    nodeKind: nodeManifest.kind
+                }
             )
             : undefined
     }
@@ -169,6 +287,16 @@ export async function registerInstalledPluginsRuntime(installedPlugins: Installe
 
         for (const nodeManifest of installedPlugin.manifest.nodes) {
             if (pluginRegistry.has(nodeManifest.kind)) {
+                reportPluginDiagnostic({
+                    source: 'installed',
+                    severity: 'warning',
+                    stage: 'registration',
+                    pluginId: installedPlugin.id,
+                    pluginName: installedPlugin.name,
+                    sourcePath: installedPlugin.installDir,
+                    nodeKind: nodeManifest.kind,
+                    message: `Skipped node kind "${nodeManifest.kind}" because it is already registered`
+                })
                 console.warn(
                     `[Plugins] Skipping installed plugin kind "${nodeManifest.kind}" from ${installedPlugin.id} because it is already registered`
                 )
@@ -182,7 +310,8 @@ export async function registerInstalledPluginsRuntime(installedPlugins: Installe
 
 function buildDevelopmentRuntimePlugin(
     developmentPlugin: DevelopmentPluginRecord,
-    nodeManifest: PluginPackageNodeManifest
+    nodeManifest: PluginPackageNodeManifest,
+    cacheBustKey?: string
 ): NodePlugin {
     return {
         meta: {
@@ -196,18 +325,37 @@ function buildDevelopmentRuntimePlugin(
         },
         renderer: createAsyncPluginComponent(
             joinPluginFilePath(developmentPlugin.sourcePath, nodeManifest.renderer),
-            ['renderer', 'RendererComponent', 'default']
+            ['renderer', 'RendererComponent', 'default'],
+            {
+                source: 'development',
+                pluginId: developmentPlugin.id,
+                pluginName: developmentPlugin.name,
+                sourcePath: developmentPlugin.sourcePath,
+                nodeKind: nodeManifest.kind
+            },
+            cacheBustKey
         ),
         editor: nodeManifest.editor
             ? createAsyncPluginComponent(
                 joinPluginFilePath(developmentPlugin.sourcePath, nodeManifest.editor),
-                ['editor', 'EditorComponent', 'default']
+                ['editor', 'EditorComponent', 'default'],
+                {
+                    source: 'development',
+                    pluginId: developmentPlugin.id,
+                    pluginName: developmentPlugin.name,
+                    sourcePath: developmentPlugin.sourcePath,
+                    nodeKind: nodeManifest.kind
+                },
+                cacheBustKey
             )
             : undefined
     }
 }
 
-export async function registerDevelopmentPluginsRuntime(developmentPlugins: DevelopmentPluginRecord[]): Promise<void> {
+export async function registerDevelopmentPluginsRuntime(
+    developmentPlugins: DevelopmentPluginRecord[],
+    cacheBustKey?: string
+): Promise<void> {
     ensureRuntimePluginGlobals()
     const enabledPlugins = developmentPlugins.filter(plugin => plugin.enabled)
 
@@ -221,13 +369,23 @@ export async function registerDevelopmentPluginsRuntime(developmentPlugins: Deve
 
         for (const nodeManifest of developmentPlugin.manifest.nodes) {
             if (pluginRegistry.has(nodeManifest.kind)) {
+                reportPluginDiagnostic({
+                    source: 'development',
+                    severity: 'warning',
+                    stage: 'registration',
+                    pluginId: developmentPlugin.id,
+                    pluginName: developmentPlugin.name,
+                    sourcePath: developmentPlugin.sourcePath,
+                    nodeKind: nodeManifest.kind,
+                    message: `Skipped node kind "${nodeManifest.kind}" because it is already registered`
+                })
                 console.warn(
                     `[Plugins] Skipping development plugin kind "${nodeManifest.kind}" from ${developmentPlugin.id} because it is already registered`
                 )
                 continue
             }
 
-            pluginRegistry.register(buildDevelopmentRuntimePlugin(developmentPlugin, nodeManifest))
+            pluginRegistry.register(buildDevelopmentRuntimePlugin(developmentPlugin, nodeManifest, cacheBustKey))
         }
     }
 }

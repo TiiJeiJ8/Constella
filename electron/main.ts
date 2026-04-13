@@ -6,7 +6,12 @@ import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 import { spawn, ChildProcess } from 'child_process'
 import Bonjour, { Service } from 'bonjour-service'
-import type { DevelopmentPluginRecord, InstalledPluginRecord, PluginPackageManifest } from '../src/plugins/package'
+import type {
+    DevelopmentPluginRecord,
+    InstalledPluginRecord,
+    PluginDiagnosticRecord,
+    PluginPackageManifest
+} from '../src/plugins/package'
 import {
     PLUGIN_ARCHIVE_EXTENSION,
     PLUGIN_DEVELOPMENT_FILE,
@@ -63,8 +68,19 @@ interface DevelopmentPluginPayload {
     enabled: boolean
 }
 
+interface DevelopmentPluginWatchEventPayload {
+    pluginId: string
+    sourcePath: string
+    eventType: string
+    changedPath?: string
+    timestamp: string
+}
+
 let mainWindow: BrowserWindow | null = null
 let serverProcess: ChildProcess | null = null
+const developmentPluginDiagnostics = new Map<string, PluginDiagnosticRecord>()
+const developmentPluginWatchers = new Map<string, fs.FSWatcher>()
+const developmentPluginWatchDebounceTimers = new Map<string, NodeJS.Timeout>()
 
 function ensureDir(targetPath: string): string {
     if (!fs.existsSync(targetPath)) {
@@ -95,6 +111,115 @@ function sanitizeSegment(value: string): string {
 
 function buildInstalledPluginFolderName(manifest: PluginPackageManifest): string {
     return `${sanitizeSegment(manifest.id)}__${sanitizeSegment(manifest.version)}`
+}
+
+function makeDevelopmentPluginDiagnosticKey(pluginId: string, stage: PluginDiagnosticRecord['stage'], filePath?: string): string {
+    return `${pluginId}:${stage}:${filePath || ''}`
+}
+
+function setDevelopmentPluginDiagnostic(diagnostic: PluginDiagnosticRecord): void {
+    developmentPluginDiagnostics.set(diagnostic.id, diagnostic)
+}
+
+function clearDevelopmentPluginDiagnostic(pluginId: string, stage?: PluginDiagnosticRecord['stage']): void {
+    for (const [key, diagnostic] of developmentPluginDiagnostics.entries()) {
+        if (diagnostic.pluginId !== pluginId) continue
+        if (stage && diagnostic.stage !== stage) continue
+        developmentPluginDiagnostics.delete(key)
+    }
+}
+
+function clearAllDevelopmentPluginDiagnostics(): void {
+    developmentPluginDiagnostics.clear()
+}
+
+function listDevelopmentPluginDiagnosticsInternal(): PluginDiagnosticRecord[] {
+    return Array.from(developmentPluginDiagnostics.values()).sort((left, right) =>
+        right.timestamp.localeCompare(left.timestamp)
+    )
+}
+
+function broadcastDevelopmentPluginWatchEvent(payload: DevelopmentPluginWatchEventPayload): void {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    mainWindow.webContents.send('development-plugin-changed', payload)
+}
+
+function stopDevelopmentPluginWatcher(pluginId: string): void {
+    const existingWatcher = developmentPluginWatchers.get(pluginId)
+    if (existingWatcher) {
+        existingWatcher.close()
+        developmentPluginWatchers.delete(pluginId)
+    }
+
+    const existingTimer = developmentPluginWatchDebounceTimers.get(pluginId)
+    if (existingTimer) {
+        clearTimeout(existingTimer)
+        developmentPluginWatchDebounceTimers.delete(pluginId)
+    }
+}
+
+function watchDevelopmentPlugin(entry: DevelopmentPluginPayload): void {
+    stopDevelopmentPluginWatcher(entry.id)
+
+    try {
+        const watcher = fs.watch(entry.sourcePath, { recursive: true }, (eventType, filename) => {
+            const existingTimer = developmentPluginWatchDebounceTimers.get(entry.id)
+            if (existingTimer) {
+                clearTimeout(existingTimer)
+            }
+
+            const nextTimer = setTimeout(() => {
+                clearDevelopmentPluginDiagnostic(entry.id, 'watch')
+                broadcastDevelopmentPluginWatchEvent({
+                    pluginId: entry.id,
+                    sourcePath: entry.sourcePath,
+                    eventType,
+                    changedPath: typeof filename === 'string' && filename ? path.join(entry.sourcePath, filename) : undefined,
+                    timestamp: new Date().toISOString()
+                })
+                developmentPluginWatchDebounceTimers.delete(entry.id)
+            }, 180)
+
+            developmentPluginWatchDebounceTimers.set(entry.id, nextTimer)
+        })
+
+        watcher.on('error', (error) => {
+            const message = error instanceof Error ? error.message : String(error)
+            setDevelopmentPluginDiagnostic({
+                id: makeDevelopmentPluginDiagnosticKey(entry.id, 'watch', entry.sourcePath),
+                source: 'development',
+                severity: 'error',
+                scope: 'electron',
+                stage: 'watch',
+                pluginId: entry.id,
+                sourcePath: entry.sourcePath,
+                filePath: entry.sourcePath,
+                message: `Failed to watch development plugin directory: ${message}`,
+                detail: error instanceof Error ? error.stack : undefined,
+                timestamp: new Date().toISOString()
+            })
+            console.error(`[Electron] Failed to watch development plugin ${entry.sourcePath}:`, error)
+        })
+
+        developmentPluginWatchers.set(entry.id, watcher)
+        clearDevelopmentPluginDiagnostic(entry.id, 'watch')
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        setDevelopmentPluginDiagnostic({
+            id: makeDevelopmentPluginDiagnosticKey(entry.id, 'watch', entry.sourcePath),
+            source: 'development',
+            severity: 'error',
+            scope: 'electron',
+            stage: 'watch',
+            pluginId: entry.id,
+            sourcePath: entry.sourcePath,
+            filePath: entry.sourcePath,
+            message: `Failed to watch development plugin directory: ${message}`,
+            detail: error instanceof Error ? error.stack : undefined,
+            timestamp: new Date().toISOString()
+        })
+        console.error(`[Electron] Failed to watch development plugin ${entry.sourcePath}:`, error)
+    }
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -257,6 +382,7 @@ async function readDevelopmentPluginState(): Promise<DevelopmentPluginPayload[]>
 async function writeDevelopmentPluginState(entries: DevelopmentPluginPayload[]): Promise<void> {
     const statePath = getDevelopmentPluginStatePath()
     await fs.promises.writeFile(statePath, JSON.stringify(entries, null, 2), 'utf8')
+    await syncDevelopmentPluginWatchers()
 }
 
 async function createDevelopmentPluginRecord(payload: DevelopmentPluginPayload): Promise<DevelopmentPluginRecord> {
@@ -290,8 +416,23 @@ async function listDevelopmentPluginsInternal(): Promise<DevelopmentPluginRecord
     const developmentPlugins = await Promise.all(
         state.map(async (entry) => {
             try {
+                clearDevelopmentPluginDiagnostic(entry.id, 'manifest')
                 return await createDevelopmentPluginRecord(entry)
             } catch (error) {
+                const message = error instanceof Error ? error.message : String(error)
+                setDevelopmentPluginDiagnostic({
+                    id: makeDevelopmentPluginDiagnosticKey(entry.id, 'manifest', entry.sourcePath),
+                    source: 'development',
+                    severity: 'error',
+                    scope: 'electron',
+                    stage: 'manifest',
+                    pluginId: entry.id,
+                    sourcePath: entry.sourcePath,
+                    filePath: path.join(entry.sourcePath, PLUGIN_MANIFEST_FILE),
+                    message,
+                    detail: error instanceof Error ? error.stack : undefined,
+                    timestamp: new Date().toISOString()
+                })
                 console.warn(`[Electron] Failed to load development plugin ${entry.sourcePath}:`, error)
                 return null
             }
@@ -301,6 +442,22 @@ async function listDevelopmentPluginsInternal(): Promise<DevelopmentPluginRecord
     return developmentPlugins
         .filter((plugin): plugin is DevelopmentPluginRecord => Boolean(plugin))
         .sort((left, right) => left.name.localeCompare(right.name))
+}
+
+async function syncDevelopmentPluginWatchers(): Promise<void> {
+    const state = await readDevelopmentPluginState()
+    const activeIds = new Set(state.map(entry => entry.id))
+
+    for (const entry of state) {
+        watchDevelopmentPlugin(entry)
+    }
+
+    for (const pluginId of Array.from(developmentPluginWatchers.keys())) {
+        if (!activeIds.has(pluginId)) {
+            stopDevelopmentPluginWatcher(pluginId)
+            clearDevelopmentPluginDiagnostic(pluginId, 'watch')
+        }
+    }
 }
 
 async function listInstalledPluginsInternal(): Promise<InstalledPluginRecord[]> {
@@ -538,6 +695,7 @@ async function addDevelopmentPluginInternal(ownerWindow: BrowserWindow | null, e
     const filteredState = state.filter(entry => entry.id !== manifest.id)
     filteredState.push(nextEntry)
     await writeDevelopmentPluginState(filteredState)
+    clearDevelopmentPluginDiagnostic(nextEntry.id)
 
     return await createDevelopmentPluginRecord(nextEntry)
 }
@@ -569,6 +727,8 @@ async function removeDevelopmentPluginInternal(pluginId: string): Promise<void> 
     }
 
     await writeDevelopmentPluginState(nextState)
+    clearDevelopmentPluginDiagnostic(pluginId)
+    stopDevelopmentPluginWatcher(pluginId)
 }
 
 function createWindow() {
@@ -1090,6 +1250,16 @@ ipcMain.handle('list-development-plugins', async () => {
     }
 })
 
+ipcMain.handle('list-development-plugin-diagnostics', async () => {
+    try {
+        await listDevelopmentPluginsInternal()
+        return listDevelopmentPluginDiagnosticsInternal()
+    } catch (error) {
+        console.error('[Electron] Failed to list development plugin diagnostics:', error)
+        return listDevelopmentPluginDiagnosticsInternal()
+    }
+})
+
 ipcMain.handle('set-installed-plugin-enabled', async (_event, pluginId: string, enabled: boolean) => {
     try {
         return await updateInstalledPluginEnabledState(pluginId, enabled)
@@ -1221,6 +1391,8 @@ app.whenReady().then(() => {
         console.log('[Electron] Backend startup skipped (SKIP_BACKEND=true)')
     }
 
+    void syncDevelopmentPluginWatchers()
+
     const delay = process.env.SKIP_BACKEND === 'true' ? 0 : 1000
     setTimeout(() => {
         createWindow()
@@ -1243,6 +1415,9 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
+    for (const pluginId of Array.from(developmentPluginWatchers.keys())) {
+        stopDevelopmentPluginWatcher(pluginId)
+    }
     if (serverProcess && !serverProcess.killed) {
         serverProcess.kill()
     }

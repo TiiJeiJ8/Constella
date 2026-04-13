@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { DevelopmentPluginRecord, InstalledPluginRecord } from '../src/plugins/package'
+import type { DevelopmentPluginRecord, InstalledPluginRecord, PluginDiagnosticRecord } from '../src/plugins/package'
 
 interface LanServerDescriptor {
     id: string
@@ -26,6 +26,14 @@ interface ExportPdfResult {
     filePath?: string
 }
 
+interface DevelopmentPluginWatchEventPayload {
+    pluginId: string
+    sourcePath: string
+    eventType: string
+    changedPath?: string
+    timestamp: string
+}
+
 contextBridge.exposeInMainWorld('electron', {
     minimize: () => ipcRenderer.send('window-minimize'),
     toggleMaximize: () => ipcRenderer.send('window-maximize'),
@@ -43,6 +51,8 @@ contextBridge.exposeInMainWorld('electron', {
         ipcRenderer.invoke('list-installed-plugins'),
     listDevelopmentPlugins: (): Promise<DevelopmentPluginRecord[]> =>
         ipcRenderer.invoke('list-development-plugins'),
+    listDevelopmentPluginDiagnostics: (): Promise<PluginDiagnosticRecord[]> =>
+        ipcRenderer.invoke('list-development-plugin-diagnostics'),
     setInstalledPluginEnabled: (pluginId: string, enabled: boolean): Promise<InstalledPluginRecord> =>
         ipcRenderer.invoke('set-installed-plugin-enabled', pluginId, enabled),
     setDevelopmentPluginEnabled: (pluginId: string, enabled: boolean): Promise<DevelopmentPluginRecord> =>
@@ -50,7 +60,13 @@ contextBridge.exposeInMainWorld('electron', {
     removeInstalledPlugin: (pluginId: string): Promise<void> =>
         ipcRenderer.invoke('remove-installed-plugin', pluginId),
     removeDevelopmentPlugin: (pluginId: string): Promise<void> =>
-        ipcRenderer.invoke('remove-development-plugin', pluginId)
+        ipcRenderer.invoke('remove-development-plugin', pluginId),
+    onDevelopmentPluginChanged: (listener: (payload: DevelopmentPluginWatchEventPayload) => void) => {
+        const channel = 'development-plugin-changed'
+        const wrapped = (_event: Electron.IpcRendererEvent, payload: DevelopmentPluginWatchEventPayload) => listener(payload)
+        ipcRenderer.on(channel, wrapped)
+        return () => ipcRenderer.removeListener(channel, wrapped)
+    }
 })
 
 declare global {
@@ -66,10 +82,12 @@ declare global {
             addDevelopmentPlugin: (sourcePath?: string) => Promise<DevelopmentPluginRecord>
             listInstalledPlugins: () => Promise<InstalledPluginRecord[]>
             listDevelopmentPlugins: () => Promise<DevelopmentPluginRecord[]>
+            listDevelopmentPluginDiagnostics: () => Promise<PluginDiagnosticRecord[]>
             setInstalledPluginEnabled: (pluginId: string, enabled: boolean) => Promise<InstalledPluginRecord>
             setDevelopmentPluginEnabled: (pluginId: string, enabled: boolean) => Promise<DevelopmentPluginRecord>
             removeInstalledPlugin: (pluginId: string) => Promise<void>
             removeDevelopmentPlugin: (pluginId: string) => Promise<void>
+            onDevelopmentPluginChanged: (listener: (payload: DevelopmentPluginWatchEventPayload) => void) => () => void
         }
     }
 }

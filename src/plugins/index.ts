@@ -3,7 +3,7 @@
  * 管理节点类型插件的注册和获取
  */
 import { markRaw, ref, type Component } from 'vue'
-import type { DevelopmentPluginRecord, InstalledPluginRecord } from './package'
+import type { DevelopmentPluginRecord, InstalledPluginRecord, PluginDiagnosticRecord, PluginDiagnosticSource } from './package'
 
 /**
  * 节点内容类型 - 支持动态扩展
@@ -93,6 +93,7 @@ class PluginRegistry {
     private installedPlugins: InstalledPluginRecord[] = []
     private developmentPlugins: DevelopmentPluginRecord[] = []
     private builtinKinds: Set<string> = new Set()
+    private pluginDiagnostics: PluginDiagnosticRecord[] = []
 
     /**
      * 注册插件
@@ -206,6 +207,38 @@ class PluginRegistry {
         return [...this.developmentPlugins]
     }
 
+    setPluginDiagnostics(source: PluginDiagnosticSource, diagnostics: PluginDiagnosticRecord[]): void {
+        this.pluginDiagnostics = [
+            ...this.pluginDiagnostics.filter(item => item.source !== source),
+            ...diagnostics
+        ].sort((left, right) => right.timestamp.localeCompare(left.timestamp))
+        pluginCatalogVersion.value += 1
+    }
+
+    reportPluginDiagnostic(diagnostic: PluginDiagnosticRecord): void {
+        const existingIndex = this.pluginDiagnostics.findIndex(item => item.id === diagnostic.id)
+        if (existingIndex >= 0) {
+            this.pluginDiagnostics.splice(existingIndex, 1, diagnostic)
+        } else {
+            this.pluginDiagnostics.unshift(diagnostic)
+        }
+        this.pluginDiagnostics.sort((left, right) => right.timestamp.localeCompare(left.timestamp))
+        pluginCatalogVersion.value += 1
+    }
+
+    clearPluginDiagnostics(source?: PluginDiagnosticSource): void {
+        this.pluginDiagnostics = source
+            ? this.pluginDiagnostics.filter(item => item.source !== source)
+            : []
+        pluginCatalogVersion.value += 1
+    }
+
+    getPluginDiagnostics(source?: PluginDiagnosticSource): PluginDiagnosticRecord[] {
+        return source
+            ? this.pluginDiagnostics.filter(item => item.source === source)
+            : [...this.pluginDiagnostics]
+    }
+
     /**
      * 清空所有已注册的插件（用于测试或重新加载）
      */
@@ -215,6 +248,7 @@ class PluginRegistry {
         this.installedPlugins = []
         this.developmentPlugins = []
         this.builtinKinds.clear()
+        this.pluginDiagnostics = []
         pluginCatalogVersion.value += 1
     }
 }

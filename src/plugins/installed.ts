@@ -1,5 +1,5 @@
 import { pluginRegistry } from './index'
-import type { DevelopmentPluginRecord, InstalledPluginRecord } from './package'
+import type { DevelopmentPluginRecord, InstalledPluginRecord, PluginDiagnosticRecord } from './package'
 
 export async function refreshInstalledPluginsCatalog(): Promise<InstalledPluginRecord[]> {
     if (!window.electron?.listInstalledPlugins) {
@@ -21,6 +21,17 @@ export async function refreshDevelopmentPluginsCatalog(): Promise<DevelopmentPlu
     const developmentPlugins = await window.electron.listDevelopmentPlugins()
     pluginRegistry.setDevelopmentPlugins(developmentPlugins)
     return developmentPlugins
+}
+
+export async function refreshDevelopmentPluginDiagnostics(): Promise<PluginDiagnosticRecord[]> {
+    if (!window.electron?.listDevelopmentPluginDiagnostics) {
+        pluginRegistry.setPluginDiagnostics('development', [])
+        return []
+    }
+
+    const diagnostics = await window.electron.listDevelopmentPluginDiagnostics()
+    pluginRegistry.setPluginDiagnostics('development', diagnostics)
+    return diagnostics
 }
 
 export async function installPluginPackage(sourcePath?: string): Promise<InstalledPluginRecord> {
@@ -79,4 +90,20 @@ export async function removeDevelopmentPlugin(pluginId: string): Promise<void> {
 
     await window.electron.removeDevelopmentPlugin(pluginId)
     await refreshDevelopmentPluginsCatalog()
+}
+
+export function subscribeDevelopmentPluginChanges(
+    listener: (payload: {
+        pluginId: string
+        sourcePath: string
+        eventType: string
+        changedPath?: string
+        timestamp: string
+    }) => void
+): (() => void) | null {
+    if (!window.electron?.onDevelopmentPluginChanged) {
+        return null
+    }
+
+    return window.electron.onDevelopmentPluginChanged(listener)
 }

@@ -152,6 +152,40 @@
             </div>
         </div>
 
+        <div v-if="developerMode && developmentDiagnostics.length > 0" class="plugin-section">
+            <div class="plugin-section-head">
+                <h4>{{ text.diagnosticsTitle }}</h4>
+                <span class="plugin-count">{{ developmentDiagnostics.length }}</span>
+            </div>
+            <div class="plugin-diagnostics">
+                <article
+                    v-for="diagnostic in developmentDiagnostics"
+                    :key="diagnostic.id"
+                    class="plugin-diagnostic-card"
+                    :class="`plugin-diagnostic-${diagnostic.severity}`"
+                >
+                    <div class="plugin-card-row plugin-card-row-top">
+                        <div>
+                            <div class="plugin-name">{{ diagnostic.pluginName || diagnostic.pluginId || text.unknownPlugin }}</div>
+                            <div class="plugin-kind">{{ formatDiagnosticStage(diagnostic) }}</div>
+                        </div>
+                        <span class="plugin-tag" :class="`plugin-tag-${diagnostic.severity}`">{{ diagnostic.severity }}</span>
+                    </div>
+                    <p class="plugin-description">{{ diagnostic.message }}</p>
+                    <div class="plugin-meta-stack">
+                        <div v-if="diagnostic.nodeKind">{{ text.nodeKinds }}: {{ diagnostic.nodeKind }}</div>
+                        <div v-if="diagnostic.sourcePath">{{ text.path }}: {{ diagnostic.sourcePath }}</div>
+                        <div v-if="diagnostic.filePath">{{ text.file }}: {{ diagnostic.filePath }}</div>
+                        <div>{{ text.updatedAt }}: {{ formatInstalledTime(diagnostic.timestamp) }}</div>
+                    </div>
+                    <details v-if="diagnostic.detail" class="plugin-diagnostic-detail">
+                        <summary>{{ text.details }}</summary>
+                        <pre>{{ diagnostic.detail }}</pre>
+                    </details>
+                </article>
+            </div>
+        </div>
+
         <div class="plugin-section">
             <div class="plugin-section-head">
                 <h4>{{ text.installedTitle }}</h4>
@@ -208,6 +242,7 @@ import { reloadPlugins } from '@/plugins/register'
 import {
     addDevelopmentPlugin,
     installPluginPackage,
+    refreshDevelopmentPluginDiagnostics,
     refreshDevelopmentPluginsCatalog,
     refreshInstalledPluginsCatalog,
     removeDevelopmentPlugin,
@@ -215,7 +250,7 @@ import {
     setDevelopmentPluginEnabled,
     setInstalledPluginEnabled
 } from '@/plugins/installed'
-import type { DevelopmentPluginRecord, InstalledPluginRecord } from '@/plugins/package'
+import type { DevelopmentPluginRecord, InstalledPluginRecord, PluginDiagnosticRecord } from '@/plugins/package'
 
 const { locale, t, te } = useI18n()
 
@@ -232,6 +267,11 @@ const supportsPluginManagement = computed(() =>
 const builtinPlugins = computed(() => {
     pluginCatalogVersion.value
     return pluginRegistry.getBuiltinMeta()
+})
+
+const developmentDiagnostics = computed<PluginDiagnosticRecord[]>(() => {
+    pluginCatalogVersion.value
+    return pluginRegistry.getPluginDiagnostics('development')
 })
 
 const text = computed(() => locale.value === 'zh-CN'
@@ -273,7 +313,12 @@ const text = computed(() => locale.value === 'zh-CN'
         marketEyebrow: 'Plugin Market',
         marketTitle: '插件市场',
         marketDescription: '这里将用于后续承载市场入口、精选插件、分类、评分、更新与在线安装能力。',
-        marketSoon: '即将推出'
+        marketSoon: '即将推出',
+        diagnosticsTitle: '插件诊断',
+        file: '文件',
+        updatedAt: '更新',
+        details: '详情',
+        unknownPlugin: '未知插件'
     }
     : {
         title: 'Plugins',
@@ -313,7 +358,12 @@ const text = computed(() => locale.value === 'zh-CN'
         marketEyebrow: 'Plugin Market',
         marketTitle: 'Marketplace',
         marketDescription: 'This area is reserved for future marketplace entry points, featured plugins, categories, ratings, updates, and online installs.',
-        marketSoon: 'Coming Soon'
+        marketSoon: 'Coming Soon',
+        diagnosticsTitle: 'Plugin Diagnostics',
+        file: 'File',
+        updatedAt: 'Updated',
+        details: 'Details',
+        unknownPlugin: 'Unknown plugin'
     }
 )
 
@@ -337,6 +387,7 @@ async function refreshCatalog() {
     if (!supportsPluginManagement.value) {
         installedPlugins.value = []
         developmentPlugins.value = []
+        pluginRegistry.setPluginDiagnostics('development', [])
         return
     }
 
@@ -347,6 +398,7 @@ async function refreshCatalog() {
     ])
     installedPlugins.value = nextInstalled
     developmentPlugins.value = nextDevelopment
+    await refreshDevelopmentPluginDiagnostics()
 }
 
 function readDeveloperModeSetting() {
@@ -366,6 +418,12 @@ function handleSettingsUpdated(event: Event) {
 async function syncPluginRuntime() {
     await refreshCatalog()
     await reloadPlugins()
+    await refreshDevelopmentPluginDiagnostics()
+}
+
+function formatDiagnosticStage(diagnostic: PluginDiagnosticRecord) {
+    const scopeLabel = diagnostic.scope === 'electron' ? 'Electron' : 'Runtime'
+    return `${scopeLabel} / ${diagnostic.stage}`
 }
 
 async function runBusyAction(action: () => Promise<void>) {
@@ -439,6 +497,11 @@ async function removeDevelopment(pluginId: string, pluginName: string) {
 
 watch(() => locale.value, () => {
     void refreshCatalog()
+}, { immediate: true })
+
+watch(() => pluginCatalogVersion.value, () => {
+    installedPlugins.value = pluginRegistry.getInstalledPlugins()
+    developmentPlugins.value = pluginRegistry.getDevelopmentPlugins()
 }, { immediate: true })
 
 onMounted(() => {
@@ -770,6 +833,11 @@ onBeforeUnmount(() => {
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
+.plugin-diagnostics {
+    display: grid;
+    gap: 14px;
+}
+
 .plugin-card {
     border: 1px solid var(--border-color);
     border-radius: 18px;
@@ -786,6 +854,30 @@ onBeforeUnmount(() => {
 
 .plugin-card-dev:hover {
     border-color: rgba(16, 185, 129, 0.26);
+}
+
+.plugin-diagnostic-card {
+    display: grid;
+    gap: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    padding: 16px;
+    background: var(--bg-secondary);
+}
+
+.plugin-diagnostic-error {
+    border-color: rgba(239, 68, 68, 0.3);
+    background: linear-gradient(180deg, rgba(239, 68, 68, 0.06), rgba(239, 68, 68, 0.015)), var(--bg-secondary);
+}
+
+.plugin-diagnostic-warning {
+    border-color: rgba(245, 158, 11, 0.3);
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.06), rgba(245, 158, 11, 0.015)), var(--bg-secondary);
+}
+
+.plugin-diagnostic-info {
+    border-color: rgba(59, 130, 246, 0.28);
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.06), rgba(59, 130, 246, 0.015)), var(--bg-secondary);
 }
 
 .plugin-card-row {
@@ -866,6 +958,45 @@ onBeforeUnmount(() => {
     color: var(--text-secondary);
     font-size: 11px;
     font-weight: 700;
+}
+
+.plugin-tag-error {
+    background: rgba(127, 29, 29, 0.7);
+    color: #fecaca;
+}
+
+.plugin-tag-warning {
+    background: rgba(120, 53, 15, 0.65);
+    color: #fde68a;
+}
+
+.plugin-tag-info {
+    background: rgba(30, 64, 175, 0.45);
+    color: #bfdbfe;
+}
+
+.plugin-diagnostic-detail {
+    border-top: 1px solid var(--border-color);
+    padding-top: 10px;
+}
+
+.plugin-diagnostic-detail summary {
+    cursor: pointer;
+    color: var(--text-secondary);
+    user-select: none;
+}
+
+.plugin-diagnostic-detail pre {
+    margin: 10px 0 0;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.72);
+    color: #e2e8f0;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 0.78rem;
+    line-height: 1.55;
 }
 
 .plugin-card-actions {

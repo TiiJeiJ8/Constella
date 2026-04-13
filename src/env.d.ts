@@ -1,5 +1,5 @@
 /// <reference types="vite/web" />
-import type { DevelopmentPluginRecord, InstalledPluginRecord } from './plugins/package'
+import type { DevelopmentPluginRecord, InstalledPluginRecord, PluginDiagnosticRecord } from './plugins/package'
 
 declare global {
     const __APP_VERSION__: string
@@ -37,10 +37,18 @@ interface ElectronBridgeApi {
     addDevelopmentPlugin: (sourcePath?: string) => Promise<DevelopmentPluginRecord>
     listInstalledPlugins: () => Promise<InstalledPluginRecord[]>
     listDevelopmentPlugins: () => Promise<DevelopmentPluginRecord[]>
+    listDevelopmentPluginDiagnostics: () => Promise<PluginDiagnosticRecord[]>
     setInstalledPluginEnabled: (pluginId: string, enabled: boolean) => Promise<InstalledPluginRecord>
     setDevelopmentPluginEnabled: (pluginId: string, enabled: boolean) => Promise<DevelopmentPluginRecord>
     removeInstalledPlugin: (pluginId: string) => Promise<void>
     removeDevelopmentPlugin: (pluginId: string) => Promise<void>
+    onDevelopmentPluginChanged: (listener: (payload: {
+        pluginId: string
+        sourcePath: string
+        eventType: string
+        changedPath?: string
+        timestamp: string
+    }) => void) => () => void
 }
 
 declare global {
