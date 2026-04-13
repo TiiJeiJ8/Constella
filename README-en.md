@@ -137,6 +137,13 @@ See:
 
 </details>
 
+<details>
+<summary> Plugin Development </summary>
+
+![Plugin Panel Error](IMG/plugin_developer_error.jpg)
+
+</details>
+
 ## 📦️ Distribution
 
 ### Run from Source

@@ -134,6 +134,13 @@ Constella 现已同时支持内置节点插件与可安装运行时插件。
 
 </details>
 
+<details>
+<summary> 插件开发 </summary>
+
+![Plugin Panel Error](IMG/plugin_developer_error.jpg)
+
+</details>
+
 ## 📦️ 获取
 
 ### 源码运行
