@@ -82,6 +82,28 @@ const developmentPluginDiagnostics = new Map<string, PluginDiagnosticRecord>()
 const developmentPluginWatchers = new Map<string, fs.FSWatcher>()
 const developmentPluginWatchDebounceTimers = new Map<string, NodeJS.Timeout>()
 
+function resolveBundledNodePath(): string | null {
+    if (process.platform !== 'win32') {
+        return null
+    }
+
+    const nodePath = path.join(process.resourcesPath, 'node-runtime', 'win-x64', 'node.exe')
+    return fs.existsSync(nodePath) ? nodePath : null
+}
+
+function showBundledRuntimeMissingError(nodePath: string, serverPath: string): void {
+    const message = [
+        'Constella could not start its bundled backend runtime.',
+        '',
+        `Missing Node runtime: ${nodePath}`,
+        `Backend entry: ${serverPath}`,
+        '',
+        'Please reinstall Constella or download a complete installer package.'
+    ].join('\n')
+
+    dialog.showErrorBox('Constella Runtime Missing', message)
+}
+
 function ensureDir(targetPath: string): string {
     if (!fs.existsSync(targetPath)) {
         fs.mkdirSync(targetPath, { recursive: true })
@@ -1323,14 +1345,23 @@ function startBackendServer() {
     } else {
         const serverJsPath = path.join(process.resourcesPath, 'server', 'dist', 'server.js')
         serverCwd = path.join(process.resourcesPath, 'server')
+        const bundledNodePath = resolveBundledNodePath()
+        const expectedNodePath = path.join(process.resourcesPath, 'node-runtime', 'win-x64', 'node.exe')
 
         if (fs.existsSync(serverJsPath)) {
             serverPath = serverJsPath
-            command = 'node'
+            if (!bundledNodePath) {
+                console.error('[Electron] Bundled Node runtime not found at:', expectedNodePath)
+                showBundledRuntimeMissingError(expectedNodePath, serverJsPath)
+                return
+            }
+            command = bundledNodePath
             args = [serverJsPath]
             serverEnv = {
                 ...process.env,
-                NODE_ENV: 'production'
+                NODE_ENV: 'production',
+                CONSTELLA_BUNDLED_NODE: bundledNodePath,
+                PATH: `${path.dirname(bundledNodePath)}${path.delimiter}${process.env.PATH || ''}`
             }
         } else {
             console.error('[Electron] Backend script not found at:', serverJsPath)
