@@ -1,5 +1,10 @@
 # Constella User Guide
 
+## Note
+
+- Desktop installer: install and launch, no separate Node.js installation required
+- Desktop portable: unzip and run the executable, Node runtime is bundled
+
 ## 1. Scope
 
 - Client targets: Web and Electron desktop

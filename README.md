@@ -29,9 +29,12 @@
 > ### 项目定位
 >
 > - 本仓库是 Constella 的前端工程（Web + Electron），后端请使用 [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE)
-> - **软件（项目）需要拥有 Node.js 环境才能运行**
 > - Constella 关注“结构化思维表达”，而不是线性文档编辑
 > - 当前项目仍在持续迭代，欢迎通过 Issue 和 PR 参与改进
+
+> [!NOTE]
+> - **从源码开发/构建需要 Node.js 环境**
+> - **桌面发行版（installer / zip）已内置 Node.js 环境，终端用户无需额外安装**
 
 - 技术栈：Vue 3 + TypeScript + Vite + Electron + Yjs
 - 运行形态：Web 浏览器与 Electron 桌面端
@@ -42,7 +45,7 @@
 
 ### 快速开始
 
-1. 确保 Node.js 版本建议 22.*
+1. 开发者从源码运行时，请使用 Node.js 22.12.0
 2. 安装依赖：`npm install`
 3. 启动 Web 开发环境：`npm run dev`
 4. 启动 Electron 开发模式：`npm run dev:electron`
@@ -50,7 +53,10 @@
 
 ### 构建桌面端
 
-- 执行 `npm run build:electron`
+- 执行 `npm run version:bump -- 1.x.x` 更新版本号（构建前必做）
+- 执行 `npm run build:electron:release` 进行生产构建（一次性生成 installer + zip）
+- 或执行 `npm run build:electron:installer` 构建安装程序版本
+- 或执行 `npm run build:electron:zip` 构建 zip 版本
 - 构建输出目录在 `dist-electron/`
 
 ### 协作地址配置
@@ -155,7 +161,7 @@ npm run dev
 ### 打包构建
 
 - Web 产物：`npm run build`，输出至 `dist/`
-- Electron 客户端：`npm run build:electron`
+- Electron 客户端：`npm run build:electron` (包含内置 Node runtime)
 
 ### 部署建议
 

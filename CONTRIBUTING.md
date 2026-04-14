@@ -4,7 +4,11 @@ Thanks for contributing to Constella's web client. This repository contains the 
 
 ## Before You Start
 
-- Use Node.js `>=20.19.0 || >=22.12.0`
+> [!NOTE]
+> FOR USERS: Node is now bundled with the project, so no separate installation is needed!
+> FOR DEVELOPERS: The web client now uses Node.js `22.12.0` bundled with the project. No separate Node.js installation is required for development or production builds.
+
+- Use Node.js  `22.12.0`
 - Install dependencies with `npm install`
 - Read [README.md](./README.md) for project context and startup instructions
 - For editor-related changes, check [docs/EDITOR_GUIDE.md](./docs/EDITOR_GUIDE.md)
@@ -17,7 +21,7 @@ Common commands:
 - `npm run dev:electron`: start the Electron development flow
 - `npm run dev:electron-no-backend`: run Electron UI without starting the backend flow
 - `npm run build`: run type-checking and production build
-- `npm run build:electron`: build the Electron package
+- `npm run build:electron:release/zip/installer`: build the Electron package (Desktop artifacts bundle a Node runtime for end users, but not for development)
 
 ## What We Expect in Contributions
 

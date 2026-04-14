@@ -29,9 +29,12 @@
 > ### Project Scope
 >
 > - This repository is the frontend of Constella (Web + Electron). The backend is [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE)
-> - **The app requires a Node.js environment to run**
 > - Constella focuses on structure-first knowledge expression instead of linear documents
 > - The project is actively evolving; contributions via Issues and PRs are welcome
+
+> [!NOTE]
+> - **Running from source requires Node.js**
+> - **Desktop releases (installer/zip) include Node.js, no extra installation needed for end users**
 
 - Stack: Vue 3 + TypeScript + Vite + Electron + Yjs
 - Runtime: modern browsers and Electron desktop
@@ -42,7 +45,7 @@
 
 ### Quick Start
 
-1. Ensure Node.js (recommended >= 20)
+1. Use Node.js 22.12.0 for development and building from source
 2. Install dependencies: `npm install`
 3. Start Web dev server: `npm run dev`
 4. Start Electron dev mode: `npm run dev:electron`
@@ -50,7 +53,10 @@
 
 ### Build Desktop Package
 
-- Run `npm run build:electron`
+- Run `npm run version:bump -- 1.x.x` to update version number before building
+- Run `npm run build:electron:release` for production build (generates both installer and zip)
+- Run `npm run build:electron:installer` for installer version
+- Run `npm run build:electron:zip` for zip version
 - Build artifacts are generated in `dist-electron/`
 
 ### Collaboration Address Configuration
@@ -158,7 +164,7 @@ npm run dev
 ### Build Artifacts
 
 - Web build: `npm run build` outputs to `dist/`
-- Electron package: `npm run build:electron`
+- Electron package: `npm run build:electron` (includes built-in Node runtime)
 
 ### Deployment Notes
 
