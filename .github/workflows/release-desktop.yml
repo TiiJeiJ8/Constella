@@ -1,0 +1,137 @@
+name: Release Desktop
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: '要发布的标签，例如 v1.2.1'
+        required: true
+      prerelease:
+        description: '是否作为预发布版本'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      NODE_VERSION: 22.12.0
+      BACKEND_REPOSITORY: TiiJeiJ8/Constella_CORE
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag || github.ref_name }}
+      IS_PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.prerelease || 'false' }}
+
+    steps:
+      - name: 检出前端仓库
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 使用 PAT 检出后端仓库
+        if: ${{ secrets.CONSTELLA_CORE_PAT != '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.BACKEND_REPOSITORY }}
+          path: server
+          fetch-depth: 1
+          token: ${{ secrets.CONSTELLA_CORE_PAT }}
+
+      - name: 不使用 PAT 检出后端仓库
+        if: ${{ secrets.CONSTELLA_CORE_PAT == '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.BACKEND_REPOSITORY }}
+          path: server
+          fetch-depth: 1
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+
+      - name: 校验标签和版本号一致
+        run: |
+          $releaseTag = "${env:RELEASE_TAG}"
+          $frontendVersion = node -p "require('./package.json').version"
+          if ($frontendVersion -ne $releaseTag) {
+            throw "Release tag '$releaseTag' does not match package.json version '$frontendVersion'."
+          }
+
+      - name: 安装前端依赖
+        run: npm ci --no-audit --no-fund
+
+      - name: 安装后端依赖
+        working-directory: server
+        run: npm ci --no-audit --no-fund
+
+      - name: 构建桌面端发布产物
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: npm run build:electron:release
+
+      - name: 收集发布文件
+        id: artifacts
+        run: |
+          $artifactDir = Join-Path (Get-Location) 'release-assets'
+          if (Test-Path $artifactDir) {
+            Remove-Item -LiteralPath $artifactDir -Recurse -Force
+          }
+          New-Item -ItemType Directory -Path $artifactDir | Out-Null
+
+          $files = Get-ChildItem -Path 'dist-electron' -File | Where-Object {
+            $_.Extension -in @('.exe', '.zip', '.yml', '.blockmap')
+          }
+
+          if (-not $files) {
+            throw 'No release artifacts were found in dist-electron.'
+          }
+
+          $files | ForEach-Object {
+            Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $artifactDir $_.Name)
+          }
+
+          "artifact_dir=$artifactDir" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: 生成发布说明
+        id: notes
+        run: |
+          $notesPath = Join-Path $env:RUNNER_TEMP 'release-notes.md'
+          @"
+          ## 桌面端发布
+
+          - 前端标签：`${{ env.RELEASE_TAG }}`
+          - 后端仓库：`${{ env.BACKEND_REPOSITORY }}`
+          - 工作流运行记录：${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          ## 包含产物
+
+          - Windows 安装包（`.exe`）
+          - Windows 压缩包（`.zip`）
+
+          下方会附加 GitHub 自动生成的变更说明。
+          "@ | Set-Content -LiteralPath $notesPath -Encoding utf8
+
+          "notes_path=$notesPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: 创建 GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: Constella ${{ env.RELEASE_TAG }}
+          prerelease: ${{ env.IS_PRERELEASE == 'true' }}
+          generate_release_notes: true
+          append_body: true
+          body_path: ${{ steps.notes.outputs.notes_path }}
+          files: ${{ steps.artifacts.outputs.artifact_dir }}\*
