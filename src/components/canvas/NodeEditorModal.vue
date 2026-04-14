@@ -368,6 +368,18 @@
                                                     {{ replaceLabel }}
                                                 </button>
                                             </div>
+                                            <div v-if="searchScope === 'room' && roomSearchTypeOptions.length > 1" class="editor-search-filters">
+                                                <button
+                                                    v-for="option in roomSearchTypeOptions"
+                                                    :key="option.value"
+                                                    type="button"
+                                                    class="editor-search-filter"
+                                                    :class="{ active: roomSearchKindFilter === option.value }"
+                                                    @click="roomSearchKindFilter = option.value"
+                                                >
+                                                    {{ option.label }}
+                                                </button>
+                                            </div>
                                             <div v-if="replaceBarOpen && searchScope === 'current'" class="editor-search-row replace-row">
                                                 <input
                                                     ref="replaceInputRef"
@@ -410,11 +422,14 @@
                                                     type="button"
                                                     class="editor-search-result"
                                                     :class="{ active: index === activeRoomSearchIndex }"
-                                                    @click="jumpToRoomSearchResult(index)"
+                                                    @click="activeRoomSearchIndex = index"
+                                                    @dblclick="jumpToRoomSearchResult(index)"
                                                 >
                                                     <span class="editor-search-result-title" v-html="result.titleHtml" />
                                                     <span class="editor-search-result-snippet">{{ result.snippet }}</span>
-                                                    <span class="editor-search-result-meta">{{ result.matchCount }} match<span v-if="result.matchCount > 1">es</span></span>
+                                                    <span class="editor-search-result-meta">
+                                                        {{ result.kindLabel }} - {{ result.matchCount }} match<span v-if="result.matchCount > 1">es</span>
+                                                    </span>
                                                 </button>
                                             </div>
                                         </div>
@@ -946,6 +961,7 @@ const replaceQuery = ref('')
 const searchMatchCase = ref(false)
 const searchWholeWord = ref(false)
 const searchUseRegex = ref(false)
+const roomSearchKindFilter = ref<'all' | string>('all')
 const currentSearchIndex = ref(0)
 const activeRoomSearchIndex = ref(0)
 const showSlashMenu = ref(false)
@@ -981,6 +997,8 @@ const splitRatio = ref<SplitRatioMode>('balanced')
 
 type RoomSearchResult = {
     nodeId: string
+    kind: string
+    kindLabel: string
     titleHtml: string
     snippet: string
     matchIndex: number
@@ -1405,6 +1423,7 @@ const searchRegexLabel = computed(() => locale.value === 'zh-CN' ? '正则' : 'R
 const replaceLabel = computed(() => locale.value === 'zh-CN' ? '替换' : 'Replace')
 const replaceAllLabel = computed(() => locale.value === 'zh-CN' ? '全部替换' : 'Replace all')
 const roomReplaceHintLabel = computed(() => locale.value === 'zh-CN' ? '房间范围暂不支持替换' : 'Replace is only available in the current node')
+const allNodeTypesLabel = computed(() => locale.value === 'zh-CN' ? '全部类型' : 'All types')
 
 type SearchMatch = { start: number; end: number; text: string }
 
@@ -1470,9 +1489,47 @@ function collectMatches(content: string): SearchMatch[] {
     return matches
 }
 
+function getNodeKindLabel(kind: string) {
+    const meta = pluginRegistry.getMeta(kind)
+    if (te(`canvas.nodeTypes.${kind}`)) return t(`canvas.nodeTypes.${kind}`)
+    return meta?.label || kind
+}
+
 const currentSearchMatches = computed(() => collectMatches(localContent.value))
 
 const hasCurrentSearchMatches = computed(() => currentSearchMatches.value.length > 0)
+
+const roomSearchTypeOptions = computed(() => {
+    pluginCatalogVersion.value
+
+    const kindsInRoom = new Set(
+        (props.allNodes || [])
+            .map(node => node.content?.kind)
+            .filter((kind): kind is string => Boolean(kind))
+    )
+
+    return [
+        { value: 'all', label: allNodeTypesLabel.value },
+        ...Array.from(kindsInRoom)
+            .sort((left, right) => getNodeKindLabel(left).localeCompare(getNodeKindLabel(right), locale.value))
+            .map(kind => ({
+                value: kind,
+                label: getNodeKindLabel(kind)
+            }))
+    ]
+})
+
+const selectedRoomSearchTypeLabel = computed(() => {
+    const selected = roomSearchTypeOptions.value.find(option => option.value === roomSearchKindFilter.value)
+    return selected?.label || allNodeTypesLabel.value
+})
+
+const filteredRoomSearchNodes = computed(() => {
+    const selectedKind = roomSearchKindFilter.value
+    return (props.allNodes || []).filter(node => (
+        selectedKind === 'all' || (node.content?.kind || 'blank') === selectedKind
+    ))
+})
 
 const currentSearchStatusLabel = computed(() => {
     if (!trimmedSearchQuery.value) {
@@ -1493,7 +1550,7 @@ const currentSearchStatusLabel = computed(() => {
 const roomSearchResults = computed<RoomSearchResult[]>(() => {
     if (!trimmedSearchQuery.value || searchPatternError.value) return []
 
-    return (props.allNodes || [])
+    return filteredRoomSearchNodes.value
         .flatMap(node => {
             const data = String(node.content?.data || '')
             const matches = collectMatches(data)
@@ -1506,9 +1563,12 @@ const roomSearchResults = computed<RoomSearchResult[]>(() => {
             const snippetStart = Math.max(0, matchIndex - 24)
             const snippetEnd = Math.min(data.length, firstMatch.end + 36)
             const snippet = data.slice(snippetStart, snippetEnd).replace(/\s+/g, ' ').trim()
+            const kind = node.content?.kind || 'blank'
 
             return [{
                 nodeId: node.id,
+                kind,
+                kindLabel: getNodeKindLabel(kind),
                 titleHtml: escapeHtml(title),
                 snippet: snippet || title,
                 matchIndex,
@@ -1520,18 +1580,22 @@ const roomSearchResults = computed<RoomSearchResult[]>(() => {
 
 const roomSearchStatusLabel = computed(() => {
     if (!trimmedSearchQuery.value) {
-        return locale.value === 'zh-CN' ? '可搜索房间内所有节点内容' : 'Search across all node contents in this room'
+        return locale.value === 'zh-CN'
+            ? `可搜索房间内${selectedRoomSearchTypeLabel.value}节点内容`
+            : `Search across ${selectedRoomSearchTypeLabel.value.toLowerCase()} node contents in this room`
     }
     if (searchPatternError.value) {
         return locale.value === 'zh-CN' ? `正则无效：${searchPatternError.value}` : `Invalid regex: ${searchPatternError.value}`
     }
     if (roomSearchResults.value.length === 0) {
-        return locale.value === 'zh-CN' ? '房间内无结果' : 'No room-wide matches'
+        return locale.value === 'zh-CN'
+            ? `${selectedRoomSearchTypeLabel.value}节点中无结果`
+            : `No ${selectedRoomSearchTypeLabel.value.toLowerCase()} matches in this room`
     }
 
     return locale.value === 'zh-CN'
-        ? `找到 ${roomSearchResults.value.length} 个节点，回车可跳转`
-        : `${roomSearchResults.value.length} matching nodes, press Enter to jump`
+        ? `在${selectedRoomSearchTypeLabel.value}节点中找到 ${roomSearchResults.value.length} 个结果，双击或回车可跳转`
+        : `${roomSearchResults.value.length} matching ${selectedRoomSearchTypeLabel.value.toLowerCase()} nodes, double-click or press Enter to jump`
 })
 
 const editorTextareaStyle = computed(() => {
@@ -3159,7 +3223,7 @@ watch(() => props.content.data, (newData) => {
     }
 })
 
-watch([trimmedSearchQuery, searchMatchCase, searchWholeWord, searchUseRegex], () => {
+watch([trimmedSearchQuery, searchMatchCase, searchWholeWord, searchUseRegex, roomSearchKindFilter], () => {
     currentSearchIndex.value = 0
     activeRoomSearchIndex.value = 0
 })
@@ -3175,6 +3239,12 @@ watch(currentSearchMatches, (matches) => {
 
 watch(roomSearchResults, (results) => {
     activeRoomSearchIndex.value = Math.min(activeRoomSearchIndex.value, Math.max(0, results.length - 1))
+})
+
+watch(roomSearchTypeOptions, (options) => {
+    if (!options.some(option => option.value === roomSearchKindFilter.value)) {
+        roomSearchKindFilter.value = 'all'
+    }
 })
 
 watch(searchScope, (scope) => {
@@ -3299,8 +3369,12 @@ onUnmounted(() => {
 .editor-search-input:focus { border-color: rgba(96, 165, 250, 0.68); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14); }
 .editor-search-scope { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); }
 .editor-search-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.editor-search-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .editor-search-option { border: none; padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.66); font-size: 12px; font-weight: 700; cursor: pointer; transition: background 0.18s ease, color 0.18s ease; }
 .editor-search-option.active { background: rgba(96, 165, 250, 0.18); color: #dbeafe; }
+.editor-search-filter { border: none; padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.72); font-size: 12px; font-weight: 700; cursor: pointer; transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease; }
+.editor-search-filter.active { background: rgba(34, 197, 94, 0.18); color: #dcfce7; }
+.editor-search-filter:hover { transform: translateY(-1px); }
 .editor-search-scope-btn, .editor-search-nav, .editor-search-result, .editor-search-close { border: none; cursor: pointer; }
 .editor-search-scope-btn { min-width: 64px; height: 30px; padding: 0 10px; border-radius: 999px; background: transparent; color: rgba(255, 255, 255, 0.62); font-size: 12px; font-weight: 700; }
 .editor-search-scope-btn.active { background: rgba(96, 165, 250, 0.18); color: #dbeafe; }
@@ -3615,8 +3689,10 @@ html[data-theme='light'] .editor-settings-reset:hover { background: rgba(0, 0, 0
 html[data-theme='light'] .editor-search-input { border-color: rgba(0, 0, 0, 0.08); background: rgba(0, 0, 0, 0.03); color: rgba(0, 0, 0, 0.88); }
 html[data-theme='light'] .editor-search-scope { background: rgba(0, 0, 0, 0.06); }
 html[data-theme='light'] .editor-search-option { background: rgba(0, 0, 0, 0.05); color: rgba(0, 0, 0, 0.62); }
+html[data-theme='light'] .editor-search-filter { background: rgba(0, 0, 0, 0.04); color: rgba(0, 0, 0, 0.68); }
 html[data-theme='light'] .editor-search-scope-btn { color: rgba(0, 0, 0, 0.6); }
 html[data-theme='light'] .editor-search-scope-btn.active, html[data-theme='light'] .editor-search-option.active { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
+html[data-theme='light'] .editor-search-filter.active { background: rgba(34, 197, 94, 0.14); color: #166534; }
 html[data-theme='light'] .editor-search-close, html[data-theme='light'] .editor-search-nav, html[data-theme='light'] .editor-search-result { background: rgba(0, 0, 0, 0.05); color: rgba(0, 0, 0, 0.82); }
 html[data-theme='light'] .editor-search-meta, html[data-theme='light'] .editor-search-result-snippet, html[data-theme='light'] .editor-search-result-meta { color: rgba(0, 0, 0, 0.54); }
 html[data-theme='light'] .editor-search-result.active { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.12); }
