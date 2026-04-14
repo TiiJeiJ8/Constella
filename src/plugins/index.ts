@@ -94,6 +94,14 @@ class PluginRegistry {
     private developmentPlugins: DevelopmentPluginRecord[] = []
     private builtinKinds: Set<string> = new Set()
     private pluginDiagnostics: PluginDiagnosticRecord[] = []
+    private pluginDiagnosticsListeners: Set<(diagnostics: PluginDiagnosticRecord[]) => void> = new Set()
+
+    private emitPluginDiagnostics(): void {
+        const snapshot = [...this.pluginDiagnostics]
+        for (const listener of this.pluginDiagnosticsListeners) {
+            listener(snapshot)
+        }
+    }
 
     /**
      * 注册插件
@@ -213,6 +221,7 @@ class PluginRegistry {
             ...diagnostics
         ].sort((left, right) => right.timestamp.localeCompare(left.timestamp))
         pluginCatalogVersion.value += 1
+        this.emitPluginDiagnostics()
     }
 
     reportPluginDiagnostic(diagnostic: PluginDiagnosticRecord): void {
@@ -224,6 +233,7 @@ class PluginRegistry {
         }
         this.pluginDiagnostics.sort((left, right) => right.timestamp.localeCompare(left.timestamp))
         pluginCatalogVersion.value += 1
+        this.emitPluginDiagnostics()
     }
 
     clearPluginDiagnostics(source?: PluginDiagnosticSource): void {
@@ -231,12 +241,21 @@ class PluginRegistry {
             ? this.pluginDiagnostics.filter(item => item.source !== source)
             : []
         pluginCatalogVersion.value += 1
+        this.emitPluginDiagnostics()
     }
 
     getPluginDiagnostics(source?: PluginDiagnosticSource): PluginDiagnosticRecord[] {
         return source
             ? this.pluginDiagnostics.filter(item => item.source === source)
             : [...this.pluginDiagnostics]
+    }
+
+    subscribePluginDiagnostics(listener: (diagnostics: PluginDiagnosticRecord[]) => void): () => void {
+        this.pluginDiagnosticsListeners.add(listener)
+        listener([...this.pluginDiagnostics])
+        return () => {
+            this.pluginDiagnosticsListeners.delete(listener)
+        }
     }
 
     /**
@@ -250,6 +269,7 @@ class PluginRegistry {
         this.builtinKinds.clear()
         this.pluginDiagnostics = []
         pluginCatalogVersion.value += 1
+        this.emitPluginDiagnostics()
     }
 }
 

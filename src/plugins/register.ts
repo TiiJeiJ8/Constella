@@ -12,7 +12,9 @@ import { registerDevelopmentPluginsRuntime, registerInstalledPluginsRuntime } fr
 let hasRegistered = false
 let developmentPluginReloadToken = `${Date.now()}`
 let hasBoundDevelopmentPluginWatcher = false
+let hasBoundDevelopmentPluginDiagnosticWatcher = false
 let developmentPluginReloadTimer: number | null = null
+let lastDevelopmentDiagnosticFingerprints = new Set<string>()
 const toast = useToast()
 
 function isDeveloperModeEnabled(): boolean {
@@ -69,10 +71,12 @@ async function performPluginRegistration() {
     await registerInstalledPluginsRuntime(installedPlugins)
 
     console.log('[Plugins] Auto-registered:', pluginRegistry.getRegisteredKinds())
+    updateDevelopmentDiagnosticFingerprints()
 }
 
 export async function registerPlugins() {
     bindDevelopmentPluginWatcher()
+    bindDevelopmentPluginDiagnosticWatcher()
     if (hasRegistered) return
     hasRegistered = true
     await performPluginRegistration()
@@ -104,10 +108,64 @@ function bindDevelopmentPluginWatcher() {
                 await reloadPlugins()
                 const changedTarget = payload.changedPath || payload.sourcePath
                 toast.info(`Development plugin reloaded: ${changedTarget}`)
+                notifyNewDevelopmentPluginErrors()
             } catch (error) {
                 const message = error instanceof Error ? error.message : String(error)
                 toast.error(`Development plugin reload failed: ${message}`)
             }
         }, 220)
     })
+}
+
+function bindDevelopmentPluginDiagnosticWatcher() {
+    if (hasBoundDevelopmentPluginDiagnosticWatcher) return
+    hasBoundDevelopmentPluginDiagnosticWatcher = true
+
+    pluginRegistry.subscribePluginDiagnostics(diagnostics => {
+        if (!isDeveloperModeEnabled()) {
+            updateDevelopmentDiagnosticFingerprints()
+            return
+        }
+
+        notifyNewDevelopmentPluginErrorsFromDiagnostics(diagnostics)
+    })
+}
+
+function createDiagnosticFingerprint(diagnostic: {
+    id: string
+    timestamp: string
+}) {
+    return `${diagnostic.id}:${diagnostic.timestamp}`
+}
+
+function updateDevelopmentDiagnosticFingerprints() {
+    lastDevelopmentDiagnosticFingerprints = new Set(
+        pluginRegistry
+            .getPluginDiagnostics('development')
+            .map(createDiagnosticFingerprint)
+    )
+}
+
+function notifyNewDevelopmentPluginErrors() {
+    const diagnostics = pluginRegistry.getPluginDiagnostics('development')
+    notifyNewDevelopmentPluginErrorsFromDiagnostics(diagnostics)
+}
+
+function notifyNewDevelopmentPluginErrorsFromDiagnostics(diagnostics: ReturnType<typeof pluginRegistry.getPluginDiagnostics>) {
+    const nextFingerprints = new Set(diagnostics.map(createDiagnosticFingerprint))
+    const newErrors = diagnostics.filter(diagnostic =>
+        diagnostic.source === 'development' &&
+        diagnostic.severity === 'error' &&
+        !lastDevelopmentDiagnosticFingerprints.has(createDiagnosticFingerprint(diagnostic))
+    )
+
+    lastDevelopmentDiagnosticFingerprints = nextFingerprints
+
+    if (newErrors.length === 0) return
+
+    const firstError = newErrors[0]
+    if (!firstError) return
+    const pluginLabel = firstError.pluginName || firstError.pluginId || 'development plugin'
+    const suffix = newErrors.length > 1 ? ` (+${newErrors.length - 1} more)` : ''
+    toast.error(`Plugin error detected in ${pluginLabel}. Open Settings > Plugins > Plugin Diagnostics.${suffix}`, 7000)
 }
