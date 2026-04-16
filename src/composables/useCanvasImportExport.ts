@@ -1,4 +1,4 @@
-import * as Y from 'yjs'
+﻿import * as Y from 'yjs'
 import { ref, type ComputedRef, type Ref } from 'vue'
 import { exportCanvas } from '@/utils/canvasExport'
 
@@ -48,6 +48,8 @@ interface UseCanvasImportExportOptions {
     yjs: { doc: Y.Doc | null }
     yjsNodes: any
     yjsEdges: any
+    canEditCanvas?: Ref<boolean>
+    canManageSnapshots?: Ref<boolean>
     t: (key: string, params?: Record<string, unknown>) => string
     toast: { success: (message: string) => void; error: (message: string) => void }
 }
@@ -63,6 +65,8 @@ export function useCanvasImportExport(options: UseCanvasImportExportOptions) {
         yjs,
         yjsNodes,
         yjsEdges,
+        canEditCanvas,
+        canManageSnapshots,
         t,
         toast
     } = options
@@ -70,6 +74,10 @@ export function useCanvasImportExport(options: UseCanvasImportExportOptions) {
     const roomSnapshots = ref<any[]>([])
 
     function handleSnapshotCreate(snapshotData: any) {
+        if (canEditCanvas && !canEditCanvas.value) {
+            toast.error(t('canvas.permissionDenied'))
+            return
+        }
         const snapshot = {
             ...snapshotData,
             state: {
@@ -91,12 +99,16 @@ export function useCanvasImportExport(options: UseCanvasImportExportOptions) {
             }
         }
 
-        if (!snapshotData.auto) {
+        if (!snapshotData.auto && snapshotData.silentToast !== true) {
             toast.success(t('canvas.toast.snapshotCreated'))
         }
     }
 
     function handleSnapshotRestore(snapshot: any) {
+        if (canManageSnapshots && !canManageSnapshots.value) {
+            toast.error(t('canvas.permissionDenied'))
+            return
+        }
         if (!snapshot.state) {
             console.warn('[Canvas] Snapshot has no state data')
             return
@@ -163,6 +175,10 @@ export function useCanvasImportExport(options: UseCanvasImportExportOptions) {
     }
 
     function handleSnapshotDelete(snapshotId: string) {
+        if (canManageSnapshots && !canManageSnapshots.value) {
+            toast.error(t('canvas.permissionDenied'))
+            return
+        }
         const index = roomSnapshots.value.findIndex(snapshot => snapshot.id === snapshotId)
         if (index !== -1) {
             roomSnapshots.value.splice(index, 1)
@@ -172,9 +188,10 @@ export function useCanvasImportExport(options: UseCanvasImportExportOptions) {
     function handleTopBarSnapshot() {
         handleSnapshotCreate({
             id: `snapshot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            name: `快照 ${new Date().toLocaleTimeString('zh-CN')}`,
+            name: `${t('canvas.history.snapshot')} ${new Date().toLocaleTimeString(localStorage.getItem('locale') === 'zh-CN' ? 'zh-CN' : 'en-US')}`,
             createdAt: new Date().toISOString(),
-            auto: false
+            auto: false,
+            silentToast: true
         })
     }
 
@@ -244,6 +261,10 @@ export function useCanvasImportExport(options: UseCanvasImportExportOptions) {
 
     function handleImport(data: any) {
         try {
+            if (canEditCanvas && !canEditCanvas.value) {
+                toast.error(t('canvas.permissionDenied'))
+                return
+            }
             if (!data || typeof data !== 'object') {
                 toast.error(t('canvas.topBar.importError'))
                 return
@@ -333,3 +354,4 @@ export function useCanvasImportExport(options: UseCanvasImportExportOptions) {
         handleImport
     }
 }
+

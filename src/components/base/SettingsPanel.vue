@@ -137,6 +137,40 @@
                             </div>
 
                             <div class="setting-item setting-item-column">
+                                <label class="setting-label">
+                                    <span>{{ locale === 'zh-CN' ? '界面缩放' : 'Interface Scale' }}</span>
+                                    <span class="setting-subtext">
+                                        {{ locale === 'zh-CN'
+                                            ? '适配不同尺寸屏幕。较小屏幕建议 90%-95%，大屏可使用 100%-110%。'
+                                            : 'Adjusts the UI for different screen sizes. Smaller screens usually work best at 90%-95%.' }}
+                                    </span>
+                                </label>
+                                <div class="scale-presets">
+                                    <button
+                                        v-for="preset in uiScalePresets"
+                                        :key="preset.value"
+                                        type="button"
+                                        class="scale-preset-btn"
+                                        :class="{ active: settingsData.uiScale === preset.value }"
+                                        @click="settingsData.uiScale = preset.value"
+                                    >
+                                        {{ preset.label }}
+                                    </button>
+                                </div>
+                                <div class="scale-slider-row">
+                                    <input
+                                        v-model.number="settingsData.uiScale"
+                                        type="range"
+                                        min="85"
+                                        max="115"
+                                        step="5"
+                                        class="scale-slider"
+                                    />
+                                    <span class="scale-value">{{ settingsData.uiScale }}%</span>
+                                </div>
+                            </div>
+
+                            <div class="setting-item setting-item-column">
                                 <label class="setting-label">{{ t('settings.appearance.markdownLodThreshold') }}</label>
                                 <input
                                     v-model.number="settingsData.performance.markdownLodScaleThreshold"
@@ -388,8 +422,8 @@ const categories = [
     { key: 'account', icon: UserIcon },
     { key: 'general', icon: SettingIcon },
     { key: 'appearance', icon: PaletteIcon },
-    { key: 'developer', icon: CodeIcon },
     { key: 'plugins', icon: AddIcon },
+    { key: 'developer', icon: CodeIcon },
     { key: 'shortcuts', icon: KeyboardIcon },
     { key: 'about', icon: InfoCircleIcon }
 ]
@@ -436,6 +470,12 @@ function normalizeMarkdownLodScaleThreshold(value) {
     return Math.max(0.1, Math.min(3, n))
 }
 
+function normalizeUiScale(value) {
+    const n = Number(value)
+    if (!Number.isFinite(n)) return 100
+    return Math.max(85, Math.min(115, Math.round(n / 5) * 5))
+}
+
 // 设置数据（仅保留必要项）
 const settingsData = reactive({
     // 账户信息
@@ -449,6 +489,7 @@ const settingsData = reactive({
     developerMode: false,
     // 外观设置（仅保留主题）
     theme: 'light',
+    uiScale: 100,
     // 快捷键
     shortcuts: { ...defaultShortcuts },
     // 性能相关
@@ -461,6 +502,46 @@ const installedPlugins = ref([])
 const pluginBusy = ref(false)
 const pluginError = ref('')
 const supportsPluginManagement = computed(() => Boolean(window.electron?.listInstalledPlugins))
+const uiScalePresets = computed(() => locale.value === 'zh-CN'
+    ? [
+        { value: 90, label: '紧凑 90%' },
+        { value: 100, label: '标准 100%' },
+        { value: 110, label: '宽松 110%' }
+    ]
+    : [
+        { value: 90, label: 'Compact 90%' },
+        { value: 100, label: 'Default 100%' },
+        { value: 110, label: 'Large 110%' }
+    ]
+)
+const settingsCopy = computed(() => ({
+    uiScaleTitle: locale.value === 'zh-CN' ? '界面缩放' : 'Interface Scale',
+    uiScaleHint: locale.value === 'zh-CN'
+        ? '适配不同尺寸屏幕。较小屏幕建议 90%-95%，大屏可使用 100%-110%。'
+        : 'Adjusts the UI for different screen sizes. Smaller screens usually work best at 90%-95%.',
+    aboutTitle: locale.value === 'zh-CN' ? '关于' : 'About',
+    aboutSubtitle: locale.value === 'zh-CN'
+        ? '在设置页中快速查看当前软件的关键信息。'
+        : 'Quick product information for the current app window.',
+    openRepository: locale.value === 'zh-CN' ? '打开仓库' : 'Open Repository',
+    developerTitle: locale.value === 'zh-CN' ? '开发者设置' : 'Developer Settings',
+    developerModeTitle: locale.value === 'zh-CN' ? '开发者模式' : 'Developer Mode',
+    developerModeHint: locale.value === 'zh-CN'
+        ? '开启后显示开发插件目录加载入口与开发插件列表。'
+        : 'Show development plugin loading entry points and development plugin lists.',
+    performancePanelHint: locale.value === 'zh-CN'
+        ? '控制画布性能面板显示；需同时开启开发者模式。'
+        : 'Controls the canvas performance panel. Developer mode must also be enabled.',
+    developerCategory: locale.value === 'zh-CN' ? '开发者' : 'Developer',
+    pluginsCategory: locale.value === 'zh-CN' ? '插件' : 'Plugins',
+    aboutCategory: locale.value === 'zh-CN' ? '关于' : 'About',
+    clearCacheConfirm: locale.value === 'zh-CN' ? '确定要清除缓存吗？' : 'Are you sure to clear cache?',
+    clearCacheDone: locale.value === 'zh-CN' ? '缓存已清除，请重启应用' : 'Cache cleared, please restart the app',
+    removePluginConfirm: (pluginName) => locale.value === 'zh-CN'
+        ? `确定删除插件“${pluginName}”吗？`
+        : `Remove plugin "${pluginName}"?`
+}))
+
 const pluginText = computed(() => {
     if (locale.value === 'zh-CN') {
         return {
@@ -537,6 +618,7 @@ const loadSettings = () => {
     settingsData.performance.markdownLodScaleThreshold = normalizeMarkdownLodScaleThreshold(
         settingsData.performance.markdownLodScaleThreshold
     )
+    settingsData.uiScale = normalizeUiScale(parsed.uiScale ?? settingsData.uiScale)
 
     // 优先使用 localStorage 中的 theme 和 locale 值
     const savedTheme = localStorage.getItem('theme')
@@ -578,6 +660,7 @@ const saveSettings = () => {
     settingsData.performance.markdownLodScaleThreshold = normalizeMarkdownLodScaleThreshold(
         settingsData.performance.markdownLodScaleThreshold
     )
+    settingsData.uiScale = normalizeUiScale(settingsData.uiScale)
     settingsData.performance.showCanvasPerformancePanel = settingsData.performance.showCanvasPerformancePanel !== false
 
     const payload = JSON.stringify(settingsData)
@@ -609,6 +692,8 @@ const applySettings = () => {
         document.documentElement.setAttribute('data-theme', settingsData.theme)
         localStorage.setItem('theme', settingsData.theme)
     }
+
+    document.documentElement.style.zoom = `${normalizeUiScale(settingsData.uiScale) / 100}`
 
     if (settingsData.developerMode !== lastAppliedDeveloperMode.value) {
         lastAppliedDeveloperMode.value = settingsData.developerMode === true
@@ -1226,6 +1311,54 @@ applySettings()
 
 .setting-item.setting-item-column .setting-input {
     width: min(220px, 100%);
+}
+
+.scale-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.scale-preset-btn {
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.scale-preset-btn:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.scale-preset-btn.active {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #fff;
+}
+
+.scale-slider-row {
+    width: min(320px, 100%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.scale-slider {
+    flex: 1;
+    accent-color: var(--accent-primary);
+}
+
+.scale-value {
+    min-width: 48px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-align: right;
 }
 
 .setting-hint {

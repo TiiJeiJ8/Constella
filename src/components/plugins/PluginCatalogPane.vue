@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <section class="plugin-pane">
         <div class="plugin-pane-header">
             <div class="plugin-pane-heading">
@@ -18,23 +18,13 @@
                 :disabled="busy"
                 @click="openPackagePicker"
             >
-                <div class="plugin-import-sidebar">
-                    <div class="plugin-import-badge">{{ text.packageBadge }}</div>
-                    <div class="plugin-import-emblem">
-                        <div class="plugin-import-emblem-core">
-                            <span class="plugin-import-emblem-line plugin-import-emblem-line-v"></span>
-                            <span class="plugin-import-emblem-line plugin-import-emblem-line-h"></span>
-                        </div>
-                    </div>
-                </div>
-
+                <span class="plugin-import-glyph" aria-hidden="true">📦</span>
                 <div class="plugin-import-main">
-                    <div class="plugin-import-title">{{ busy ? text.packageTitleBusy : text.packageTitle }}</div>
-                    <div class="plugin-import-description">{{ text.packageDescription }}</div>
-                    <div class="plugin-import-pills">
-                        <span class="plugin-import-pill">{{ text.packagePillPrimary }}</span>
-                        <span class="plugin-import-pill">{{ text.packagePillCompat }}</span>
+                    <div class="plugin-import-title-row">
+                        <div class="plugin-import-title">{{ busy ? text.packageTitleBusy : text.packageTitle }}</div>
+                        <div class="plugin-import-badge">{{ text.packageBadge }}</div>
                     </div>
+                    <div class="plugin-import-description">{{ text.packageDescription }}</div>
                     <div class="plugin-import-hint">{{ text.packageHint }}</div>
                 </div>
             </button>
@@ -47,23 +37,13 @@
                 :disabled="busy"
                 @click="openDevelopmentPicker"
             >
-                <div class="plugin-import-sidebar">
-                    <div class="plugin-import-badge plugin-import-badge-dev">{{ text.developmentBadge }}</div>
-                    <div class="plugin-import-emblem plugin-import-emblem-dev">
-                        <div class="plugin-import-emblem-core">
-                            <span class="plugin-import-emblem-line plugin-import-emblem-line-v"></span>
-                            <span class="plugin-import-emblem-line plugin-import-emblem-line-h"></span>
-                        </div>
-                    </div>
-                </div>
-
+                <span class="plugin-import-glyph plugin-import-glyph-dev" aria-hidden="true">🧪</span>
                 <div class="plugin-import-main">
-                    <div class="plugin-import-title">{{ busy ? text.developmentTitleBusy : text.developmentTitle }}</div>
-                    <div class="plugin-import-description">{{ text.developmentDescription }}</div>
-                    <div class="plugin-import-pills">
-                        <span class="plugin-import-pill">{{ text.developmentPillFolder }}</span>
-                        <span class="plugin-import-pill">{{ text.developmentPillManifest }}</span>
+                    <div class="plugin-import-title-row">
+                        <div class="plugin-import-title">{{ busy ? text.developmentTitleBusy : text.developmentTitle }}</div>
+                        <div class="plugin-import-badge plugin-import-badge-dev">{{ text.developmentBadge }}</div>
                     </div>
+                    <div class="plugin-import-description">{{ text.developmentDescription }}</div>
                     <div class="plugin-import-hint">{{ text.developmentHint }}</div>
                 </div>
             </button>
@@ -277,11 +257,11 @@ const developmentDiagnostics = computed<PluginDiagnosticRecord[]>(() => {
 const text = computed(() => locale.value === 'zh-CN'
     ? {
         title: '插件',
-        description: '这里展示内置正式节点、开发插件与已安装插件，并为未来插件市场预留界面。',
+        description: '这里展示内置节点、开发插件、已安装插件，以及后续预留的插件市场区域。',
         refresh: '刷新',
         remove: '移除',
-        desktopOnly: '插件安装与开发加载仅在 Electron 桌面端可用。',
-        builtinTitle: '正式节点',
+        desktopOnly: '插件安装与开发加载仅在 Electron 桌面版中可用。',
+        builtinTitle: '内置节点',
         developmentListTitle: '开发插件',
         installedTitle: '已安装插件',
         builtinTag: '内置',
@@ -290,23 +270,19 @@ const text = computed(() => locale.value === 'zh-CN'
         author: '作者',
         source: '来源',
         path: '路径',
-        addedAt: '加载时间',
+        addedAt: '添加时间',
         installedAt: '安装时间',
         nodeKinds: '节点类型',
         packageTitle: '导入插件安装包',
-        packageTitleBusy: '正在导入安装包…',
-        packageDescription: '面向普通用户，推荐导入 `.constella-plugin` 安装包，也兼容 `.zip`。',
-        packageHint: '点击打开文件选择器，导入插件安装包。',
-        packageBadge: 'Package',
-        packagePillPrimary: '.constella-plugin',
-        packagePillCompat: '.zip',
+        packageTitleBusy: '正在导入安装包...',
+        packageDescription: '推荐导入 `.constella-plugin` 安装包，也兼容 `.zip` 格式。',
+        packageHint: '点击选择文件并完成安装。',
+        packageBadge: '安装包',
         developmentTitle: '加载开发插件目录',
-        developmentTitleBusy: '正在加载开发插件…',
-        developmentDescription: '面向开发者，选择包含 `manifest.json` 的插件目录进行本地调试加载。',
-        developmentHint: '点击打开目录选择器，不会复制源码目录内容。',
-        developmentBadge: 'Development',
-        developmentPillFolder: 'Plugin Folder',
-        developmentPillManifest: 'manifest.json',
+        developmentTitleBusy: '正在加载开发插件...',
+        developmentDescription: '选择包含 `manifest.json` 的插件目录，用于本地调试与迭代。',
+        developmentHint: '点击选择目录，源文件不会被复制。',
+        developmentBadge: '开发',
         packageSource: '安装包',
         directorySource: '目录',
         developmentSource: '开发目录',
@@ -322,7 +298,7 @@ const text = computed(() => locale.value === 'zh-CN'
     }
     : {
         title: 'Plugins',
-        description: 'This view shows built-in official nodes, development plugins, installed plugins, and a reserved marketplace area.',
+        description: 'This view shows built-in nodes, development plugins, installed plugins, and a reserved marketplace area.',
         refresh: 'Refresh',
         remove: 'Remove',
         desktopOnly: 'Plugin installation and development loading are only available in the Electron desktop app.',
@@ -339,19 +315,15 @@ const text = computed(() => locale.value === 'zh-CN'
         installedAt: 'Installed',
         nodeKinds: 'Node kinds',
         packageTitle: 'Import Plugin Package',
-        packageTitleBusy: 'Importing package…',
-        packageDescription: 'For end users, prefer `.constella-plugin` packages, with `.zip` as a compatibility format.',
-        packageHint: 'Click to open the file picker and import a plugin package.',
+        packageTitleBusy: 'Importing package...',
+        packageDescription: 'Prefer `.constella-plugin` packages, with `.zip` as a compatibility format.',
+        packageHint: 'Choose a file to install the plugin.',
         packageBadge: 'Package',
-        packagePillPrimary: '.constella-plugin',
-        packagePillCompat: '.zip',
         developmentTitle: 'Load Development Plugin',
-        developmentTitleBusy: 'Loading development plugin…',
-        developmentDescription: 'For developers, choose a plugin directory that contains `manifest.json` for local iteration.',
-        developmentHint: 'Click to open the folder picker. Source files stay in place.',
+        developmentTitleBusy: 'Loading development plugin...',
+        developmentDescription: 'Choose a plugin directory that contains `manifest.json` for local iteration.',
+        developmentHint: 'Choose a folder. Source files stay in place.',
         developmentBadge: 'Development',
-        developmentPillFolder: 'Plugin Folder',
-        developmentPillManifest: 'manifest.json',
         packageSource: 'Package',
         directorySource: 'Directory',
         developmentSource: 'Development Folder',
@@ -366,7 +338,6 @@ const text = computed(() => locale.value === 'zh-CN'
         unknownPlugin: 'Unknown plugin'
     }
 )
-
 function localizedPluginName(plugin: PluginMeta) {
     const key = `canvas.nodeTypes.${plugin.kind}`
     return te(key) ? t(key) : plugin.label
@@ -472,9 +443,11 @@ async function toggleDevelopmentPlugin(pluginId: string, enabled: boolean) {
 }
 
 async function removeInstalled(pluginId: string, pluginName: string) {
-    const confirmed = confirm(locale.value === 'zh-CN'
-        ? `确认移除已安装插件“${pluginName}”？`
-        : `Remove installed plugin "${pluginName}"?`)
+    const confirmed = confirm(
+        locale.value === 'zh-CN'
+            ? `确认移除已安装插件“${pluginName}”吗？`
+            : `Remove installed plugin "${pluginName}"?`
+    )
     if (!confirmed) return
 
     await runBusyAction(async () => {
@@ -484,9 +457,11 @@ async function removeInstalled(pluginId: string, pluginName: string) {
 }
 
 async function removeDevelopment(pluginId: string, pluginName: string) {
-    const confirmed = confirm(locale.value === 'zh-CN'
-        ? `确认移除开发插件“${pluginName}”？这不会删除原始目录。`
-        : `Remove development plugin "${pluginName}"? This will not delete the source directory.`)
+    const confirmed = confirm(
+        locale.value === 'zh-CN'
+            ? `确认移除开发插件“${pluginName}”吗？这不会删除原始目录。`
+            : `Remove development plugin "${pluginName}"? This will not delete the source directory.`
+    )
     if (!confirmed) return
 
     await runBusyAction(async () => {
@@ -548,8 +523,7 @@ onBeforeUnmount(() => {
 
 .plugin-actions-grid {
     display: grid;
-    gap: 14px;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 12px;
 }
 
 .plugin-refresh-btn {
@@ -559,16 +533,13 @@ onBeforeUnmount(() => {
 
 .plugin-import-panel {
     width: 100%;
-    display: grid;
-    grid-template-columns: 120px minmax(0, 1fr);
-    gap: 18px;
+    display: flex;
     align-items: center;
-    padding: 20px;
-    border-radius: 20px;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: 16px;
     border: 1px solid var(--border-color);
-    background:
-        linear-gradient(180deg, rgba(59, 130, 246, 0.05), rgba(59, 130, 246, 0.015)),
-        var(--bg-secondary);
+    background: var(--bg-secondary);
     cursor: pointer;
     text-align: left;
     transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
@@ -576,22 +547,12 @@ onBeforeUnmount(() => {
 
 .plugin-import-panel:hover:not(:disabled) {
     border-color: rgba(59, 130, 246, 0.28);
-    background:
-        linear-gradient(180deg, rgba(59, 130, 246, 0.065), rgba(59, 130, 246, 0.02)),
-        var(--bg-secondary);
-}
-
-.plugin-import-panel-dev {
-    background:
-        linear-gradient(180deg, rgba(16, 185, 129, 0.05), rgba(16, 185, 129, 0.015)),
-        var(--bg-secondary);
+    background: color-mix(in srgb, var(--bg-secondary) 88%, #3b82f6 12%);
 }
 
 .plugin-import-panel-dev:hover:not(:disabled) {
     border-color: rgba(16, 185, 129, 0.28);
-    background:
-        linear-gradient(180deg, rgba(16, 185, 129, 0.065), rgba(16, 185, 129, 0.02)),
-        var(--bg-secondary);
+    background: color-mix(in srgb, var(--bg-secondary) 88%, #10b981 12%);
 }
 
 .plugin-import-panel.is-busy,
@@ -600,109 +561,59 @@ onBeforeUnmount(() => {
     cursor: progress;
 }
 
-.plugin-import-sidebar {
-    display: grid;
-    justify-items: center;
-    gap: 14px;
-}
-
-.plugin-import-badge {
-    padding: 5px 10px;
-    border-radius: 999px;
-    background: rgba(59, 130, 246, 0.12);
-    color: #2563eb;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-
-.plugin-import-badge-dev {
-    background: rgba(16, 185, 129, 0.12);
-    color: #059669;
-}
-
-.plugin-import-emblem {
-    width: 84px;
-    height: 84px;
-    border-radius: 24px;
-    background:
-        linear-gradient(180deg, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.04)),
-        var(--bg-primary);
-    border: 1px solid rgba(59, 130, 246, 0.14);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.plugin-import-emblem-dev {
-    background:
-        linear-gradient(180deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.04)),
-        var(--bg-primary);
-    border-color: rgba(16, 185, 129, 0.14);
-}
-
-.plugin-import-emblem-core {
-    position: relative;
+.plugin-import-glyph {
     width: 42px;
     height: 42px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.88);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(59, 130, 246, 0.12);
+    font-size: 1.15rem;
+    flex-shrink: 0;
 }
 
-.plugin-import-emblem-line {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    background: #2563eb;
-    border-radius: 999px;
-    transform: translate(-50%, -50%);
-}
-
-.plugin-import-emblem-dev .plugin-import-emblem-line {
-    background: #059669;
-}
-
-.plugin-import-emblem-line-v {
-    width: 4px;
-    height: 20px;
-}
-
-.plugin-import-emblem-line-h {
-    width: 20px;
-    height: 4px;
+.plugin-import-glyph-dev {
+    background: rgba(16, 185, 129, 0.12);
 }
 
 .plugin-import-main {
+    min-width: 0;
     display: grid;
+    gap: 6px;
+}
+
+.plugin-import-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 10px;
 }
 
 .plugin-import-title {
-    font-size: 1rem;
+    font-size: 0.98rem;
     font-weight: 700;
     color: var(--text-primary);
 }
 
 .plugin-import-description {
     color: var(--text-secondary);
-    line-height: 1.6;
+    line-height: 1.5;
+    font-size: 0.9rem;
 }
 
-.plugin-import-pills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.plugin-import-pill {
-    padding: 5px 10px;
+.plugin-import-badge {
+    padding: 4px 9px;
     border-radius: 999px;
-    background: var(--bg-tertiary);
-    color: var(--text-secondary);
-    font-size: 12px;
+    background: rgba(59, 130, 246, 0.12);
+    color: #2563eb;
+    font-size: 11px;
     font-weight: 700;
+}
+
+.plugin-import-badge-dev {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
 }
 
 .plugin-import-hint {
@@ -1053,12 +964,12 @@ onBeforeUnmount(() => {
     }
 
     .plugin-import-panel {
-        grid-template-columns: 1fr;
-        padding: 18px;
+        align-items: flex-start;
     }
 
-    .plugin-import-sidebar {
-        justify-items: start;
+    .plugin-import-title-row {
+        flex-direction: column;
+        align-items: flex-start;
     }
 
     .plugin-refresh-btn {
@@ -1066,3 +977,4 @@ onBeforeUnmount(() => {
     }
 }
 </style>
+

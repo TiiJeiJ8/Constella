@@ -1,22 +1,24 @@
 <template>
     <Transition name="panel-slide">
         <div v-if="modelValue" class="chat-panel">
-            <!-- 头部 -->
             <div class="chat-panel-header">
                 <span class="title">{{ t('canvas.chat.title') }}</span>
-                <button class="close-btn" @click="$emit('update:modelValue', false)">✕</button>
+                <button class="close-btn" @click="$emit('update:modelValue', false)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+                    </svg>
+                </button>
             </div>
-            
-            <!-- 消息列表 -->
+
             <div class="chat-messages" ref="messagesContainer">
                 <div v-if="messages.length === 0" class="empty-state">
                     {{ t('canvas.chat.noMessages') }}
                 </div>
-                <div 
-                    v-for="msg in messages" 
+                <div
+                    v-for="msg in messages"
                     :key="msg.id"
                     class="message"
-                    :class="{ 'own': msg.isOwn }"
+                    :class="{ own: msg.isOwn }"
                 >
                     <div class="message-avatar" :style="{ background: msg.userColor }">
                         {{ msg.userName.charAt(0).toUpperCase() }}
@@ -30,14 +32,13 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- 底部输入 -->
+
             <div class="chat-panel-footer">
-                <input 
+                <input
                     v-model="panelMessage"
                     :placeholder="t('canvas.chat.inputPlaceholder')"
-                    @keydown.enter.prevent="handlePanelSend"
                     class="panel-input"
+                    @keydown.enter.prevent="handlePanelSend"
                 />
                 <button class="panel-send-btn" @click="handlePanelSend">
                     {{ t('canvas.chat.send') }}
@@ -48,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 interface ChatMessage {
@@ -78,7 +79,6 @@ const emit = defineEmits<{
 const panelMessage = ref('')
 const messagesContainer = ref<HTMLElement>()
 
-// 自动滚动到最新消息
 watch(() => props.messages.length, () => {
     nextTick(() => {
         if (messagesContainer.value) {
@@ -87,8 +87,7 @@ watch(() => props.messages.length, () => {
     })
 })
 
-// 打开时滚动到底部
-watch(() => props.modelValue, (isOpen) => {
+watch(() => props.modelValue, isOpen => {
     if (isOpen) {
         nextTick(() => {
             if (messagesContainer.value) {
@@ -151,7 +150,6 @@ function formatTime(timestamp: number): string {
     border: none;
     color: var(--text-secondary);
     cursor: pointer;
-    font-size: 18px;
     padding: 0;
     width: 24px;
     height: 24px;
@@ -160,6 +158,12 @@ function formatTime(timestamp: number): string {
     justify-content: center;
     border-radius: 4px;
     transition: all 0.2s;
+}
+
+.close-btn svg {
+    width: 14px;
+    height: 14px;
+    display: block;
 }
 
 .close-btn:hover {
@@ -284,7 +288,6 @@ function formatTime(timestamp: number): string {
     transform: scale(0.95);
 }
 
-/* 滚动条样式 */
 .chat-messages::-webkit-scrollbar {
     width: 6px;
 }
@@ -310,7 +313,6 @@ html[data-theme='light'] .chat-messages::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.25);
 }
 
-/* 动画 */
 .panel-slide-enter-active,
 .panel-slide-leave-active {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

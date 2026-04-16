@@ -5,20 +5,25 @@
                 <div class="dialog-container">
                     <div class="dialog-header">
                         <h2 class="dialog-title">{{ t('rooms.delete.title') }}</h2>
-                        <button class="close-btn" @click="closeDialog">✕</button>
+                        <button class="close-btn" @click="closeDialog">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+                            </svg>
+                        </button>
                     </div>
 
                     <div class="dialog-content">
-                        <!-- 警告信息 -->
                         <div class="warning-banner">
-                            <span class="warning-icon">⚠️</span>
+                            <svg class="warning-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 4.5 21 19H3L12 4.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.9" />
+                                <path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2.1" />
+                            </svg>
                             <div class="warning-text">
                                 <p class="warning-title">{{ t('rooms.delete.warning') }}</p>
                                 <p class="warning-desc">{{ t('rooms.delete.warningDesc') }}</p>
                             </div>
                         </div>
 
-                        <!-- 房间信息 -->
                         <div class="room-info-box">
                             <div class="info-row">
                                 <span class="label">{{ t('rooms.delete.roomName') }}:</span>
@@ -28,13 +33,18 @@
                                 <span class="label">{{ t('rooms.delete.memberCount') }}:</span>
                                 <span class="value">{{ room?.memberCount }} {{ t('rooms.members') }}</span>
                             </div>
-                            <div class="info-row" v-if="room?.isPrivate">
+                            <div v-if="room?.isPrivate" class="info-row">
                                 <span class="label">{{ t('rooms.delete.privacy') }}:</span>
-                                <span class="value private">🔒 {{ t('rooms.private') }}</span>
+                                <span class="value private">
+                                    <svg class="inline-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                        <rect x="6.5" y="10.5" width="11" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.8" />
+                                        <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+                                    </svg>
+                                    {{ t('rooms.private') }}
+                                </span>
                             </div>
                         </div>
 
-                        <!-- 私密房间需要密码验证 -->
                         <div v-if="room?.isPrivate" class="password-section">
                             <label class="password-label">
                                 {{ t('rooms.delete.passwordRequired') }}
@@ -47,36 +57,41 @@
                                     :placeholder="t('rooms.delete.enterPassword')"
                                     @keyup.enter="handleConfirm"
                                 />
-                                <button 
+                                <button
                                     class="toggle-password"
-                                    @click="showPassword = !showPassword"
                                     type="button"
+                                    @click="showPassword = !showPassword"
                                 >
-                                    {{ showPassword ? '👁️' : '👁️‍🗨️' }}
+                                    <svg v-if="showPassword" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M3.75 12s3-5.5 8.25-5.5S20.25 12 20.25 12s-3 5.5-8.25 5.5S3.75 12 3.75 12Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
+                                        <circle cx="12" cy="12" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+                                    </svg>
+                                    <svg v-else viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M4 4l16 16M10.55 6.78A8.92 8.92 0 0 1 12 6.65c5.25 0 8.25 5.35 8.25 5.35a16.83 16.83 0 0 1-2.17 2.78M8.7 8.04C5.56 9.43 3.75 12 3.75 12s3 5.35 8.25 5.35c1.28 0 2.42-.32 3.42-.8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- 错误提示 -->
                         <div v-if="error" class="error-message">
                             {{ error }}
                         </div>
                     </div>
 
                     <div class="dialog-footer">
-                        <button 
-                            class="btn btn-cancel" 
-                            @click="closeDialog"
+                        <button
+                            class="btn btn-cancel"
                             :disabled="loading"
+                            @click="closeDialog"
                         >
                             {{ t('common.cancel') }}
                         </button>
-                        <button 
-                            class="btn btn-danger" 
-                            @click="handleConfirm"
+                        <button
+                            class="btn btn-danger"
                             :disabled="loading || (room?.isPrivate && !password)"
+                            @click="handleConfirm"
                         >
-                            <span v-if="loading" class="loading-spinner">⏳</span>
+                            <span v-if="loading" class="loading-spinner"></span>
                             {{ loading ? t('rooms.delete.deleting') : t('rooms.delete.confirm') }}
                         </button>
                     </div>
@@ -110,8 +125,7 @@ const showPassword = ref(false)
 const loading = ref(false)
 const error = ref('')
 
-// 监听对话框打开/关闭，重置状态
-watch(() => props.modelValue, (newVal) => {
+watch(() => props.modelValue, newVal => {
     if (newVal) {
         password.value = ''
         showPassword.value = false
@@ -128,8 +142,7 @@ function closeDialog() {
 
 function handleConfirm() {
     if (loading.value) return
-    
-    // 私密房间需要密码
+
     if (props.room?.isPrivate && !password.value) {
         error.value = t('rooms.delete.passwordEmpty')
         return
@@ -137,8 +150,7 @@ function handleConfirm() {
 
     error.value = ''
     loading.value = true
-    
-    // 发出确认事件
+
     emit('confirm', {
         roomId: props.room?.id,
         password: props.room?.isPrivate ? password.value : undefined,
@@ -203,13 +215,18 @@ function handleConfirm() {
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    font-size: 20px;
     cursor: pointer;
     border-radius: 8px;
     transition: all 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.close-btn svg {
+    width: 15px;
+    height: 15px;
+    display: block;
 }
 
 .close-btn:hover {
@@ -239,7 +256,9 @@ html[data-theme='dark'] .warning-banner {
 }
 
 .warning-icon {
-    font-size: 24px;
+    width: 24px;
+    height: 24px;
+    color: #ff9800;
     flex-shrink: 0;
 }
 
@@ -292,6 +311,15 @@ html[data-theme='dark'] .warning-banner {
 
 .value.private {
     color: #ff9800;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.inline-icon {
+    width: 15px;
+    height: 15px;
+    display: block;
 }
 
 .password-section {
@@ -336,13 +364,20 @@ html[data-theme='dark'] .warning-banner {
     border: none;
     cursor: pointer;
     padding: 4px 8px;
-    font-size: 16px;
     border-radius: 4px;
     transition: background 0.2s;
+    color: var(--text-secondary);
+}
+
+.toggle-password svg {
+    width: 16px;
+    height: 16px;
+    display: block;
 }
 
 .toggle-password:hover {
     background: var(--bg-secondary);
+    color: var(--text-primary);
 }
 
 .error-message {
@@ -400,19 +435,20 @@ html[data-theme='dark'] .warning-banner {
 }
 
 .loading-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: white;
+    border-radius: 50%;
     animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
     to {
         transform: rotate(360deg);
     }
 }
 
-/* 对话框动画 */
 .dialog-fade-enter-active,
 .dialog-fade-leave-active {
     transition: opacity 0.3s ease;
@@ -428,10 +464,7 @@ html[data-theme='dark'] .warning-banner {
     opacity: 0;
 }
 
-.dialog-fade-enter-from .dialog-container {
-    transform: scale(0.9) translateY(20px);
-}
-
+.dialog-fade-enter-from .dialog-container,
 .dialog-fade-leave-to .dialog-container {
     transform: scale(0.9) translateY(20px);
 }

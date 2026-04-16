@@ -20,6 +20,8 @@ interface UseCanvasAssetsOptions {
     roomId: string
     t: (key: string) => string
     toast: { success: (message: string) => void; error: (message: string) => void }
+    canUploadAssets?: Ref<boolean>
+    canEditCanvas?: Ref<boolean>
     yjsNodes: any
     canvasAreaRef: Ref<HTMLElement | null>
     stagePosition: Ref<PointLike>
@@ -27,7 +29,7 @@ interface UseCanvasAssetsOptions {
 }
 
 export function useCanvasAssets(options: UseCanvasAssetsOptions) {
-    const { roomId, t, toast, yjsNodes, canvasAreaRef, stagePosition, stageScale } = options
+    const { roomId, t, toast, canUploadAssets, canEditCanvas, yjsNodes, canvasAreaRef, stagePosition, stageScale } = options
 
     const roomAssets = ref<AssetLike[]>([])
     let assetsRefreshInterval: ReturnType<typeof setInterval> | null = null
@@ -76,6 +78,10 @@ export function useCanvasAssets(options: UseCanvasAssetsOptions) {
     }
 
     async function handleAssetUpload(uploadData: any) {
+        if (canUploadAssets && !canUploadAssets.value) {
+            toast.error(t('canvas.permissionDenied'))
+            return
+        }
         console.log('[Canvas] Asset upload:', uploadData)
 
         if (uploadData && uploadData.success === true && uploadData.asset) {
@@ -124,6 +130,10 @@ export function useCanvasAssets(options: UseCanvasAssetsOptions) {
     }
 
     async function handleAssetDelete(assetId: string) {
+        if (canUploadAssets && !canUploadAssets.value) {
+            toast.error(t('canvas.permissionDenied'))
+            return
+        }
         const index = roomAssets.value.findIndex(asset => asset.id === assetId)
         if (index === -1) return
 
@@ -170,6 +180,10 @@ export function useCanvasAssets(options: UseCanvasAssetsOptions) {
     }
 
     function createAssetNode(asset: AssetLike, position?: PointLike) {
+        if (canEditCanvas && !canEditCanvas.value) {
+            toast.error(t('canvas.permissionDenied'))
+            return
+        }
         const baseUrl = apiService.getBaseUrl()
         let nodeUrl = asset.url
         if (nodeUrl.startsWith(baseUrl + '/')) {
@@ -209,12 +223,16 @@ export function useCanvasAssets(options: UseCanvasAssetsOptions) {
     }
 
     function handleCanvasDragOver(event: DragEvent) {
+        if (canEditCanvas && !canEditCanvas.value) return
         const hasAsset = Array.from(event.dataTransfer?.types || []).includes('application/x-constella-asset')
         if (!hasAsset || !event.dataTransfer) return
         event.dataTransfer.dropEffect = 'copy'
     }
 
     function handleCanvasDrop(event: DragEvent) {
+        if (canEditCanvas && !canEditCanvas.value) {
+            return
+        }
         const rawAsset = event.dataTransfer?.getData('application/x-constella-asset')
         if (!rawAsset) return
 

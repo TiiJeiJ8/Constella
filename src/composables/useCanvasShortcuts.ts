@@ -10,6 +10,7 @@ interface ShortcutMap {
 
 interface UseCanvasShortcutsOptions {
     editingNodeId: Ref<string | null>
+    canEditCanvas: Ref<boolean>
     applyPerformanceSettings: (settings?: Record<string, unknown>) => void
 }
 
@@ -23,12 +24,16 @@ function getShortcutMap(): ShortcutMap {
 }
 
 export function useCanvasShortcuts(options: UseCanvasShortcutsOptions) {
-    const { editingNodeId, applyPerformanceSettings } = options
+    const { editingNodeId, canEditCanvas, applyPerformanceSettings } = options
 
     const activeTool = ref('select')
     const userShortcuts = ref<ShortcutMap>(getShortcutMap())
 
     function handleToolChange(tool: string) {
+        if (!canEditCanvas.value && (tool === 'node' || tool === 'edge')) {
+            activeTool.value = 'select'
+            return
+        }
         activeTool.value = tool
         console.log('[Canvas] Tool changed:', tool)
     }
@@ -65,6 +70,11 @@ export function useCanvasShortcuts(options: UseCanvasShortcutsOptions) {
         for (const tool of ['select', 'pan', 'node', 'edge']) {
             const mapped = (shortcuts[tool] || '').toLowerCase()
             if (mapped && mapped === key) {
+                if (!canEditCanvas.value && (tool === 'node' || tool === 'edge')) {
+                    activeTool.value = 'select'
+                    event.preventDefault()
+                    return
+                }
                 activeTool.value = tool
                 event.preventDefault()
                 return

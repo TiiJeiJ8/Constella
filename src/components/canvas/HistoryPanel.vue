@@ -1,13 +1,14 @@
 <template>
     <div class="history-panel">
         <div class="snapshot-actions">
-            <button class="snapshot-btn" :disabled="isCreating" @click="createSnapshot">
-                <span class="icon">📸</span>
+            <button class="snapshot-btn" :disabled="isCreateDisabled" @click="createSnapshot">
+                <span class="icon">+</span>
                 <span class="text">{{ isCreating ? t('canvas.history.creating') : t('canvas.history.createSnapshot') }}</span>
             </button>
             <span v-if="autoSaveEnabled" class="auto-save-hint">
                 {{ t('canvas.history.autoSaveEnabled') }} ({{ autoSaveInterval }}s)
             </span>
+            <span v-if="!canCreateSnapshots" class="readonly-hint">{{ readOnlyHint }}</span>
         </div>
 
         <div v-if="snapshots.length > 0" class="snapshots-list">
@@ -19,9 +20,12 @@
                 :class="{ active: activeSnapshotId === snapshot.id }"
             >
                 <div class="snapshot-info" @click="previewSnapshot(snapshot)">
-                    <span class="snapshot-icon">📷</span>
+                    <svg class="snapshot-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M7 4.75h7l3 3v11.5H7A2.25 2.25 0 0 1 4.75 17V7A2.25 2.25 0 0 1 7 4.75Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7" />
+                        <path d="M14 4.75V8h3" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7" />
+                    </svg>
                     <div class="snapshot-details">
-                        <span class="snapshot-name">{{ snapshot.name || t('canvas.history.snapshot') }}</span>
+                        <span class="snapshot-name">{{ formatSnapshotName(snapshot) }}</span>
                         <span class="snapshot-time">{{ formatTime(snapshot.createdAt) }}</span>
                     </div>
                 </div>
@@ -29,6 +33,7 @@
                 <div class="snapshot-actions-inline">
                     <button
                         class="action-btn small"
+                        :disabled="!canManageSnapshots"
                         :title="t('canvas.history.restore')"
                         :aria-label="t('canvas.history.restore')"
                         @click.stop="showRestoreConfirm(snapshot)"
@@ -42,6 +47,7 @@
                     </button>
                     <button
                         class="action-btn small danger"
+                        :disabled="!canManageSnapshots"
                         :title="t('canvas.history.delete')"
                         :aria-label="t('canvas.history.delete')"
                         @click.stop="showDeleteConfirm(snapshot.id)"
@@ -58,21 +64,30 @@
         </div>
 
         <div v-else class="empty-state">
-            <span class="empty-icon">🕘</span>
+            <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 4.75h7l3 3v11.5H7A2.25 2.25 0 0 1 4.75 17V7A2.25 2.25 0 0 1 7 4.75Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7" />
+                <path d="M14 4.75V8h3" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7" />
+                <path d="M8.75 13.25h6.5M8.75 16h4.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.7" />
+            </svg>
             <span class="empty-text">{{ t('canvas.history.empty') }}</span>
             <span class="empty-hint">{{ t('canvas.history.emptyHint') }}</span>
         </div>
 
-        <div class="auto-save-settings">
+        <div class="auto-save-settings" :class="{ disabled: !canCreateSnapshots }">
             <div class="setting-row">
                 <label class="setting-label">
-                    <input v-model="autoSaveEnabled" type="checkbox" @change="toggleAutoSave" />
+                    <input
+                        v-model="autoSaveEnabled"
+                        type="checkbox"
+                        :disabled="!canCreateSnapshots"
+                        @change="toggleAutoSave"
+                    />
                     <span>{{ t('canvas.history.autoSaveSnapshot') }}</span>
                 </label>
             </div>
             <div v-if="autoSaveEnabled" class="setting-row">
                 <label class="setting-label">{{ t('canvas.history.interval') }}</label>
-                <select v-model="autoSaveInterval" @change="updateAutoSaveInterval">
+                <select v-model="autoSaveInterval" :disabled="!canCreateSnapshots" @change="updateAutoSaveInterval">
                     <option :value="15">15 {{ t('canvas.history.seconds') }}</option>
                     <option :value="30">30 {{ t('canvas.history.seconds') }}</option>
                     <option :value="60">1 {{ t('canvas.history.minute') }}</option>
@@ -113,6 +128,14 @@ const props = defineProps({
     currentState: {
         type: Object,
         default: null
+    },
+    canCreateSnapshots: {
+        type: Boolean,
+        default: true
+    },
+    canManageSnapshots: {
+        type: Boolean,
+        default: true
     }
 })
 
@@ -122,18 +145,25 @@ const isCreating = ref(false)
 const activeSnapshotId = ref(null)
 const autoSaveEnabled = ref(false)
 const autoSaveInterval = ref(15)
-let autoSaveTimer = null
-
 const isRestoreDialogOpen = ref(false)
 const isDeleteDialogOpen = ref(false)
 const pendingRestoreSnapshot = ref(null)
 const pendingDeleteId = ref(null)
+let autoSaveTimer = null
 
-const sortedSnapshots = computed(() => {
-    return [...props.snapshots].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-})
+const isCreateDisabled = computed(() => isCreating.value || !props.canCreateSnapshots)
+const sortedSnapshots = computed(() => (
+    [...props.snapshots].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+))
+const readOnlyHint = computed(() => (
+    locale.value === 'zh-CN'
+        ? '当前为只读模式，不能创建、恢复或删除快照。'
+        : 'Read-only mode: snapshot changes are disabled.'
+))
 
 async function createSnapshot() {
+    if (!props.canCreateSnapshots) return
+
     isCreating.value = true
     try {
         const snapshotId = `snapshot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -149,7 +179,7 @@ async function createSnapshot() {
 }
 
 function autoCreateSnapshot() {
-    if (!autoSaveEnabled.value) return
+    if (!autoSaveEnabled.value || !props.canCreateSnapshots) return
 
     const snapshotId = `snapshot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     emit('create-snapshot', {
@@ -166,23 +196,25 @@ function previewSnapshot(snapshot) {
 }
 
 function showRestoreConfirm(snapshot) {
+    if (!props.canManageSnapshots) return
     pendingRestoreSnapshot.value = snapshot
     isRestoreDialogOpen.value = true
 }
 
 function confirmRestore() {
-    if (!pendingRestoreSnapshot.value) return
+    if (!props.canManageSnapshots || !pendingRestoreSnapshot.value) return
     emit('restore-snapshot', pendingRestoreSnapshot.value)
     pendingRestoreSnapshot.value = null
 }
 
 function showDeleteConfirm(snapshotId) {
+    if (!props.canManageSnapshots) return
     pendingDeleteId.value = snapshotId
     isDeleteDialogOpen.value = true
 }
 
 function confirmDelete() {
-    if (!pendingDeleteId.value) return
+    if (!props.canManageSnapshots || !pendingDeleteId.value) return
     emit('delete-snapshot', pendingDeleteId.value)
     if (activeSnapshotId.value === pendingDeleteId.value) {
         activeSnapshotId.value = null
@@ -191,6 +223,11 @@ function confirmDelete() {
 }
 
 function toggleAutoSave() {
+    if (!props.canCreateSnapshots) {
+        autoSaveEnabled.value = false
+        return
+    }
+
     if (autoSaveEnabled.value) {
         startAutoSave()
     } else {
@@ -199,12 +236,13 @@ function toggleAutoSave() {
 }
 
 function updateAutoSaveInterval() {
-    if (!autoSaveEnabled.value) return
+    if (!props.canCreateSnapshots || !autoSaveEnabled.value) return
     stopAutoSave()
     startAutoSave()
 }
 
 function startAutoSave() {
+    if (!props.canCreateSnapshots) return
     stopAutoSave()
     autoSaveTimer = window.setInterval(() => {
         autoCreateSnapshot()
@@ -215,6 +253,23 @@ function stopAutoSave() {
     if (!autoSaveTimer) return
     window.clearInterval(autoSaveTimer)
     autoSaveTimer = null
+}
+
+function formatSnapshotName(snapshot) {
+    if (!snapshot) return t('canvas.history.snapshot')
+
+    const rawName = typeof snapshot.name === 'string' ? snapshot.name.trim() : ''
+    const localizedPrefix = snapshot.auto ? t('canvas.history.autoSave') : t('canvas.history.snapshot')
+
+    if (!rawName) {
+        return localizedPrefix
+    }
+
+    if (/^(快照|Snapshot)\s/.test(rawName) || /^(自动保存|Auto-save)\s/.test(rawName)) {
+        return `${localizedPrefix} ${formatTime(snapshot.createdAt)}`
+    }
+
+    return rawName
 }
 
 function formatTime(isoString) {
@@ -247,6 +302,11 @@ function formatTime(isoString) {
 }
 
 onMounted(() => {
+    if (!props.canCreateSnapshots) {
+        autoSaveEnabled.value = false
+        return
+    }
+
     const savedAutoSave = localStorage.getItem('canvas_auto_save_enabled')
     const savedInterval = localStorage.getItem('canvas_auto_save_interval')
 
@@ -269,6 +329,12 @@ watch(autoSaveEnabled, value => {
 
 watch(autoSaveInterval, value => {
     localStorage.setItem('canvas_auto_save_interval', value.toString())
+})
+
+watch(() => props.canCreateSnapshots, value => {
+    if (value) return
+    autoSaveEnabled.value = false
+    stopAutoSave()
 })
 </script>
 
@@ -315,7 +381,8 @@ watch(autoSaveInterval, value => {
     font-size: 16px;
 }
 
-.auto-save-hint {
+.auto-save-hint,
+.readonly-hint {
     font-size: 12px;
     color: var(--text-tertiary);
     text-align: center;
@@ -367,7 +434,10 @@ watch(autoSaveInterval, value => {
 }
 
 .snapshot-icon {
-    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    display: block;
+    flex-shrink: 0;
 }
 
 .snapshot-details {
@@ -418,10 +488,15 @@ watch(autoSaveInterval, value => {
     flex-shrink: 0;
 }
 
-.action-btn:hover {
+.action-btn:hover:not(:disabled) {
     background: var(--bg-secondary);
     border-color: var(--color-primary);
     color: var(--text-primary);
+}
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .action-btn.small {
@@ -429,7 +504,7 @@ watch(autoSaveInterval, value => {
     height: 28px;
 }
 
-.action-btn.danger:hover {
+.action-btn.danger:hover:not(:disabled) {
     background: rgba(239, 68, 68, 0.1);
     border-color: rgba(239, 68, 68, 0.5);
     color: #ef4444;
@@ -451,8 +526,10 @@ watch(autoSaveInterval, value => {
 }
 
 .empty-icon {
-    font-size: 48px;
+    width: 48px;
+    height: 48px;
     opacity: 0.5;
+    color: var(--text-tertiary);
 }
 
 .empty-text {
@@ -472,6 +549,10 @@ watch(autoSaveInterval, value => {
     padding: 12px;
     background: var(--bg-secondary);
     border-radius: 8px;
+}
+
+.auto-save-settings.disabled {
+    opacity: 0.72;
 }
 
 .setting-row {
@@ -507,5 +588,9 @@ watch(autoSaveInterval, value => {
 .setting-row select:focus {
     outline: none;
     border-color: var(--color-primary);
+}
+
+.setting-row select:disabled {
+    cursor: not-allowed;
 }
 </style>

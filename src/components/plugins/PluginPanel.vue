@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <Teleport to="body">
         <Transition name="overlay">
             <div v-if="modelValue" class="plugin-overlay" @click="$emit('update:modelValue', false)"></div>
@@ -135,3 +135,4 @@ const closeLabel = computed(() => locale.value === 'zh-CN' ? '关闭插件面板
     transform: translateX(-50%) translateY(16px);
 }
 </style>
+

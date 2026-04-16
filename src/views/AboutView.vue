@@ -2,7 +2,7 @@
     <div class="about-view">
         <WindowControls />
 
-        <button class="back-btn" :class="{ 'no-electron': !isElectron }" @click="goBack" :title="t('about.backToHome')">
+        <button class="back-btn" :class="{ 'no-electron': !isElectron }" :title="t('about.backToHome')" @click="goBack">
             <ChevronLeftIcon />
             <span>{{ t('about.backToHome') }}</span>
         </button>
@@ -11,6 +11,11 @@
             <Transition name="fade-slide" mode="out-in">
                 <div :key="currentLocale" class="content-wrapper">
                     <div class="header-section">
+                        <div class="title-icon-row" aria-hidden="true">
+                            <span>✨</span>
+                            <span>Constella</span>
+                            <span>🌌</span>
+                        </div>
                         <h1 class="title" style="user-select: none;">{{ t('about.title') }}</h1>
                         <p class="subtitle" style="user-select: none;">{{ t('about.subtitle') }}</p>
                         <p class="version" style="user-select: none;">{{ t('about.version') }}: {{ appVersion }}</p>
@@ -21,28 +26,31 @@
                     </div>
 
                     <div class="features-section">
-                        <h2 class="section-title">{{ t('about.features.title') }}</h2>
+                        <h2 class="section-title"><span aria-hidden="true">🧩</span>{{ t('about.features.title') }}</h2>
                         <div class="features-grid">
                             <div v-for="feature in featureItems" :key="feature.title" class="feature-item">
-                                <span class="feature-icon">{{ feature.icon }}</span>
+                                <span class="feature-icon" :class="`feature-${feature.iconKey}`" aria-hidden="true">
+                                    {{ feature.emoji }}
+                                </span>
                                 <div class="feature-content">
                                     <span class="feature-text">{{ feature.title }}</span>
+                                    <span class="feature-desc">{{ feature.desc }}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="tech-section">
-                        <h2 class="section-title">{{ t('about.tech.title') }}</h2>
+                        <h2 class="section-title"><span aria-hidden="true">⚙️</span>{{ t('about.tech.title') }}</h2>
                         <div class="tech-list">
-                            <p class="tech-item">{{ t('about.tech.frontend') }}</p>
-                            <p class="tech-item">{{ t('about.tech.backend') }}</p>
-                            <p class="tech-item">{{ t('about.tech.realtime') }}</p>
+                            <p class="tech-item">🎨 {{ t('about.tech.frontend') }}</p>
+                            <p class="tech-item">🖥️ {{ t('about.tech.backend') }}</p>
+                            <p class="tech-item">🔄 {{ t('about.tech.realtime') }}</p>
                         </div>
                     </div>
 
                     <div class="authors-section">
-                        <h2 class="section-title">{{ t('about.authors.title') }}</h2>
+                        <h2 class="section-title"><span aria-hidden="true">👥</span>{{ t('about.authors.title') }}</h2>
                         <div class="authors-container">
                             <button class="author-item" @click="openAuthorGithub('TiiJeiJ8')">
                                 <div class="author-avatar">
@@ -50,7 +58,7 @@
                                 </div>
                                 <span class="author-name">{{ t('about.authors.author1') }}</span>
                             </button>
-                            <span class="author-separator">✦</span>
+                            <span class="author-separator" aria-hidden="true">×</span>
                             <button class="author-item" @click="openAuthorGithub('fkj577')">
                                 <div class="author-avatar">
                                     <img src="../assets/IMG/Author_fkj577.jpg" :alt="t('about.authors.author2')" />
@@ -80,7 +88,8 @@ import { ChevronLeftIcon, LogoGithubIcon } from 'tdesign-icons-vue-next'
 import WindowControls from '@/components/base/WindowControls.vue'
 
 interface FeatureItem {
-    icon: string
+    iconKey: 'canvas' | 'collab' | 'permissions' | 'network' | 'assets' | 'plugins'
+    emoji: string
     title: string
     desc: string
 }
@@ -95,20 +104,20 @@ const currentLocale = computed(() => locale.value)
 const featureItems = computed<FeatureItem[]>(() =>
     locale.value === 'zh-CN'
         ? [
-              { icon: '🧭', title: '结构化画布编辑', desc: '通过节点与连线组织想法，支持缩放、拖拽与关系表达。' },
-              { icon: '🤝', title: '多人实时协作', desc: '基于 Yjs 的协同同步机制，支持多人同时编辑。' },
-              { icon: '🔐', title: '房间与权限控制', desc: '支持公开/私有房间、成员角色与协作边界管理。' },
-              { icon: '🌐', title: '局域网服务发现', desc: '自动发现可用服务器，也支持手动输入地址连接。' },
-              { icon: '🗂️', title: '资源与快照工作流', desc: '支持资源上传管理与快照恢复，便于迭代与回滚。' },
-              { icon: '🧩', title: '插件扩展与导出能力', desc: '支持多类节点扩展，提供 JSON/PNG/SVG 等导出方式。' },
+              { iconKey: 'canvas', emoji: '🧠', title: '结构化画布编辑', desc: '用节点与连线组织想法和内容。' },
+              { iconKey: 'collab', emoji: '🤝', title: '多人实时协作', desc: '基于 Yjs 的实时同步机制。' },
+              { iconKey: 'permissions', emoji: '🔐', title: '房间权限控制', desc: '清晰区分成员角色与协作边界。' },
+              { iconKey: 'network', emoji: '📡', title: '局域网服务发现', desc: '自动发现附近可连接的服务端。' },
+              { iconKey: 'assets', emoji: '🗂️', title: '资源与快照工作流', desc: '方便迭代、恢复与回滚。' },
+              { iconKey: 'plugins', emoji: '🧩', title: '插件扩展与导出', desc: '支持节点扩展和多格式导出。' }
           ]
         : [
-              { icon: '🧭', title: 'Structured canvas editing', desc: 'Organize ideas with nodes and edges, including zoom, drag, and relation mapping.' },
-              { icon: '🤝', title: 'Real-time multi-user collaboration', desc: 'Built on Yjs synchronization so multiple users can edit at the same time.' },
-              { icon: '🔐', title: 'Room and permission control', desc: 'Public/private rooms, member roles, and clear collaboration boundaries.' },
-              { icon: '🌐', title: 'LAN server discovery', desc: 'Auto-discover nearby servers with manual URL connection as fallback.' },
-              { icon: '🗂️', title: 'Assets and snapshots workflow', desc: 'Manage uploaded assets and restore snapshots during iterative work.' },
-              { icon: '🧩', title: 'Plugin extensibility and export support', desc: 'Extensible node system with export options like JSON, PNG, and SVG.' },
+              { iconKey: 'canvas', emoji: '🧠', title: 'Structured canvas editing', desc: 'Organize ideas with nodes and edges.' },
+              { iconKey: 'collab', emoji: '🤝', title: 'Real-time collaboration', desc: 'Powered by Yjs synchronization.' },
+              { iconKey: 'permissions', emoji: '🔐', title: 'Room permissions', desc: 'Clear roles and collaboration boundaries.' },
+              { iconKey: 'network', emoji: '📡', title: 'LAN discovery', desc: 'Find nearby servers automatically.' },
+              { iconKey: 'assets', emoji: '🗂️', title: 'Assets and snapshots', desc: 'Iterate, restore, and roll back safely.' },
+              { iconKey: 'plugins', emoji: '🧩', title: 'Plugins and export', desc: 'Extend nodes and export in multiple formats.' }
           ]
 )
 
@@ -192,7 +201,7 @@ function openAuthorGithub(username: string) {
 }
 
 .content-wrapper {
-    max-width: 800px;
+    max-width: 840px;
     width: 100%;
 }
 
@@ -216,6 +225,19 @@ function openAuthorGithub(username: string) {
     margin-bottom: 48px;
 }
 
+.title-icon-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    margin-bottom: 14px;
+    border-radius: 999px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
 .title {
     font-size: 3.5rem;
     font-weight: 700;
@@ -237,7 +259,10 @@ function openAuthorGithub(username: string) {
     font-weight: 500;
 }
 
-.description-section {
+.description-section,
+.features-section,
+.tech-section,
+.authors-section {
     margin-bottom: 48px;
 }
 
@@ -248,11 +273,11 @@ function openAuthorGithub(username: string) {
     text-align: center;
 }
 
-.features-section {
-    margin-bottom: 48px;
-}
-
 .section-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     font-size: 1.5rem;
     font-weight: 600;
     color: var(--text-primary);
@@ -262,7 +287,7 @@ function openAuthorGithub(username: string) {
 
 .features-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 16px;
 }
 
@@ -284,23 +309,39 @@ function openAuthorGithub(username: string) {
 }
 
 .feature-icon {
-    font-size: 1.5rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.25rem;
 }
+
+.feature-canvas { background: rgba(59, 130, 246, 0.12); }
+.feature-collab { background: rgba(16, 185, 129, 0.12); }
+.feature-permissions { background: rgba(245, 158, 11, 0.14); }
+.feature-network { background: rgba(99, 102, 241, 0.12); }
+.feature-assets { background: rgba(236, 72, 153, 0.12); }
+.feature-plugins { background: rgba(139, 92, 246, 0.12); }
 
 .feature-content {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 5px;
 }
 
 .feature-text {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    font-weight: 600;
+    font-size: 0.92rem;
+    color: var(--text-primary);
+    font-weight: 700;
 }
 
-.tech-section {
-    margin-bottom: 48px;
+.feature-desc {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    line-height: 1.5;
 }
 
 .tech-list {
@@ -317,10 +358,6 @@ function openAuthorGithub(username: string) {
     font-size: 0.95rem;
     color: var(--text-secondary);
     font-weight: 500;
-}
-
-.authors-section {
-    margin-bottom: 48px;
 }
 
 .authors-container {
@@ -377,7 +414,7 @@ function openAuthorGithub(username: string) {
 }
 
 .author-separator {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     color: var(--text-tertiary);
     user-select: none;
 }
@@ -434,6 +471,10 @@ function openAuthorGithub(username: string) {
 
     .features-grid {
         grid-template-columns: 1fr;
+    }
+
+    .authors-container {
+        gap: 18px;
     }
 
     .back-btn {

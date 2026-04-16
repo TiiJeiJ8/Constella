@@ -68,7 +68,7 @@
                         x: node.x,
                         y: node.y,
                         rotation: node.rotation || 0,
-                        draggable: true
+                        draggable: !props.isReadOnly
                     }"
                     @click="handleNodeClick(node, $event)"
                     @tap="handleNodeClick(node, $event)"
@@ -236,6 +236,10 @@ const props = defineProps({
     },
     // 编辑器是否打开（打开时禁用 Delete 快捷键）
     isEditorOpen: {
+        type: Boolean,
+        default: false
+    },
+    isReadOnly: {
         type: Boolean,
         default: false
     }
@@ -693,6 +697,9 @@ function handleWheel(e) {
 
 // 鼠标按下
 function handleMouseDown(e) {
+    if (props.isReadOnly && props.activeTool === 'node') {
+        return
+    }
     const stage = stageRef.value.getNode()
     
     // 空格键 + 左键 或 手抓工具 = 平移模式
@@ -870,6 +877,9 @@ function handleMouseLeave() {
 
 // 节点点击
 function handleNodeClick(node, e) {
+    if (props.isReadOnly && props.activeTool === 'edge') {
+        return
+    }
     // 阻止事件冒泡（避免触发 stage 点击）
     e.cancelBubble = true
     
@@ -916,6 +926,9 @@ function handleNodeClick(node, e) {
 
 // 节点双击 - 进入编辑模式
 function handleNodeDblClick(node, e) {
+    if (props.isReadOnly) {
+        return
+    }
     e.cancelBubble = true
     emit('node-dblclick', node.id)
     console.log('[CanvasStage] Node double-clicked:', node.id)
@@ -937,6 +950,9 @@ function handleEdgeClick(edgeId) {
 
 // 连线双击 - 编辑标签
 function handleEdgeDblClick(edgeId) {
+    if (props.isReadOnly) {
+        return
+    }
     emit('edge-dblclick', edgeId)
     console.log('[CanvasStage] Edge double-clicked:', edgeId)
 }
@@ -1013,6 +1029,9 @@ function throttle(key, fn, delay = 16) {
 
 // 节点拖拽开始
 function handleNodeDragStart(node) {
+    if (props.isReadOnly) {
+        return
+    }
     draggingNodeIds.value.add(node.id)
     // 如果拖拽的节点不在选中列表中，则单选它
     if (!selectedNodeIds.value.has(node.id)) {
@@ -1025,6 +1044,9 @@ function handleNodeDragStart(node) {
 
 // 节点拖拽中（实时同步）
 function handleNodeDragMove(node, e) {
+    if (props.isReadOnly) {
+        return
+    }
     const group = e.target
     const newX = group.x()
     const newY = group.y()
@@ -1055,6 +1077,9 @@ function handleNodeDragMove(node, e) {
 
 // 节点拖拽结束
 function handleNodeDragEnd(node, e) {
+    if (props.isReadOnly) {
+        return
+    }
     draggingNodeIds.value.delete(node.id)
     const group = e.target
     const newX = group.x()
@@ -1075,6 +1100,9 @@ function handleNodeDragEnd(node, e) {
 
 // 节点变换结束（缩放、旋转）
 function handleNodeTransformEnd(node, e) {
+    if (props.isReadOnly) {
+        return
+    }
     const group = e.target
     const rect = group.findOne('Rect')
     
@@ -1248,7 +1276,7 @@ function handleKeyDown(e) {
     }
     
     // Delete/Backspace 删除选中节点
-    if ((e.code === 'Delete' || e.code === 'Backspace') && selectedNodeIds.value.size > 0) {
+    if (!props.isReadOnly && (e.code === 'Delete' || e.code === 'Backspace') && selectedNodeIds.value.size > 0) {
         e.preventDefault()
         const idsToDelete = Array.from(selectedNodeIds.value)
         
@@ -1262,14 +1290,14 @@ function handleKeyDown(e) {
     }
     
     // Ctrl+Z 撤销
-    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ' && !e.shiftKey) {
+    if (!props.isReadOnly && (e.ctrlKey || e.metaKey) && e.code === 'KeyZ' && !e.shiftKey) {
         e.preventDefault()
         emit('undo')
         console.log('[CanvasStage] Undo triggered')
     }
     
     // Ctrl+Shift+Z 或 Ctrl+Y 重做
-    if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey))) {
+    if (!props.isReadOnly && (e.ctrlKey || e.metaKey) && (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey))) {
         e.preventDefault()
         emit('redo')
         console.log('[CanvasStage] Redo triggered')

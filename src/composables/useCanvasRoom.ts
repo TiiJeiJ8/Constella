@@ -15,6 +15,26 @@ interface UseCanvasRoomOptions {
     emitNavigate: (view: string) => void
 }
 
+interface RoomCapabilities {
+    can_view: boolean
+    can_edit: boolean
+    can_manage_members: boolean
+    can_manage_room: boolean
+    can_upload_assets: boolean
+    can_manage_snapshots: boolean
+    can_delete_room: boolean
+}
+
+const EMPTY_CAPABILITIES: RoomCapabilities = {
+    can_view: false,
+    can_edit: false,
+    can_manage_members: false,
+    can_manage_room: false,
+    can_upload_assets: false,
+    can_manage_snapshots: false,
+    can_delete_room: false
+}
+
 function getUserName(t: (key: string) => string) {
     const settings = JSON.parse(localStorage.getItem('settings') || '{}')
     if (settings.lastName && settings.firstName) {
@@ -42,6 +62,8 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
     const isOffline = ref(false)
     const isMembersPanelOpen = ref(false)
     const isChatPanelOpen = ref(false)
+    const roomRole = ref<string | null>(null)
+    const roomCapabilities = ref<RoomCapabilities>({ ...EMPTY_CAPABILITIES })
 
     const yjs = useYjs({
         roomId,
@@ -143,6 +165,11 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
             roomName.value = typeof apiRoomName === 'string' && apiRoomName.trim()
                 ? apiRoomName.trim()
                 : fallbackName
+            roomRole.value = response.data?.user_role || null
+            roomCapabilities.value = {
+                ...EMPTY_CAPABILITIES,
+                ...(response.data?.capabilities || {})
+            }
 
             isRoomReady.value = true
             return true
@@ -150,6 +177,8 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
             console.error('[Canvas] Failed to load room:', error)
             roomName.value = fallbackName
             roomLoadError.value = t('canvas.loadError')
+            roomRole.value = null
+            roomCapabilities.value = { ...EMPTY_CAPABILITIES }
             return false
         } finally {
             isRoomLoading.value = false
@@ -203,6 +232,8 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
 
     return {
         roomName,
+        roomRole,
+        roomCapabilities,
         roomLoadError,
         isRoomLoading,
         isRoomReady,

@@ -344,7 +344,9 @@
                                                     </button>
                                                 </div>
                                                 <button type="button" class="editor-search-close" :aria-label="closeSearchLabel" @click="closeSearchBar">
-                                                    ×
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+                                                    </svg>
                                                 </button>
                                             </div>
                                             <div class="editor-search-options">
@@ -1825,25 +1827,25 @@ const activePreviewBlockId = computed(() => {
 const toolbarActions = computed<ToolbarAction[]>(() => [
     { id: 'h1', label: 'H1', icon: 'H1', description: 'Insert heading 1', action: () => prependToCurrentLine('# ') },
     { id: 'h2', label: 'H2', icon: 'H2', description: 'Insert heading 2', action: () => prependToCurrentLine('## ') },
-    { id: 'bullet', label: '• List', icon: '•', description: 'Insert bullet list', action: () => prependToCurrentLine('- ') },
-    { id: 'todo', label: 'Todo', icon: '✓', description: 'Insert checklist item', action: () => prependToCurrentLine('- [ ] ') },
-    { id: 'quote', label: 'Quote', icon: '"', description: 'Insert quote block', action: () => prependToCurrentLine('> ') },
+    { id: 'bullet', label: 'List', icon: 'UL', description: 'Insert bullet list', action: () => prependToCurrentLine('- ') },
+    { id: 'todo', label: 'Todo', icon: 'TD', description: 'Insert checklist item', action: () => prependToCurrentLine('- [ ] ') },
+    { id: 'quote', label: 'Quote', icon: 'QT', description: 'Insert quote block', action: () => prependToCurrentLine('> ') },
     { id: 'code', label: 'Code', icon: '</>', description: 'Insert fenced code block', action: () => insertSnippet('```\n\n```', 4) },
-    { id: 'math', label: 'Math', icon: '∑', description: 'Insert inline math', action: () => wrapSelection('$', '$', 'formula') },
-    { id: 'table', label: 'Table', icon: '▦', description: 'Insert markdown table', action: () => insertSnippet('| Col 1 | Col 2 |\n| --- | --- |\n| Item | Item |') },
-    { id: 'link', label: 'Link', icon: '🔗', description: 'Wrap selection with a link', action: () => wrapSelection('[', '](https://)', 'text') },
-    { id: 'flow', label: 'Flow', icon: '⇢', description: 'Insert mermaid flowchart', action: () => insertSnippet('```mermaid\nflowchart TD\n    A[Start] --> B{Decision}\n    B -->|Yes| C[Done]\n    B -->|No| D[Retry]\n```', 13) }
+    { id: 'math', label: 'Math', icon: 'FX', description: 'Insert inline math', action: () => wrapSelection('$', '$', 'formula') },
+    { id: 'table', label: 'Table', icon: 'TB', description: 'Insert markdown table', action: () => insertSnippet('| Col 1 | Col 2 |\n| --- | --- |\n| Item | Item |') },
+    { id: 'link', label: 'Link', icon: 'URL', description: 'Wrap selection with a link', action: () => wrapSelection('[', '](https://)', 'text') },
+    { id: 'flow', label: 'Flow', icon: '->', description: 'Insert mermaid flowchart', action: () => insertSnippet('```mermaid\nflowchart TD\n    A[Start] --> B{Decision}\n    B -->|Yes| C[Done]\n    B -->|No| D[Retry]\n```', 13) }
 ])
 
 const slashCommands = computed<SlashCommand[]>(() => [
     { id: 'h1', icon: 'H1', label: t('canvas.editor.commands.h1'), description: t('canvas.editor.commands.h1Desc'), action: () => '# ' },
     { id: 'h2', icon: 'H2', label: t('canvas.editor.commands.h2'), description: t('canvas.editor.commands.h2Desc'), action: () => '## ' },
     { id: 'h3', icon: 'H3', label: t('canvas.editor.commands.h3'), description: t('canvas.editor.commands.h3Desc'), action: () => '### ' },
-    { id: 'bullet', icon: '•', label: t('canvas.editor.commands.bullet'), description: t('canvas.editor.commands.bulletDesc'), action: () => '- ' },
+    { id: 'bullet', icon: 'UL', label: t('canvas.editor.commands.bullet'), description: t('canvas.editor.commands.bulletDesc'), action: () => '- ' },
     { id: 'numbered', icon: '1.', label: t('canvas.editor.commands.numbered'), description: t('canvas.editor.commands.numberedDesc'), action: () => '1. ' },
-    { id: 'todo', icon: '☐', label: t('canvas.editor.commands.todo'), description: t('canvas.editor.commands.todoDesc'), action: () => '- [ ] ' },
+    { id: 'todo', icon: 'TD', label: t('canvas.editor.commands.todo'), description: t('canvas.editor.commands.todoDesc'), action: () => '- [ ] ' },
     { id: 'quote', icon: '"', label: t('canvas.editor.commands.quote'), description: t('canvas.editor.commands.quoteDesc'), action: () => '> ' },
-    { id: 'divider', icon: '—', label: t('canvas.editor.commands.divider'), description: t('canvas.editor.commands.dividerDesc'), action: () => '\n---\n' },
+    { id: 'divider', icon: '---', label: t('canvas.editor.commands.divider'), description: t('canvas.editor.commands.dividerDesc'), action: () => '\n---\n' },
     { id: 'code', icon: '<>', iconClass: 'code-icon', label: t('canvas.editor.commands.code'), description: t('canvas.editor.commands.codeDesc'), action: () => '```\n\n```' },
     { id: 'code-js', icon: 'JS', iconClass: 'lang-js', label: t('canvas.editor.commands.codeJs'), description: t('canvas.editor.commands.codeJsDesc'), action: () => '```javascript\n\n```' },
     { id: 'code-ts', icon: 'TS', iconClass: 'lang-ts', label: t('canvas.editor.commands.codeTs'), description: t('canvas.editor.commands.codeTsDesc'), action: () => '```typescript\n\n```' },
@@ -1854,8 +1856,8 @@ const slashCommands = computed<SlashCommand[]>(() => [
     { id: 'code-sql', icon: 'DB', label: t('canvas.editor.commands.codeSql'), description: t('canvas.editor.commands.codeSqlDesc'), action: () => '```sql\n\n```' },
     { id: 'code-sh', icon: '$', label: t('canvas.editor.commands.codeSh'), description: t('canvas.editor.commands.codeShDesc'), action: () => '```bash\n\n```' },
     { id: 'code-json', icon: '{}', label: t('canvas.editor.commands.codeJson'), description: t('canvas.editor.commands.codeJsonDesc'), action: () => '```json\n\n```' },
-    { id: 'math', icon: 'Σ', iconClass: 'math-icon', label: t('canvas.editor.commands.math'), description: t('canvas.editor.commands.mathDesc'), shortcut: '$...$', action: () => '$E = mc^2$' },
-    { id: 'math-block', icon: '∫', iconClass: 'math-icon', label: t('canvas.editor.commands.mathBlock'), description: t('canvas.editor.commands.mathBlockDesc'), shortcut: '$$...$$', action: () => '$$\n\\int_{a}^{b} f(x) dx\n$$' },
+    { id: 'math', icon: 'FX', iconClass: 'math-icon', label: t('canvas.editor.commands.math'), description: t('canvas.editor.commands.mathDesc'), shortcut: '$...$', action: () => '$E = mc^2$' },
+    { id: 'math-block', icon: 'INT', iconClass: 'math-icon', label: t('canvas.editor.commands.mathBlock'), description: t('canvas.editor.commands.mathBlockDesc'), shortcut: '$$...$$', action: () => '$$\n\\int_{a}^{b} f(x) dx\n$$' },
     { id: 'mermaid-flow', icon: 'Flow', label: t('canvas.editor.commands.flowchart'), description: t('canvas.editor.commands.flowchartDesc'), action: () => '```mermaid\nflowchart TD\n    A[Start] --> B{Decision}\n    B -->|Yes| C[Done]\n    B -->|No| D[Retry]\n```' },
     { id: 'mermaid-seq', icon: 'Seq', label: t('canvas.editor.commands.sequence'), description: t('canvas.editor.commands.sequenceDesc'), action: () => '```mermaid\nsequenceDiagram\n    Alice->>Bob: Hello\n    Bob-->>Alice: Hi\n```' },
     { id: 'mermaid-mindmap', icon: 'Map', label: t('canvas.editor.commands.mindmap'), description: t('canvas.editor.commands.mindmapDesc'), action: () => '```mermaid\nmindmap\n  root((Topic))\n    Branch One\n      Detail A\n      Detail B\n```' },
@@ -1872,9 +1874,9 @@ const slashCommands = computed<SlashCommand[]>(() => [
     { id: 'bold', icon: 'B', iconClass: 'bold-icon', label: t('canvas.editor.commands.bold'), description: t('canvas.editor.commands.boldDesc'), action: () => `**${t('canvas.editor.examples.bold')}**` },
     { id: 'italic', icon: 'I', iconClass: 'italic-icon', label: t('canvas.editor.commands.italic'), description: t('canvas.editor.commands.italicDesc'), action: () => `*${t('canvas.editor.examples.italic')}*` },
     { id: 'strike', icon: 'S', iconClass: 'strike-icon', label: t('canvas.editor.commands.strike'), description: t('canvas.editor.commands.strikeDesc'), action: () => `~~${t('canvas.editor.examples.strikethrough')}~~` },
-    { id: 'link', icon: '🔗', label: t('canvas.editor.commands.link'), description: t('canvas.editor.commands.linkDesc'), action: () => `[${t('canvas.editor.examples.text')}](${t('canvas.editor.examples.url')})` },
-    { id: 'image', icon: '🖼', label: t('canvas.editor.commands.image'), description: t('canvas.editor.commands.imageDesc'), action: () => `![${t('canvas.editor.examples.description')}](${t('canvas.editor.examples.url')})` },
-    { id: 'table', icon: '▦', label: t('canvas.editor.commands.table'), description: t('canvas.editor.commands.tableDesc'), action: () => `| ${t('canvas.editor.examples.col1')} | ${t('canvas.editor.examples.col2')} | ${t('canvas.editor.examples.col3')} |\n| --- | --- | --- |\n| ${t('canvas.editor.examples.content')} | ${t('canvas.editor.examples.content')} | ${t('canvas.editor.examples.content')} |` }
+    { id: 'link', icon: 'URL', label: t('canvas.editor.commands.link'), description: t('canvas.editor.commands.linkDesc'), action: () => `[${t('canvas.editor.examples.text')}](${t('canvas.editor.examples.url')})` },
+    { id: 'image', icon: 'IMG', label: t('canvas.editor.commands.image'), description: t('canvas.editor.commands.imageDesc'), action: () => `![${t('canvas.editor.examples.description')}](${t('canvas.editor.examples.url')})` },
+    { id: 'table', icon: 'TB', label: t('canvas.editor.commands.table'), description: t('canvas.editor.commands.tableDesc'), action: () => `| ${t('canvas.editor.examples.col1')} | ${t('canvas.editor.examples.col2')} | ${t('canvas.editor.examples.col3')} |\n| --- | --- | --- |\n| ${t('canvas.editor.examples.content')} | ${t('canvas.editor.examples.content')} | ${t('canvas.editor.examples.content')} |` }
 ])
 
 const filteredCommands = computed(() => {
@@ -3378,7 +3380,8 @@ onUnmounted(() => {
 .editor-search-scope-btn, .editor-search-nav, .editor-search-result, .editor-search-close { border: none; cursor: pointer; }
 .editor-search-scope-btn { min-width: 64px; height: 30px; padding: 0 10px; border-radius: 999px; background: transparent; color: rgba(255, 255, 255, 0.62); font-size: 12px; font-weight: 700; }
 .editor-search-scope-btn.active { background: rgba(96, 165, 250, 0.18); color: #dbeafe; }
-.editor-search-close { width: 30px; height: 30px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.72); font-size: 18px; line-height: 1; }
+.editor-search-close { width: 30px; height: 30px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.72); display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+.editor-search-close svg { width: 14px; height: 14px; display: block; }
 .editor-search-meta { margin-top: 10px; color: rgba(255, 255, 255, 0.52); font-size: 12px; }
 .editor-search-actions { display: flex; gap: 8px; margin-top: 10px; }
 .editor-search-nav { flex: 1; height: 32px; border-radius: 10px; background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.82); font-size: 12px; font-weight: 700; }

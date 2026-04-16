@@ -7,7 +7,11 @@
             <div class="bubble-content">
                 <div class="bubble-header">
                     <span class="bubble-user">{{ message.userName }}</span>
-                    <button class="bubble-close" @click="close">✕</button>
+                    <button class="bubble-close" @click="close">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+                        </svg>
+                    </button>
                 </div>
                 <div class="bubble-text">{{ message.content }}</div>
             </div>
@@ -16,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import type { ChatMessage } from '../../composables/useYjsChat'
 
 interface Props {
@@ -26,19 +30,17 @@ interface Props {
 
 defineProps<Props>()
 
-const emit = defineEmits<{
+defineEmits<{
     (e: 'remove'): void
 }>()
 
 const visible = ref(false)
 
 onMounted(() => {
-    // 延迟显示实现滑入效果
     requestAnimationFrame(() => {
         visible.value = true
     })
-    
-    // 3秒后自动关闭
+
     setTimeout(() => {
         close()
     }, 3000)
@@ -102,7 +104,6 @@ function close() {
     border: none;
     color: var(--text-secondary);
     cursor: pointer;
-    font-size: 16px;
     padding: 0;
     width: 18px;
     height: 18px;
@@ -111,6 +112,12 @@ function close() {
     justify-content: center;
     border-radius: 3px;
     transition: all 0.2s;
+}
+
+.bubble-close svg {
+    width: 12px;
+    height: 12px;
+    display: block;
 }
 
 .bubble-close:hover {
@@ -132,7 +139,6 @@ function close() {
     -webkit-box-orient: vertical;
 }
 
-/* 动画 */
 .bubble-enter-active,
 .bubble-leave-active {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

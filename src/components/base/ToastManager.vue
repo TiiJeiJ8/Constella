@@ -8,7 +8,18 @@
                 :class="toast.type"
                 @click="removeToast(toast.id)"
             >
-                <span class="toast-icon">{{ getIcon(toast.type) }}</span>
+                <svg class="toast-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path v-if="toast.type === 'success'" d="m5 12.5 4.2 4.2L19 6.9" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" />
+                    <path v-else-if="toast.type === 'error'" d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2.2" />
+                    <g v-else-if="toast.type === 'warning'">
+                        <path d="M12 4.5 21 19H3L12 4.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.9" />
+                        <path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2.1" />
+                    </g>
+                    <g v-else>
+                        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8" />
+                        <path d="M12 10v6M12 7.5h.01" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2.2" />
+                    </g>
+                </svg>
                 <span class="toast-message">{{ toast.message }}</span>
             </div>
         </TransitionGroup>
@@ -28,24 +39,14 @@ export interface Toast {
 const toasts = ref<Toast[]>([])
 let nextId = 0
 
-function getIcon(type: string) {
-    switch (type) {
-        case 'success': return '✓'
-        case 'error': return '✕'
-        case 'warning': return '⚠'
-        case 'info': return 'ℹ'
-        default: return 'ℹ'
-    }
-}
-
 function addToast(message: string, type: Toast['type'] = 'info', duration = 3000) {
     const id = nextId++
     toasts.value.push({ id, message, type, duration })
-    
+
     if (duration > 0) {
         setTimeout(() => removeToast(id), duration)
     }
-    
+
     return id
 }
 
@@ -148,15 +149,15 @@ defineExpose({
 }
 
 .toast-icon {
-    font-size: 16px;
-    font-weight: bold;
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
 }
 
 .toast-message {
     flex: 1;
 }
 
-/* 动画 */
 .toast-enter-active {
     animation: toastIn 0.3s ease-out;
 }

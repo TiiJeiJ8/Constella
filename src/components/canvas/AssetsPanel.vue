@@ -1,83 +1,92 @@
 <template>
     <div class="assets-panel">
-        <!-- 上传按钮 -->
-        <div class="upload-area">
+        <div class="upload-area" :class="{ disabled: !canUpload }">
             <input
                 ref="fileInputRef"
                 type="file"
                 multiple
                 accept="image/*"
                 class="file-input"
+                :disabled="!canUpload"
                 @change="handleFileSelect"
             />
-            <button class="upload-btn" @click="triggerFileSelect">
-                <span class="icon">📤</span>
+            <button class="upload-btn" :disabled="!canUpload || uploading" @click="triggerFileSelect">
+                <span class="icon">+</span>
                 <span class="text">{{ t('canvas.assets.upload') }}</span>
             </button>
             <span class="hint">{{ t('canvas.assets.supportedFormats') }}</span>
+            <span v-if="!canUpload" class="readonly-hint">{{ readOnlyHint }}</span>
         </div>
-        
-        <!-- 上传进度 -->
+
         <div v-if="uploading" class="upload-progress">
             <div class="progress-bar">
                 <div class="progress-fill" :style="{ width: uploadProgress + '%' }"></div>
             </div>
             <span class="progress-text">{{ t('canvas.assets.uploading') }} {{ uploadProgress }}%</span>
         </div>
-        
-        <!-- 资源列表 -->
+
         <div v-if="assets.length > 0" class="assets-grid">
             <div
                 v-for="asset in assets"
                 :key="asset.id"
                 class="asset-item"
-                :class="{ selected: selectedAssetId === asset.id }"
-                draggable="true"
+                :class="{
+                    selected: selectedAssetId === asset.id,
+                    readonly: !canInsert
+                }"
+                :draggable="canInsert"
                 @click="selectAsset(asset)"
                 @dblclick="insertAsset(asset)"
                 @dragstart="handleAssetDragStart(asset, $event)"
             >
                 <div class="asset-preview">
                     <img
-                        v-if="asset.type.startsWith('image')"
+                        v-if="asset.type?.startsWith('image')"
                         :src="asset.url"
                         :alt="asset.name"
                     />
-                    <span v-else class="file-icon">📄</span>
+                    <svg v-else class="file-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M7 4.75h7l3 3v11.5H7A2.25 2.25 0 0 1 4.75 17V7A2.25 2.25 0 0 1 7 4.75Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7" />
+                        <path d="M14 4.75V8h3" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7" />
+                    </svg>
                 </div>
                 <div class="asset-info">
                     <span class="asset-name" :title="asset.name">{{ truncateName(asset.name) }}</span>
                     <span class="asset-size">{{ formatSize(asset.size) }}</span>
                 </div>
-                <button 
+                <button
                     v-if="asset.canDelete !== false"
-                    class="delete-btn" 
-                    @click.stop="showDeleteConfirm(asset.id)"
+                    class="delete-btn"
+                    :disabled="!canUpload"
                     :title="t('canvas.assets.delete')"
+                    @click.stop="showDeleteConfirm(asset.id)"
                 >
-                    ✕
+                    x
                 </button>
             </div>
         </div>
-        
-        <!-- 空状态 -->
+
         <div v-else class="empty-state">
-            <span class="empty-icon">🖼️</span>
+            <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="4.75" y="5.5" width="14.5" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7" />
+                <circle cx="9" cy="10" r="1.2" fill="currentColor" />
+                <path d="m8 16 3.2-3.2L14 15l1.8-1.8L17 14.4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" />
+            </svg>
             <span class="empty-text">{{ t('canvas.assets.empty') }}</span>
             <span class="empty-hint">{{ t('canvas.assets.emptyHint') }}</span>
         </div>
-        
-        <!-- 选中资源操作 -->
+
         <div v-if="selectedAssetId" class="asset-actions">
-            <button class="action-btn" @click="insertSelectedAsset">
-                <span>➕</span> {{ t('canvas.assets.insertToCanvas') }}
+            <button class="action-btn" :disabled="!canInsert" @click="insertSelectedAsset">
+                <span>></span>
+                <span>{{ t('canvas.assets.insertToCanvas') }}</span>
             </button>
             <button class="action-btn" @click="copyAssetUrl">
-                <span>📋</span> {{ t('canvas.assets.copyLink') }}
+                <span>#</span>
+                <span>{{ t('canvas.assets.copyLink') }}</span>
             </button>
         </div>
-        
-        <!-- 删除确认弹窗 -->
+
         <ConfirmDialog
             v-model="isDeleteDialogOpen"
             :title="t('canvas.assets.deleteConfirmTitle')"
@@ -89,12 +98,12 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { apiService } from '@/services/api'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ConfirmDialog from '@/components/base/ConfirmDialog.vue'
+import { apiService } from '@/services/api'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const ASSET_DRAG_MIME = 'application/x-constella-asset'
 
 const props = defineProps({
@@ -105,6 +114,14 @@ const props = defineProps({
     roomId: {
         type: String,
         required: true
+    },
+    canUpload: {
+        type: Boolean,
+        default: true
+    },
+    canInsert: {
+        type: Boolean,
+        default: true
     }
 })
 
@@ -114,61 +131,59 @@ const fileInputRef = ref(null)
 const uploading = ref(false)
 const uploadProgress = ref(0)
 const selectedAssetId = ref(null)
-
-// 删除确认弹窗
 const isDeleteDialogOpen = ref(false)
 const pendingDeleteId = ref(null)
 
-// 选中的资源
-const selectedAsset = computed(() => {
-    return props.assets.find(a => a.id === selectedAssetId.value)
-})
+const selectedAsset = computed(() => props.assets.find(asset => asset.id === selectedAssetId.value) || null)
+const readOnlyHint = computed(() => (
+    locale.value === 'zh-CN'
+        ? '当前为只读模式，不能上传或删除素材。'
+        : 'Read-only mode: uploading and deleting assets is disabled.'
+))
 
-// 触发文件选择
 function triggerFileSelect() {
+    if (!props.canUpload || uploading.value) return
     fileInputRef.value?.click()
 }
 
-// 处理文件选择
-function handleFileSelect(e) {
-    const files = Array.from(e.target.files || [])
-    if (files.length === 0) return
-    
-    uploadFiles(files)
-    
-    // 清除 input 以便重复选择同一文件
-    e.target.value = ''
+function handleFileSelect(event) {
+    if (!props.canUpload) {
+        event.target.value = ''
+        return
+    }
+
+    const files = Array.from(event.target.files || [])
+    if (files.length > 0) {
+        uploadFiles(files)
+    }
+
+    event.target.value = ''
 }
 
-// 上传文件（使用 XHR 支持上传进度）
 async function uploadFiles(files) {
-    if (!files || files.length === 0) return
+    if (!props.canUpload || !files?.length) return
 
     uploading.value = true
     uploadProgress.value = 0
-
     const totalFiles = files.length
 
     try {
-        for (let i = 0; i < totalFiles; i++) {
+        for (let i = 0; i < totalFiles; i += 1) {
             const file = files[i]
 
-            // 使用 XMLHttpRequest 进行文件上传以获取进度
-            await new Promise((resolve) => {
+            await new Promise(resolve => {
                 const xhr = new XMLHttpRequest()
                 const url = `${apiService.getBaseUrl()}/api/v1/rooms/${props.roomId}/assets`
 
                 xhr.open('POST', url, true)
 
-                // 授权头（如果有）
                 const token = localStorage.getItem('access_token')
                 if (token) {
                     xhr.setRequestHeader('Authorization', `Bearer ${token}`)
                 }
 
-                xhr.upload.onprogress = (e) => {
-                    const fileProgress = e.lengthComputable ? e.loaded / e.total : 0
-                    // 计算整体进度（简单平均 + 当前文件进度）
+                xhr.upload.onprogress = progressEvent => {
+                    const fileProgress = progressEvent.lengthComputable ? progressEvent.loaded / progressEvent.total : 0
                     uploadProgress.value = Math.round(((i + fileProgress) / totalFiles) * 100)
                 }
 
@@ -177,41 +192,36 @@ async function uploadFiles(files) {
                         let result = {}
                         try {
                             result = JSON.parse(xhr.responseText)
-                        } catch (err) {
-                            console.error('Invalid JSON response for upload:', err)
+                        } catch (error) {
+                            console.error('Invalid JSON response for upload:', error)
                         }
 
-                        // 服务器可能返回 data 为资源相对路径或对象
                         let assetUrl = ''
-                        if (result && result.data) {
+                        if (result?.data) {
                             if (typeof result.data === 'string') {
-                                // 如果是相对路径（uploads/...）或已经带协议
-                                if (result.data.startsWith('uploads/')) {
-                                    assetUrl = 'constella://' + result.data
-                                } else {
-                                    assetUrl = result.data
-                                }
+                                assetUrl = result.data.startsWith('uploads/')
+                                    ? `constella://${result.data}`
+                                    : result.data
                             } else if (typeof result.data === 'object' && result.data.url) {
                                 assetUrl = result.data.url
                             }
                         }
 
                         const asset = {
-                            id: (result && result.data && result.data.id) || Date.now().toString(),
+                            id: result?.data?.id || Date.now().toString(),
                             name: file.name,
                             size: file.size,
                             type: file.type,
                             url: assetUrl || `constella://uploads/assets/${file.name}`
                         }
 
-                        // 通知父组件上传成功，带上服务器返回的资源信息
                         emit('upload', { success: true, asset, raw: result })
-                        resolve(undefined)
                     } else {
                         console.error('Upload failed:', xhr.status, xhr.statusText)
                         emit('upload', { success: false, error: xhr.statusText })
-                        resolve(undefined)
                     }
+
+                    resolve(undefined)
                 }
 
                 xhr.onerror = () => {
@@ -230,83 +240,77 @@ async function uploadFiles(files) {
     } catch (error) {
         console.error('Upload failed:', error)
     } finally {
-        setTimeout(() => {
+        window.setTimeout(() => {
             uploading.value = false
             uploadProgress.value = 0
         }, 500)
     }
 }
 
-// 选择资源
 function selectAsset(asset) {
     selectedAssetId.value = asset.id
     emit('select', asset)
 }
 
-// 插入资源到画布
 function insertAsset(asset) {
+    if (!props.canInsert) return
     emit('insert', asset)
 }
 
-// 插入选中的资源
 function insertSelectedAsset() {
-    if (selectedAsset.value) {
-        emit('insert', selectedAsset.value)
-    }
+    if (!props.canInsert || !selectedAsset.value) return
+    emit('insert', selectedAsset.value)
 }
 
 function handleAssetDragStart(asset, event) {
-    if (!event.dataTransfer) return
+    if (!props.canInsert || !event.dataTransfer) {
+        event.preventDefault?.()
+        return
+    }
 
     event.dataTransfer.effectAllowed = 'copy'
     event.dataTransfer.setData(ASSET_DRAG_MIME, JSON.stringify(asset))
     event.dataTransfer.setData('text/plain', asset.name || asset.id || 'asset')
 }
 
-// 显示删除确认弹窗
 function showDeleteConfirm(assetId) {
+    if (!props.canUpload) return
     pendingDeleteId.value = assetId
     isDeleteDialogOpen.value = true
 }
 
-// 确认删除资源
 function confirmDelete() {
-    if (pendingDeleteId.value) {
-        emit('delete', pendingDeleteId.value)
-        if (selectedAssetId.value === pendingDeleteId.value) {
-            selectedAssetId.value = null
-        }
-        pendingDeleteId.value = null
+    if (!props.canUpload || !pendingDeleteId.value) return
+
+    emit('delete', pendingDeleteId.value)
+    if (selectedAssetId.value === pendingDeleteId.value) {
+        selectedAssetId.value = null
     }
+    pendingDeleteId.value = null
 }
 
-// 复制资源链接
 async function copyAssetUrl() {
     if (!selectedAsset.value) return
-    
+
     try {
         await navigator.clipboard.writeText(selectedAsset.value.url)
-        // TODO: 显示成功提示
-        console.log('URL copied:', selectedAsset.value.url)
     } catch (error) {
         console.error('Copy failed:', error)
     }
 }
 
-// 截断文件名
 function truncateName(name) {
     if (name.length <= 15) return name
     const ext = name.split('.').pop()
     const baseName = name.slice(0, name.length - ext.length - 1)
     if (baseName.length <= 10) return name
-    return baseName.slice(0, 8) + '...' + '.' + ext
+    return `${baseName.slice(0, 8)}....${ext}`
 }
 
-// 格式化文件大小
 function formatSize(bytes) {
-    if (bytes < 1024) return bytes + ' B'
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 </script>
 
@@ -318,7 +322,6 @@ function formatSize(bytes) {
     padding: 4px;
 }
 
-/* 上传区域 */
 .upload-area {
     display: flex;
     flex-direction: column;
@@ -334,6 +337,16 @@ function formatSize(bytes) {
 .upload-area:hover {
     border-color: var(--color-primary);
     background: rgba(102, 126, 234, 0.05);
+}
+
+.upload-area.disabled {
+    border-style: solid;
+    opacity: 0.72;
+}
+
+.upload-area.disabled:hover {
+    border-color: var(--border-color);
+    background: var(--bg-secondary);
 }
 
 .file-input {
@@ -354,21 +367,30 @@ function formatSize(bytes) {
     transition: all 0.2s;
 }
 
-.upload-btn:hover {
+.upload-btn:hover:not(:disabled) {
     background: var(--color-primary-dark);
     transform: translateY(-1px);
+}
+
+.upload-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .upload-btn .icon {
     font-size: 16px;
 }
 
-.hint {
+.hint,
+.readonly-hint {
     font-size: 12px;
     color: var(--text-tertiary);
 }
 
-/* 上传进度 */
+.readonly-hint {
+    text-align: center;
+}
+
 .upload-progress {
     display: flex;
     flex-direction: column;
@@ -394,7 +416,6 @@ function formatSize(bytes) {
     text-align: center;
 }
 
-/* 资源网格 */
 .assets-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -418,6 +439,14 @@ function formatSize(bytes) {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.asset-item.readonly {
+    cursor: default;
+}
+
+.asset-item.readonly:hover {
+    box-shadow: none;
+}
+
 .asset-item.selected {
     border-color: var(--color-primary);
     box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
@@ -439,7 +468,9 @@ function formatSize(bytes) {
 }
 
 .file-icon {
-    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    color: var(--text-tertiary);
 }
 
 .asset-info {
@@ -481,15 +512,20 @@ function formatSize(bytes) {
     transition: opacity 0.2s;
 }
 
-.asset-item:hover .delete-btn {
+.asset-item:hover .delete-btn,
+.asset-item.selected .delete-btn {
     opacity: 1;
 }
 
-.delete-btn:hover {
+.delete-btn:hover:not(:disabled) {
     background: #ef4444;
 }
 
-/* 空状态 */
+.delete-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 .empty-state {
     display: flex;
     flex-direction: column;
@@ -500,8 +536,10 @@ function formatSize(bytes) {
 }
 
 .empty-icon {
-    font-size: 48px;
+    width: 48px;
+    height: 48px;
     opacity: 0.5;
+    color: var(--text-tertiary);
 }
 
 .empty-text {
@@ -514,7 +552,6 @@ function formatSize(bytes) {
     color: var(--text-tertiary);
 }
 
-/* 资源操作 */
 .asset-actions {
     display: flex;
     gap: 8px;
@@ -538,8 +575,13 @@ function formatSize(bytes) {
     transition: all 0.2s;
 }
 
-.action-btn:hover {
+.action-btn:hover:not(:disabled) {
     background: var(--bg-tertiary);
     border-color: var(--color-primary);
+}
+
+.action-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
 }
 </style>

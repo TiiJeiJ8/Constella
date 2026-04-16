@@ -4,11 +4,11 @@
 
         <div class="control-buttons" :class="{ 'no-electron': !isElectron }">
             <button class="ctrl-btn" @click="toggleLanguage" :title="t('home.controls.language')">
-                <span class="lang-text">{{ currentLocale === 'zh-CN' ? '中' : 'EN' }}</span>
+                <span class="lang-text">{{ currentLocale === 'zh-CN' ? 'EN' : '中' }}</span>
             </button>
             <button class="ctrl-btn" @click="toggleTheme" :title="t('home.controls.theme')">
-                <MoonIcon v-if="!isDark" />
-                <SunnyIcon v-else />
+                <SunnyIcon v-if="isDark" />
+                <MoonIcon v-else />
             </button>
             <button class="ctrl-btn" @click="goBack" :title="t('login.controls.back')">
                 <ChevronLeftIcon />

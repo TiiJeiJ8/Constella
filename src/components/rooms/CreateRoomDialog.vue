@@ -2,30 +2,30 @@
     <Transition name="dialog-fade">
         <div v-if="modelValue" class="dialog-overlay" @click="handleOverlayClick">
             <div class="dialog-container" @click.stop>
-                <!-- 对话框头部 -->
                 <div class="dialog-header">
                     <h3 class="dialog-title">{{ t('createRoom.title') }}</h3>
-                    <button class="close-btn" @click="handleClose">✕</button>
+                    <button class="close-btn" @click="handleClose">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+                        </svg>
+                    </button>
                 </div>
 
-                <!-- 对话框内容 -->
                 <div class="dialog-body">
                     <form @submit.prevent="handleSubmit">
-                        <!-- 房间名称 -->
                         <div class="form-group">
                             <label class="form-label">{{ t('createRoom.name') }}</label>
                             <input
                                 v-model="formData.name"
                                 type="text"
                                 class="form-input"
-                                :class="{ 'error': errors.name }"
+                                :class="{ error: errors.name }"
                                 :placeholder="t('createRoom.namePlaceholder')"
                                 maxlength="100"
                             />
                             <span v-if="errors.name" class="error-text">{{ errors.name }}</span>
                         </div>
 
-                        <!-- 房间描述 -->
                         <div class="form-group">
                             <label class="form-label">{{ t('createRoom.description') }}</label>
                             <textarea
@@ -38,7 +38,6 @@
                             <span class="char-count">{{ formData.description?.length || 0 }}/500</span>
                         </div>
 
-                        <!-- 房间图标 -->
                         <div class="form-group">
                             <label class="form-label">{{ t('createRoom.icon') }}</label>
                             <div class="icon-selector">
@@ -47,7 +46,7 @@
                                     :key="icon"
                                     type="button"
                                     class="icon-option"
-                                    :class="{ 'active': formData.icon === icon }"
+                                    :class="{ active: formData.icon === icon }"
                                     @click="formData.icon = icon"
                                 >
                                     {{ icon }}
@@ -55,7 +54,6 @@
                             </div>
                         </div>
 
-                        <!-- 隐私设置 -->
                         <div class="form-group">
                             <div class="checkbox-group">
                                 <label class="checkbox-label">
@@ -65,14 +63,17 @@
                                         class="checkbox-input"
                                     />
                                     <span class="checkbox-text">
-                                        🔒 {{ t('createRoom.private') }}
+                                        <svg class="inline-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                            <rect x="6.5" y="10.5" width="11" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.8" />
+                                            <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+                                        </svg>
+                                        {{ t('createRoom.private') }}
                                     </span>
                                 </label>
                             </div>
                             <p class="form-hint">{{ t('createRoom.privateHint') }}</p>
                         </div>
 
-                        <!-- 房间密码（仅私密房间） -->
                         <Transition name="slide-fade">
                             <div v-if="formData.isPrivate" class="form-group">
                                 <label class="form-label">{{ t('createRoom.password') }}</label>
@@ -80,7 +81,7 @@
                                     v-model="formData.password"
                                     type="password"
                                     class="form-input"
-                                    :class="{ 'error': errors.password }"
+                                    :class="{ error: errors.password }"
                                     :placeholder="t('createRoom.passwordPlaceholder')"
                                     maxlength="50"
                                 />
@@ -90,12 +91,11 @@
                     </form>
                 </div>
 
-                <!-- 对话框底部 -->
                 <div class="dialog-footer">
-                    <button class="btn btn-secondary" @click="handleClose" :disabled="loading">
+                    <button class="btn btn-secondary" :disabled="loading" @click="handleClose">
                         {{ t('common.cancel') }}
                     </button>
-                    <button class="btn btn-primary" @click="handleSubmit" :disabled="loading">
+                    <button class="btn btn-primary" :disabled="loading" @click="handleSubmit">
                         <span v-if="loading" class="loading-spinner"></span>
                         {{ loading ? t('createRoom.creating') : t('createRoom.create') }}
                     </button>
@@ -106,13 +106,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { apiService } from '@/services/api'
 
 const { t } = useI18n()
 
-const props = defineProps({
+defineProps({
     modelValue: {
         type: Boolean,
         required: true
@@ -121,71 +121,62 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'created'])
 
-// 图标选项
-const iconOptions = ['💼', '🎨', '📊', '💡', '🚀', '📝', '🎯', '⭐', '🔥', '💻', '📱', '🎮']
+const iconOptions = ['💡', '🎯', '📊', '🚀', '📝', '⭐', '🔥', '🧩', '🧠', '🗺️', '⚗️', '🔭']
 
-// 表单数据
 const formData = reactive({
     name: '',
     description: '',
-    icon: '💼',
+    icon: '💡',
     isPrivate: false,
     password: ''
 })
 
-// 错误信息
 const errors = reactive({
     name: '',
     password: ''
 })
 
-// 加载状态
 const loading = ref(false)
 
-// 验证表单
 function validateForm() {
     errors.name = ''
     errors.password = ''
-    
+
     if (!formData.name.trim()) {
         errors.name = t('createRoom.errors.nameRequired')
         return false
     }
-    
+
     if (formData.name.trim().length < 2) {
         errors.name = t('createRoom.errors.nameTooShort')
         return false
     }
-    
+
     if (formData.isPrivate && !formData.password) {
         errors.password = t('createRoom.errors.passwordRequired')
         return false
     }
-    
+
     if (formData.password && formData.password.length < 4) {
         errors.password = t('createRoom.errors.passwordTooShort')
         return false
     }
-    
+
     return true
 }
 
-// 提交表单
 async function handleSubmit() {
-    if (!validateForm()) {
-        return
-    }
-    
+    if (!validateForm()) return
+
     loading.value = true
-    
+
     try {
-        // 准备设置数据
         const settings = {
             appearance: {
                 icon: formData.icon
             }
         }
-        
+
         const response = await apiService.createRoom({
             name: formData.name.trim(),
             description: formData.description.trim() || undefined,
@@ -193,18 +184,15 @@ async function handleSubmit() {
             password: formData.password || undefined,
             settings
         })
-        
+
         if (response.success) {
             emit('created', response.data.room)
             handleClose()
             resetForm()
+        } else if (response.errorCode === 'UNAUTHORIZED' || response.message?.includes('token')) {
+            errors.name = t('common.errors.tokenExpired')
         } else {
-            // 显示错误，映射常见错误码到翻译
-            if (response.errorCode === 'UNAUTHORIZED' || response.message?.includes('token')) {
-                errors.name = t('common.errors.tokenExpired')
-            } else {
-                errors.name = response.message || t('createRoom.errors.createFailed')
-            }
+            errors.name = response.message || t('createRoom.errors.createFailed')
         }
     } catch (error) {
         errors.name = error.message || t('createRoom.errors.createFailed')
@@ -213,40 +201,35 @@ async function handleSubmit() {
     }
 }
 
-// 关闭对话框
 function handleClose() {
     emit('update:modelValue', false)
 }
 
-// 点击遮罩层关闭
 function handleOverlayClick() {
     if (!loading.value) {
         handleClose()
     }
 }
 
-// 重置表单
 function resetForm() {
     formData.name = ''
     formData.description = ''
-    formData.icon = '💼'
+    formData.icon = '💡'
     formData.isPrivate = false
     formData.password = ''
     errors.name = ''
     errors.password = ''
 }
 
-// 监听对话框关闭，清空错误
-watch(() => props.modelValue, (newVal) => {
-    if (!newVal) {
-        errors.name = ''
+watch(() => formData.isPrivate, isPrivate => {
+    if (!isPrivate) {
+        formData.password = ''
         errors.password = ''
     }
 })
 </script>
 
 <style scoped>
-/* ==================== 对话框遮罩 ==================== */
 .dialog-overlay {
     position: fixed;
     top: 0;
@@ -262,7 +245,6 @@ watch(() => props.modelValue, (newVal) => {
     padding: 20px;
 }
 
-/* ==================== 对话框容器 ==================== */
 .dialog-container {
     background: var(--bg-primary);
     border-radius: 16px;
@@ -276,7 +258,6 @@ watch(() => props.modelValue, (newVal) => {
     transition: background-color 0.3s ease;
 }
 
-/* ==================== 对话框头部 ==================== */
 .dialog-header {
     padding: 24px 24px 16px;
     border-bottom: 1px solid var(--border-light);
@@ -295,10 +276,10 @@ watch(() => props.modelValue, (newVal) => {
 .close-btn {
     width: 32px;
     height: 32px;
+    border: none;
     border-radius: 16px;
     background: transparent;
     color: var(--text-secondary);
-    font-size: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -306,19 +287,23 @@ watch(() => props.modelValue, (newVal) => {
     transition: all 0.2s ease;
 }
 
+.close-btn svg {
+    width: 15px;
+    height: 15px;
+    display: block;
+}
+
 .close-btn:hover {
     background: var(--bg-tertiary);
     color: var(--text-primary);
 }
 
-/* ==================== 对话框主体 ==================== */
 .dialog-body {
     padding: 24px;
     overflow-y: auto;
     flex: 1;
 }
 
-/* ==================== 表单组 ==================== */
 .form-group {
     margin-bottom: 20px;
 }
@@ -384,7 +369,6 @@ watch(() => props.modelValue, (newVal) => {
     margin: 6px 0 0;
 }
 
-/* ==================== 图标选择器 ==================== */
 .icon-selector {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
@@ -415,7 +399,6 @@ watch(() => props.modelValue, (newVal) => {
     background: rgba(66, 153, 225, 0.1);
 }
 
-/* ==================== 复选框 ==================== */
 .checkbox-group {
     margin-bottom: 8px;
 }
@@ -439,9 +422,17 @@ watch(() => props.modelValue, (newVal) => {
     font-size: 14px;
     font-weight: 500;
     color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
-/* ==================== 对话框底部 ==================== */
+.inline-icon {
+    width: 15px;
+    height: 15px;
+    display: block;
+}
+
 .dialog-footer {
     padding: 16px 24px;
     border-top: 1px solid var(--border-light);
@@ -501,7 +492,6 @@ watch(() => props.modelValue, (newVal) => {
     to { transform: rotate(360deg); }
 }
 
-/* ==================== 动画 ==================== */
 .dialog-fade-enter-active,
 .dialog-fade-leave-active {
     transition: opacity 0.3s ease;
@@ -534,7 +524,6 @@ watch(() => props.modelValue, (newVal) => {
     transform: translateY(-10px);
 }
 
-/* ==================== 响应式 ==================== */
 @media (max-width: 768px) {
     .dialog-container {
         max-width: 100%;
@@ -543,7 +532,7 @@ watch(() => props.modelValue, (newVal) => {
         align-self: flex-end;
         max-height: 85vh;
     }
-    
+
     .icon-selector {
         grid-template-columns: repeat(4, 1fr);
     }

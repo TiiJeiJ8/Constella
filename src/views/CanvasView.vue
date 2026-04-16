@@ -26,8 +26,11 @@
             v-if="isRoomReady"
             :room-id="roomId"
             :room-name="roomName"
+            :room-role="roomRole"
             :is-syncing="isSyncing"
             :online-count="currentUsers.length"
+            :can-edit-canvas="canEditCanvas"
+            :can-manage-snapshots="canManageSnapshots"
             @exit="handleExit"
             @export="handleExport"
             @import="handleImport"
@@ -39,8 +42,9 @@
         <Toolbox
             v-if="isRoomReady"
             :active-tool="activeTool"
-            :can-undo="canUndo"
-            :can-redo="canRedo"
+            :can-edit="canEditCanvas"
+            :can-undo="canEditCanvas && canUndo"
+            :can-redo="canEditCanvas && canRedo"
             :shortcuts="userShortcuts"
             @tool-change="handleToolChange"
             @undo="handleUndo"
@@ -65,6 +69,7 @@
                 :yjs-edges="canvasEdges"
                 :remote-cursors="remoteCursors"
                 :is-editor-open="!!editingNode"
+                :is-read-only="!canEditCanvas"
                 @zoom-change="handleZoomChange"
                 @position-change="handlePositionChange"
                 @node-select="handleNodeSelect"
@@ -118,7 +123,7 @@
         </div>
 
         <NodeEditorModal
-            v-if="isRoomReady && editingNode"
+            v-if="isRoomReady && editingNode && canEditCanvas"
             :node-id="editingNode.id"
             :content="editingNode.content"
             :all-nodes="canvasNodes"
@@ -128,7 +133,7 @@
         />
 
         <component
-            v-if="isRoomReady && editingCustomNode && editingCustomPlugin?.editor"
+            v-if="isRoomReady && editingCustomNode && editingCustomPlugin?.editor && canEditCanvas"
             :is="editingCustomPlugin.editor"
             :node-id="editingCustomNode.id"
             :content="editingCustomNode.content"
@@ -141,6 +146,9 @@
             v-model="isMembersPanelOpen"
             :room-id="roomId"
             :current-users="currentUsers"
+            :room-role="roomRole"
+            :can-edit-canvas="canEditCanvas"
+            :can-manage-snapshots="canManageSnapshots"
         />
 
         <InputDialog
@@ -157,6 +165,9 @@
             :active-panel="activePanel"
             :is-collapsed="isPanelCollapsed"
             :room-id="roomId"
+            :can-edit-canvas="canEditCanvas"
+            :can-upload-assets="canUploadAssets"
+            :can-manage-snapshots="canManageSnapshots"
             :selected-nodes="selectedNodes"
             :selected-edges="selectedEdges"
             :all-nodes="canvasNodes"
@@ -260,6 +271,8 @@ const editingCustomNodeId = ref<string | null>(null)
 
 const {
     roomName,
+    roomRole,
+    roomCapabilities,
     roomLoadError,
     isRoomLoading,
     isRoomReady,
@@ -284,6 +297,10 @@ const {
     bubbleContainerRef,
     emitNavigate: (view) => emit('navigate', view)
 })
+
+const canEditCanvas = computed(() => roomCapabilities.value.can_edit)
+const canUploadAssets = computed(() => roomCapabilities.value.can_upload_assets)
+const canManageSnapshots = computed(() => roomCapabilities.value.can_manage_snapshots)
 
 const canvasNodes = computed(() => yjsNodes.nodes.value)
 const canvasEdges = computed(() => yjsEdges.edges.value)
@@ -324,6 +341,7 @@ const {
     handleToolChange
 } = useCanvasShortcuts({
     editingNodeId,
+    canEditCanvas,
     applyPerformanceSettings
 })
 
@@ -338,6 +356,8 @@ const {
     roomId: props.roomId,
     t,
     toast,
+    canUploadAssets,
+    canEditCanvas,
     yjsNodes,
     canvasAreaRef,
     stagePosition,
@@ -349,7 +369,7 @@ const {
     handleSnapshotCreate,
     handleSnapshotRestore,
     handleSnapshotDelete,
-    handleTopBarSnapshot,
+    handleTopBarSnapshot: handleTopBarSnapshotInternal,
     handleExport,
     handleImport
 } = useCanvasImportExport({
@@ -362,9 +382,19 @@ const {
     yjs,
     yjsNodes,
     yjsEdges,
+    canEditCanvas,
+    canManageSnapshots,
     t,
     toast
 })
+
+function handleTopBarSnapshot() {
+    const previousCount = roomSnapshots.value.length
+    handleTopBarSnapshotInternal()
+    if (roomSnapshots.value.length > previousCount) {
+        toast.success(t('canvas.toast.snapshotCreated'))
+    }
+}
 
 const {
     selectedCount,
@@ -444,6 +474,9 @@ function handlePositionChange(newPosition: { x: number; y: number }) {
 }
 
 function handleNodeUpdate(updateData: any) {
+    if (!canEditCanvas.value) {
+        return
+    }
     if (!updateData?.id) return
     if (updateData._realtime) {
         yjsNodes.updateNodePosition(updateData.id, updateData.x, updateData.y)
@@ -453,6 +486,9 @@ function handleNodeUpdate(updateData: any) {
 }
 
 function handleNodeDelete(nodeIds: string[]) {
+    if (!canEditCanvas.value) {
+        return
+    }
     nodeIds.forEach(nodeId => {
         yjsEdges.deleteEdgesByNode(nodeId)
     })
@@ -460,6 +496,9 @@ function handleNodeDelete(nodeIds: string[]) {
 }
 
 function handleNodeCreate(createData: { x: number; y: number }) {
+    if (!canEditCanvas.value) {
+        return
+    }
     const nodeId = `node-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     const colors = isDark.value
         ? [
@@ -496,6 +535,9 @@ function handleNodeCreate(createData: { x: number; y: number }) {
 }
 
 function handleEdgeCreate(edgeData: { sourceId: string; targetId: string }) {
+    if (!canEditCanvas.value) {
+        return
+    }
     const edgeId = `edge-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
     yjsEdges.createEdge({
@@ -511,6 +553,9 @@ function handleEdgeCreate(edgeData: { sourceId: string; targetId: string }) {
 }
 
 function handleEdgeDelete(edgeIds: string[]) {
+    if (!canEditCanvas.value) {
+        return
+    }
     yjsEdges.deleteEdges(edgeIds)
 }
 
@@ -523,6 +568,11 @@ function handleEdgeDblClick(edgeId: string) {
 }
 
 function handleEdgeLabelConfirm(newLabel: string) {
+    if (!canEditCanvas.value) {
+        editingEdgeId.value = null
+        editingEdgeLabel.value = ''
+        return
+    }
     if (editingEdgeId.value) {
         yjsEdges.updateEdge(editingEdgeId.value, { label: newLabel })
         toast.success(t('canvas.toast.edgeLabelUpdated'))
@@ -549,10 +599,14 @@ function handleRenderStats(stats: { visibleNodes?: number; visibleEdges?: number
 }
 
 function handleContentUpdate(nodeId: string, data: string) {
+    if (!canEditCanvas.value) {
+        return
+    }
     yjsNodes.updateNodeContent(nodeId, data)
 }
 
 function openNodeEditor(nodeId: string) {
+    if (!canEditCanvas.value) return false
     const node = canvasNodes.value.find(item => item.id === nodeId)
     if (!node) return false
 
@@ -590,6 +644,10 @@ function handleJumpToNode(nodeId: string) {
 }
 
 function handleCustomEditorUpdate(nodeId: string, contentPatch: Record<string, unknown>) {
+    if (!canEditCanvas.value) {
+        editingCustomNodeId.value = null
+        return
+    }
     yjsNodes.updateNode(nodeId, { content: contentPatch } as any)
     editingCustomNodeId.value = null
 }
@@ -599,18 +657,30 @@ function handleCloseEditor() {
 }
 
 function handleNodeKindChange(nodeId: string, kind: string) {
+    if (!canEditCanvas.value) {
+        return
+    }
     yjsNodes.updateNodeKind(nodeId, kind)
 }
 
 function handleNodePropertyChange(nodeId: string, property: string, value: unknown) {
+    if (!canEditCanvas.value) {
+        return
+    }
     yjsNodes.updateNode(nodeId, { [property]: value } as any)
 }
 
 function handleNodeDisplayModeChange(nodeId: string, displayMode: string) {
+    if (!canEditCanvas.value) {
+        return
+    }
     yjsNodes.updateNodeDisplayMode(nodeId, displayMode as any)
 }
 
 function handleNodeContentMetadataChange(nodeId: string, key: string, value: unknown) {
+    if (!canEditCanvas.value) {
+        return
+    }
     const node = canvasNodes.value.find(item => item.id === nodeId)
     if (!node?.content) return
 
@@ -630,6 +700,9 @@ function handleNodeContentMetadataChange(nodeId: string, key: string, value: unk
 }
 
 function handleNodeZIndexChange(nodeId: string, action: 'top' | 'bottom' | 'up' | 'down') {
+    if (!canEditCanvas.value) {
+        return
+    }
     const allZIndexes = canvasNodes.value.map(node => node.zIndex || 0)
     const currentNode = canvasNodes.value.find(node => node.id === nodeId)
     if (!currentNode) return
@@ -660,10 +733,16 @@ function handleNodeZIndexChange(nodeId: string, action: 'top' | 'bottom' | 'up' 
 }
 
 function handleUndo() {
+    if (!canEditCanvas.value) {
+        return
+    }
     yjsNodes.undo()
 }
 
 function handleRedo() {
+    if (!canEditCanvas.value) {
+        return
+    }
     yjsNodes.redo()
 }
 

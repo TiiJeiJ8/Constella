@@ -1,15 +1,12 @@
 <template>
     <div class="dock">
-        <!-- 左侧：用户信息胶囊（不可点击） -->
         <div class="user-pill">
             <img :src="userAvatar" alt="avatar" class="user-avatar" />
             <span class="user-name">{{ userName }}</span>
         </div>
 
-        <!-- 分隔线 -->
         <div class="dock-divider"></div>
 
-        <!-- 中间：导航图标组 -->
         <div class="dock-section">
             <button
                 v-for="item in navItems"
@@ -19,63 +16,71 @@
                 :title="t(`dock.${item.id}`)"
                 @click="item.action"
             >
-                <span class="dock-icon">{{ item.icon }}</span>
+                <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                        v-for="(path, index) in item.paths"
+                        :key="index"
+                        :d="path.d"
+                        :fill="path.fill || 'none'"
+                        :stroke="path.stroke || 'currentColor'"
+                        :stroke-linecap="path.linecap || 'round'"
+                        :stroke-linejoin="path.linejoin || 'round'"
+                        :stroke-width="path.width || 1.8"
+                    />
+                </svg>
             </button>
         </div>
 
-        <!-- 分隔线 -->
         <div class="dock-divider"></div>
 
-        <!-- 右侧：系统控制组 -->
         <div class="dock-section">
-            <button
-                class="dock-item"
-                :title="t('dock.language')"
-                @click="toggleLanguage"
-            >
-                <span class="dock-icon">🌐</span>
+            <button class="dock-item language-btn" :title="t('dock.language')" @click="toggleLanguage">
+                <span class="dock-text">{{ locale === 'zh-CN' ? 'EN' : '中' }}</span>
             </button>
-            <button
-                class="dock-item"
-                :title="t('dock.theme')"
-                @click="toggleTheme"
-            >
-                <span class="dock-icon">{{ isDark ? '☀️' : '🌙' }}</span>
+            <button class="dock-item" :title="t('dock.theme')" @click="toggleTheme">
+                <svg v-if="isDark" class="dock-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 3.5v2.2M12 18.3v2.2M20.5 12h-2.2M5.7 12H3.5M17.66 6.34l-1.55 1.55M7.89 16.11l-1.55 1.55M17.66 17.66l-1.55-1.55M7.89 7.89L6.34 6.34" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+                    <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8" />
+                </svg>
+                <svg v-else class="dock-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M18.5 14.75A7.25 7.25 0 0 1 9.25 5.5a7.75 7.75 0 1 0 9.25 9.25Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
+                </svg>
             </button>
-            <button
-                class="dock-item"
-                :title="locale.value === 'zh-CN' ? '插件' : 'Plugins'"
-                @click="openPlugins"
-            >
-                <span class="dock-icon">🏪</span>
+            <button class="dock-item" :title="locale === 'zh-CN' ? '插件' : 'Plugins'" @click="openPlugins">
+                <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M10 4.75a2.75 2.75 0 1 1 4.92 1.69l.71.7a2.75 2.75 0 1 1 3.89 3.89l-.7.71A2.75 2.75 0 1 1 17.13 17l-.71-.7-4.56 4.55a1 1 0 0 1-1.41 0l-3.26-3.26a1 1 0 0 1 0-1.41l4.56-4.56-.71-.7A2.75 2.75 0 0 1 10 4.75Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7" />
+                    <path d="m12.15 11.85-2.3 2.3" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.7" />
+                </svg>
             </button>
-            <button
-                class="dock-item"
-                :title="t('dock.settings')"
-                @click="openSettings"
-            >
-                <span class="dock-icon">⚙️</span>
+            <button class="dock-item" :title="t('dock.settings')" @click="openSettings">
+                <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M10.1 3.7h3.8l.55 2.08c.3.09.59.21.87.36l1.97-.92 2.68 2.68-.92 1.97c.15.28.27.57.36.87l2.08.55v3.8l-2.08.55c-.09.3-.21.59-.36.87l.92 1.97-2.68 2.68-1.97-.92c-.28.15-.57.27-.87.36l-.55 2.08h-3.8l-.55-2.08a6.3 6.3 0 0 1-.87-.36l-1.97.92-2.68-2.68.92-1.97a6.3 6.3 0 0 1-.36-.87l-2.08-.55v-3.8l2.08-.55c.09-.3.21-.59.36-.87l-.92-1.97 2.68-2.68 1.97.92c.28-.15.57-.27.87-.36L10.1 3.7Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.45" />
+                    <circle cx="12" cy="12" r="2.7" fill="none" stroke="currentColor" stroke-width="1.8" />
+                </svg>
             </button>
-            
-            <!-- 退出按钮 -->
+
             <div class="exit-menu-wrapper">
-                <button
-                    class="dock-item exit-btn"
-                    :title="t('dock.exit')"
-                    @click="toggleExitMenu"
-                >
-                    <span class="dock-icon">🚪</span>
+                <button class="dock-item exit-btn" :title="t('dock.exit')" @click="toggleExitMenu">
+                    <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M10.25 6.75L5 12l5.25 5.25" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" />
+                        <path d="M19 12H5.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.9" />
+                    </svg>
                 </button>
 
-                <!-- 退出菜单 -->
                 <Transition name="menu-slide">
                     <div v-if="showExitMenu" class="exit-menu" @click.stop>
                         <button class="menu-item" @click="handleLogout">
-                            <span class="menu-icon">🚪</span>
+                            <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M10.25 6.75L5 12l5.25 5.25" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" />
+                                <path d="M19 12H5.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.9" />
+                            </svg>
                             <span class="menu-text">{{ t('dock.logout') }}</span>
                         </button>
                         <button class="menu-item" @click="handleDisconnect">
-                            <span class="menu-icon">🔌</span>
+                            <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M7.5 7.5 16.5 16.5M16.5 7.5l-9 9" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.9" />
+                                <rect x="4.75" y="4.75" width="14.5" height="14.5" rx="3" fill="none" stroke="currentColor" stroke-width="1.7" />
+                            </svg>
                             <span class="menu-text">{{ t('dock.disconnect') }}</span>
                         </button>
                     </div>
@@ -86,7 +91,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const { t, locale } = useI18n()
@@ -100,25 +105,49 @@ const props = defineProps({
 
 const emit = defineEmits(['navigate', 'openSettings', 'openPlugins', 'logout', 'disconnect'])
 
-// 从 localStorage 读取用户信息
 const settings = JSON.parse(localStorage.getItem('settings') || '{}')
 const userAvatar = ref(settings.avatar || '')
+const showExitMenu = ref(false)
+const isDark = ref(false)
+
 const userName = computed(() => {
     if (settings.lastName && settings.firstName) {
-        return locale.value === 'zh-CN' 
+        return locale.value === 'zh-CN'
             ? `${settings.lastName}${settings.firstName}`
             : `${settings.firstName} ${settings.lastName}`
     }
     return settings.userId || 'User'
 })
 
-// 退出菜单状态
-const showExitMenu = ref(false)
+const navItems = ref([
+    {
+        id: 'rooms',
+        active: true,
+        paths: [
+            { d: 'M4.75 8.25 12 4.75l7.25 3.5v7.5L12 19.25l-7.25-3.5Z' },
+            { d: 'M12 4.75v14.5M4.75 8.25 12 12l7.25-3.75' }
+        ],
+        action: () => emit('navigate', 'rooms')
+    },
+    {
+        id: 'recent',
+        active: false,
+        paths: [
+            { d: 'M12 6v6l4 2' },
+            { d: 'M12 20a8 8 0 1 1 5.66-2.34' }
+        ],
+        action: () => emit('navigate', 'recent')
+    },
+    {
+        id: 'favorites',
+        active: false,
+        paths: [
+            { d: 'm12 18.5-5.29 2.78 1.01-5.9-4.29-4.19 5.93-.86L12 5l2.64 5.33 5.93.86-4.29 4.19 1.01 5.9Z', linejoin: 'round' }
+        ],
+        action: () => emit('navigate', 'favorites')
+    }
+])
 
-// 主题状态
-const isDark = ref(false)
-
-// 初始化主题
 onMounted(() => {
     const savedTheme = localStorage.getItem('theme') || 'light'
     isDark.value = savedTheme === 'dark'
@@ -129,56 +158,29 @@ onUnmounted(() => {
     document.removeEventListener('click', handleClickOutside)
 })
 
-// 导航项配置
-const navItems = ref([
-    { 
-        id: 'rooms',
-        icon: '🏠',
-        active: true,
-        action: () => emit('navigate', 'rooms')
-    },
-    { 
-        id: 'recent',
-        icon: '🕐',
-        active: false,
-        action: () => emit('navigate', 'recent')
-    },
-    { 
-        id: 'favorites',
-        icon: '⭐',
-        active: false,
-        action: () => emit('navigate', 'favorites')
-    }
-])
-
-// 监听当前视图变化，更新导航项激活状态
-watch(() => props.currentView, (newView) => {
+watch(() => props.currentView, newView => {
     navItems.value.forEach(item => {
         item.active = item.id === newView
     })
 }, { immediate: true })
 
-// 切换语言
 function toggleLanguage() {
     const newLocale = locale.value === 'zh-CN' ? 'en-US' : 'zh-CN'
     locale.value = newLocale
     localStorage.setItem('locale', newLocale)
 }
 
-// 切换主题
 function toggleTheme() {
     isDark.value = !isDark.value
     const theme = isDark.value ? 'dark' : 'light'
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
-    
-    // 同步更新 settings 中的主题设置
-    const settings = JSON.parse(localStorage.getItem('settings') || '{}')
-    settings.theme = theme
-    localStorage.setItem('settings', JSON.stringify(settings))
+
+    const nextSettings = JSON.parse(localStorage.getItem('settings') || '{}')
+    nextSettings.theme = theme
+    localStorage.setItem('settings', JSON.stringify(nextSettings))
 }
 
-// 打开设置面板
 function openSettings() {
     emit('openSettings')
 }
@@ -187,26 +189,20 @@ function openPlugins() {
     emit('openPlugins')
 }
 
-// 切换退出菜单
 function toggleExitMenu() {
     showExitMenu.value = !showExitMenu.value
 }
 
-// 点击退出登录
 function handleLogout() {
     showExitMenu.value = false
-    // 清除登录信息
     emit('logout')
 }
 
-// 点击断开连接
 function handleDisconnect() {
     showExitMenu.value = false
-    // 清除服务器连接信息
     emit('disconnect')
 }
 
-// 点击外部关闭菜单
 function handleClickOutside(event) {
     if (showExitMenu.value && !event.target.closest('.exit-menu-wrapper')) {
         showExitMenu.value = false
@@ -229,14 +225,12 @@ function handleClickOutside(event) {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ==================== 暗色模式 ==================== */
 html[data-theme='dark'] .dock {
     background: rgba(28, 28, 28, 0.95);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* ==================== 用户信息胶囊 ==================== */
 .user-pill {
     height: 36px;
     padding: 0 12px;
@@ -270,7 +264,6 @@ html[data-theme='dark'] .user-pill {
     white-space: nowrap;
 }
 
-/* ==================== 分隔线 ==================== */
 .dock-divider {
     width: 1px;
     height: 24px;
@@ -278,18 +271,16 @@ html[data-theme='dark'] .user-pill {
     margin: 0 4px;
 }
 
-.dark .dock-divider {
+html[data-theme='dark'] .dock-divider {
     background: rgba(255, 255, 255, 0.1);
 }
 
-/* ==================== Dock 区域 ==================== */
 .dock-section {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-/* ==================== Dock 图标项 ==================== */
 .dock-item {
     width: 40px;
     height: 40px;
@@ -302,11 +293,20 @@ html[data-theme='dark'] .user-pill {
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
+    color: var(--text-primary);
 }
 
 .dock-icon {
-    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    display: block;
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dock-text {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
 }
 
 .dock-item:hover {
@@ -314,8 +314,19 @@ html[data-theme='dark'] .user-pill {
     transform: translateY(-4px);
 }
 
-.dark .dock-item:hover {
+.dock-item.language-btn:hover {
+    background: var(--accent-primary);
+    color: #fff;
+    transform: scale(1.05);
+}
+
+html[data-theme='dark'] .dock-item:hover {
     background: rgba(255, 255, 255, 0.1);
+}
+
+html[data-theme='dark'] .dock-item.language-btn:hover {
+    background: var(--accent-primary);
+    color: #fff;
 }
 
 .dock-item:active {
@@ -326,7 +337,7 @@ html[data-theme='dark'] .user-pill {
     background: rgba(103, 126, 234, 0.15);
 }
 
-.dark .dock-item.active {
+html[data-theme='dark'] .dock-item.active {
     background: rgba(103, 126, 234, 0.25);
 }
 
@@ -342,38 +353,8 @@ html[data-theme='dark'] .user-pill {
     background: var(--accent-primary);
 }
 
-/* ==================== 响应式设计 ==================== */
-@media (max-width: 768px) {
-    .dock {
-        padding: 0 12px;
-        gap: 6px;
-    }
-
-    .dock-item {
-        width: 36px;
-        height: 36px;
-    }
-
-    .dock-icon {
-        font-size: 18px;
-    }
-
-    .user-name {
-        display: none;
-    }
-
-    .user-pill {
-        padding: 0 6px;
-    }
-}
-
-/* ==================== 退出菜单 ==================== */
 .exit-menu-wrapper {
     position: relative;
-}
-
-.exit-btn {
-    /* 退出按钮特殊样式 */
 }
 
 .exit-menu {
@@ -388,7 +369,7 @@ html[data-theme='dark'] .user-pill {
     border: 1px solid var(--border-light);
 }
 
-.dark .exit-menu {
+html[data-theme='dark'] .exit-menu {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
@@ -412,7 +393,10 @@ html[data-theme='dark'] .user-pill {
 }
 
 .menu-icon {
-    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    display: block;
+    flex-shrink: 0;
 }
 
 .menu-text {
@@ -420,7 +404,6 @@ html[data-theme='dark'] .user-pill {
     text-align: left;
 }
 
-/* ==================== 菜单滑入滑出动画 ==================== */
 .menu-slide-enter-active {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -437,5 +420,34 @@ html[data-theme='dark'] .user-pill {
 .menu-slide-leave-to {
     opacity: 0;
     transform: translateY(5px);
+}
+
+@media (max-width: 768px) {
+    .dock {
+        padding: 0 12px;
+        gap: 6px;
+    }
+
+    .dock-item {
+        width: 36px;
+        height: 36px;
+    }
+
+    .dock-icon {
+        width: 18px;
+        height: 18px;
+    }
+
+    .dock-text {
+        font-size: 12px;
+    }
+
+    .user-name {
+        display: none;
+    }
+
+    .user-pill {
+        padding: 0 6px;
+    }
 }
 </style>
