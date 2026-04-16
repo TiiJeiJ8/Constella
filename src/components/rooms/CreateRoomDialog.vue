@@ -74,6 +74,19 @@
                             <p class="form-hint">{{ t('createRoom.privateHint') }}</p>
                         </div>
 
+                        <div class="form-group">
+                            <label class="form-label">{{ locale === 'zh-CN' ? '默认加入角色' : 'Default Join Role' }}</label>
+                            <select v-model="formData.defaultRole" class="form-input">
+                                <option value="editor">{{ locale === 'zh-CN' ? '可编辑' : 'Editor' }}</option>
+                                <option value="viewer">{{ locale === 'zh-CN' ? '只读' : 'Viewer' }}</option>
+                            </select>
+                            <p class="form-hint">
+                                {{ locale === 'zh-CN'
+                                    ? '新成员主动加入房间时会获得这个默认角色。'
+                                    : 'Members who join the room will receive this role by default.' }}
+                            </p>
+                        </div>
+
                         <Transition name="slide-fade">
                             <div v-if="formData.isPrivate" class="form-group">
                                 <label class="form-label">{{ t('createRoom.password') }}</label>
@@ -110,7 +123,7 @@ import { reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { apiService } from '@/services/api'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 defineProps({
     modelValue: {
@@ -128,7 +141,8 @@ const formData = reactive({
     description: '',
     icon: '💡',
     isPrivate: false,
-    password: ''
+    password: '',
+    defaultRole: 'editor'
 })
 
 const errors = reactive({
@@ -172,6 +186,9 @@ async function handleSubmit() {
 
     try {
         const settings = {
+            permissions: {
+                defaultRole: formData.defaultRole
+            },
             appearance: {
                 icon: formData.icon
             }
@@ -217,6 +234,7 @@ function resetForm() {
     formData.icon = '💡'
     formData.isPrivate = false
     formData.password = ''
+    formData.defaultRole = 'editor'
     errors.name = ''
     errors.password = ''
 }

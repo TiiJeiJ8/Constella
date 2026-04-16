@@ -1,12 +1,12 @@
 import { computed, onMounted, onUnmounted, provide, ref, watch, type Ref } from 'vue'
-import { useYjs } from '@/composables/useYjs'
+import { useYjs, type RoomRealtimeEvent } from '@/composables/useYjs'
 import { useYjsNodes } from '@/composables/useYjsNodes'
 import { useYjsEdges } from '@/composables/useYjsEdges'
 import { useYjsChat } from '@/composables/useYjsChat'
 import { useAwareness } from '@/composables/useAwareness'
 import { apiService } from '@/services/api'
 import { registerPlugins } from '@/plugins/register'
-import { getAccessToken, getUserId, getUsername, recordRecentVisit } from '@/utils/storage'
+import { getUserId, getUsername, recordRecentVisit } from '@/utils/storage'
 
 interface UseCanvasRoomOptions {
     roomId: string
@@ -33,6 +33,16 @@ const EMPTY_CAPABILITIES: RoomCapabilities = {
     can_upload_assets: false,
     can_manage_snapshots: false,
     can_delete_room: false
+}
+
+function hasCapabilitiesChanged(previous: RoomCapabilities, next: RoomCapabilities) {
+    return previous.can_view !== next.can_view ||
+        previous.can_edit !== next.can_edit ||
+        previous.can_manage_members !== next.can_manage_members ||
+        previous.can_manage_room !== next.can_manage_room ||
+        previous.can_upload_assets !== next.can_upload_assets ||
+        previous.can_manage_snapshots !== next.can_manage_snapshots ||
+        previous.can_delete_room !== next.can_delete_room
 }
 
 function getUserName(t: (key: string) => string) {
@@ -65,9 +75,23 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
     const roomRole = ref<string | null>(null)
     const roomCapabilities = ref<RoomCapabilities>({ ...EMPTY_CAPABILITIES })
 
+    function notifyRoomMembersUpdated(event: RoomRealtimeEvent) {
+        window.dispatchEvent(new CustomEvent('room-members-updated', {
+            detail: event
+        }))
+    }
+
+    async function handleRoomEvent(event: RoomRealtimeEvent) {
+        if (event.roomId !== roomId || event.type !== 'room_permissions_updated') {
+            return
+        }
+
+        notifyRoomMembersUpdated(event)
+        await refreshRoomPermissions()
+    }
+
     const yjs = useYjs({
         roomId,
-        token: getAccessToken(),
         onConnect: () => {
             isSyncing.value = false
             isOffline.value = false
@@ -94,11 +118,15 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
         onError: error => {
             console.error('[Canvas] Yjs error:', error)
             isOffline.value = true
+        },
+        onRoomEvent: event => {
+            void handleRoomEvent(event)
         }
     })
 
     const awareness = useAwareness({
         provider: yjs.provider,
+        userId: getUserId() || undefined,
         userName: getUserName(t)
     })
 
@@ -133,7 +161,7 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
 
         remoteCursors.value.forEach(cursor => {
             users.push({
-                id: String(cursor.clientId),
+                id: cursor.user?.id || String(cursor.clientId),
                 name: cursor.user?.name || t('common.anonymous'),
                 isMe: false
             })
@@ -145,44 +173,75 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
     const chatMessages = computed(() => yjsChat.messages.value)
     const unreadCount = computed(() => yjsChat.unreadCount.value)
 
-    async function loadRoomData() {
-        isRoomLoading.value = true
-        roomLoadError.value = ''
-        isRoomReady.value = false
+    async function syncRoomState(showLoading = false) {
+        if (showLoading) {
+            isRoomLoading.value = true
+            roomLoadError.value = ''
+            isRoomReady.value = false
+        }
 
+        const previousRole = roomRole.value
+        const previousCapabilities = { ...roomCapabilities.value }
         const fallbackName = `Room ${roomId.slice(0, 8)}`
 
         try {
             const response = await apiService.getRoomById(roomId)
 
             if (!response.success) {
-                roomName.value = fallbackName
-                roomLoadError.value = response.message || t('canvas.loadError')
+                if (showLoading) {
+                    roomName.value = fallbackName
+                    roomLoadError.value = response.message || t('canvas.loadError')
+                }
                 return false
             }
 
             const apiRoomName = response.data?.room?.name || response.data?.name
-            roomName.value = typeof apiRoomName === 'string' && apiRoomName.trim()
-                ? apiRoomName.trim()
-                : fallbackName
-            roomRole.value = response.data?.user_role || null
-            roomCapabilities.value = {
+            const nextRole = response.data?.user_role || null
+            const nextCapabilities = {
                 ...EMPTY_CAPABILITIES,
                 ...(response.data?.capabilities || {})
             }
+            const permissionsChanged = previousRole !== nextRole || hasCapabilitiesChanged(previousCapabilities, nextCapabilities)
 
-            isRoomReady.value = true
+            roomName.value = typeof apiRoomName === 'string' && apiRoomName.trim()
+                ? apiRoomName.trim()
+                : fallbackName
+            roomRole.value = nextRole
+            roomCapabilities.value = nextCapabilities
+
+            if (showLoading) {
+                isRoomReady.value = true
+            }
+
+            if (!showLoading && permissionsChanged && yjs.provider.value) {
+                yjs.disconnect()
+                await yjs.connect()
+            }
+
             return true
         } catch (error) {
             console.error('[Canvas] Failed to load room:', error)
-            roomName.value = fallbackName
-            roomLoadError.value = t('canvas.loadError')
-            roomRole.value = null
-            roomCapabilities.value = { ...EMPTY_CAPABILITIES }
+            if (showLoading) {
+                roomName.value = fallbackName
+                roomLoadError.value = t('canvas.loadError')
+                roomRole.value = null
+                roomCapabilities.value = { ...EMPTY_CAPABILITIES }
+            }
             return false
         } finally {
-            isRoomLoading.value = false
+            if (showLoading) {
+                isRoomLoading.value = false
+            }
         }
+    }
+
+    async function loadRoomData() {
+        return syncRoomState(true)
+    }
+
+    async function refreshRoomPermissions() {
+        if (!isRoomReady.value) return
+        await syncRoomState(false)
     }
 
     function handleExit() {
@@ -222,11 +281,19 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
         }
     })
 
+    const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+            void refreshRoomPermissions()
+        }
+    }
+
     onMounted(() => {
         void initializeRoom()
+        document.addEventListener('visibilitychange', handleVisibilityChange)
     })
 
     onUnmounted(() => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
         yjs.disconnect()
     })
 

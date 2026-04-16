@@ -98,7 +98,7 @@ export function useRoomsList(options: UseRoomsListOptions) {
         const room = rooms.value.find(item => item.id === roomId)
         if (!room) return
 
-        room.role = room.creator === currentUserId ? 'owner' : 'member'
+        room.role = room.creator === currentUserId ? 'owner' : 'editor'
         room.memberCount = Math.max(1, (room.memberCount || 0) + 1)
     }
 

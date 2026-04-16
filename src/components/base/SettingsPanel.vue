@@ -476,6 +476,19 @@ function normalizeUiScale(value) {
     return Math.max(85, Math.min(115, Math.round(n / 5) * 5))
 }
 
+function applyUiScale(value) {
+    const scale = normalizeUiScale(value) / 100
+    const appRoot = document.getElementById('app')
+    if (!appRoot) return
+
+    document.documentElement.style.zoom = ''
+    document.body.style.zoom = ''
+    appRoot.style.transformOrigin = 'top left'
+    appRoot.style.transform = `scale(${scale})`
+    appRoot.style.width = `${100 / scale}%`
+    appRoot.style.height = `${100 / scale}%`
+}
+
 // 设置数据（仅保留必要项）
 const settingsData = reactive({
     // 账户信息
@@ -693,7 +706,7 @@ const applySettings = () => {
         localStorage.setItem('theme', settingsData.theme)
     }
 
-    document.documentElement.style.zoom = `${normalizeUiScale(settingsData.uiScale) / 100}`
+    applyUiScale(settingsData.uiScale)
 
     if (settingsData.developerMode !== lastAppliedDeveloperMode.value) {
         lastAppliedDeveloperMode.value = settingsData.developerMode === true

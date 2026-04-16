@@ -1,21 +1,19 @@
 <template>
-        <Transition name="slide" mode="out-in">
-            <HomeView v-if="currentView === 'home'" @navigate="handleNavigate" />
-            <LoginView v-else-if="currentView === 'login'" @navigate="handleNavigate" />
-            <RoomWorkspaceView v-else-if="isRoomWorkspace" :subview="currentView" @navigate="handleNavigate" />
-            <CanvasView v-else-if="currentView === 'canvas'" :room-id="currentRoomId" @navigate="handleNavigate" />
-            <AboutView v-else-if="currentView === 'about'" @navigate="handleNavigate" />
-        </Transition>
+    <Transition name="slide" mode="out-in">
+        <HomeView v-if="currentView === 'home'" @navigate="handleNavigate" />
+        <LoginView v-else-if="currentView === 'login'" @navigate="handleNavigate" />
+        <RoomWorkspaceView v-else-if="isRoomWorkspace" :subview="currentView" @navigate="handleNavigate" />
+        <CanvasView v-else-if="currentView === 'canvas'" :room-id="currentRoomId" @navigate="handleNavigate" />
+        <AboutView v-else-if="currentView === 'about'" @navigate="handleNavigate" />
+    </Transition>
 
-        <!-- eslint-disable vue/no-multiple-template-root -->
-        <Toast
-            :message="toastMessage"
-            :type="toastType"
-            :show="showToast"
-            @update:show="showToast = $event"
-        />
-        <ToastManager ref="toastManagerRef" />
-        <!-- eslint-enable vue/no-multiple-template-root -->
+    <Toast
+        :message="toastMessage"
+        :type="toastType"
+        :show="showToast"
+        @update:show="showToast = $event"
+    />
+    <ToastManager ref="toastManagerRef" />
 </template>
 
 <script setup>
@@ -39,134 +37,140 @@ const toastType = ref('info')
 const toastManagerRef = ref(null)
 const isRoomWorkspace = computed(() => ['rooms', 'recent', 'favorites'].includes(currentView.value))
 
-// Token 自动刷新
 let tokenRefreshInterval = null
-const TOKEN_REFRESH_INTERVAL = 15 * 60 * 1000 // 15分钟刷新一次
+let settingsUpdatedHandler = null
+const TOKEN_REFRESH_INTERVAL = 15 * 60 * 1000
 
-// 在应用启动时初始化主题和Token刷新
-onMounted(() => {
-    const savedTheme = localStorage.getItem('theme') || 'light'
-    document.documentElement.setAttribute('data-theme', savedTheme)
-    
-    // 初始化全局 Toast 实例
-    if (toastManagerRef.value) {
-        setToastInstance(toastManagerRef.value)
-    }
-    
-    // 启动 Token 自动刷新（如果已登录）
-    startTokenRefresh()
-})
+function normalizeUiScale(value) {
+    const n = Number(value)
+    if (!Number.isFinite(n)) return 100
+    return Math.max(85, Math.min(115, Math.round(n / 5) * 5))
+}
 
-// 组件卸载时清理定时器
-onUnmounted(() => {
-    stopTokenRefresh()
-})
+function applyUiScale(value) {
+    const scale = normalizeUiScale(value) / 100
+    const appRoot = document.getElementById('app')
+    if (!appRoot) return
 
-// 启动 Token 自动刷新
+    document.documentElement.style.zoom = ''
+    document.body.style.zoom = ''
+    appRoot.style.transformOrigin = 'top left'
+    appRoot.style.transform = `scale(${scale})`
+    appRoot.style.width = `${100 / scale}%`
+    appRoot.style.height = `${100 / scale}%`
+}
+
 function startTokenRefresh() {
     const accessToken = getAccessToken()
     const refreshToken = getRefreshToken()
-    
-    if (!accessToken || !refreshToken) {
-        return
-    }
-    
-    // 清除旧的定时器
+
+    if (!accessToken || !refreshToken) return
+
     stopTokenRefresh()
-    
-    // 设置新的定时器
     tokenRefreshInterval = setInterval(async () => {
         const currentRefreshToken = getRefreshToken()
-        
         if (!currentRefreshToken) {
             stopTokenRefresh()
             return
         }
-        
+
         try {
             const result = await apiService.refreshToken(currentRefreshToken)
-            
             if (result.success && result.data) {
-                // 更新 token
                 if (result.data.access_token) {
                     setAuthTokens({ accessToken: result.data.access_token })
                 }
                 if (result.data.refresh_token) {
                     setAuthTokens({ refreshToken: result.data.refresh_token })
                 }
-                console.log('[Token] Auto refresh successful')
             } else {
-                // Token 刷新失败，可能已过期
-                console.warn('[Token] Refresh failed, redirecting to login')
                 handleTokenExpired()
             }
         } catch (error) {
             console.error('[Token] Auto refresh error:', error)
         }
     }, TOKEN_REFRESH_INTERVAL)
-    
-    console.log('[Token] Auto refresh started')
 }
 
-// 停止 Token 自动刷新
 function stopTokenRefresh() {
     if (tokenRefreshInterval) {
         clearInterval(tokenRefreshInterval)
         tokenRefreshInterval = null
-        console.log('[Token] Auto refresh stopped')
     }
 }
 
-// 处理 Token 过期
 function handleTokenExpired() {
     stopTokenRefresh()
     clearAuthStorage()
-    
-    toastMessage.value = '登录已过期，请重新登录'
+    toastMessage.value = '登录状态已过期，请重新登录'
     toastType.value = 'warning'
     showToast.value = true
-    
-    setTimeout(() => {
+
+    window.setTimeout(() => {
         currentView.value = 'login'
     }, 1500)
 }
 
 function handleNavigate(view, params) {
-    // 暂时只支持这些视图，其他的保持在 rooms
     const supportedViews = ['home', 'login', 'rooms', 'recent', 'favorites', 'canvas', 'about']
-    
-    if (supportedViews.includes(view)) {
-        currentView.value = view
-        
-        // 如果是 canvas 视图，保存 roomId
-        if (view === 'canvas' && params?.roomId) {
-            currentRoomId.value = params.roomId
-            console.log('[App] Navigating to canvas, roomId:', params.roomId)
-        }
-        
-        // 如果导航到登录页，停止 Token 刷新
-        if (view === 'login' || view === 'home') {
-            stopTokenRefresh()
-        } else if (view === 'rooms' || view === 'recent' || view === 'favorites') {
-            // 进入房间相关页面时启动 Token 刷新
-            startTokenRefresh()
-        }
-    } else {
-        // 未实现的功能，显示提示
+    if (!supportedViews.includes(view)) {
         const featureNames = {
-            recent: '最近使用',
-            favorites: '我的收藏',
-            notifications: '通知中心'
+            recent: '最近',
+            favorites: '收藏',
+            notifications: '通知'
         }
-        toastMessage.value = `${featureNames[view] || view} 功能正在开发中，敬请期待 🚀`
+        toastMessage.value = `${featureNames[view] || view} 功能暂未开放`
         toastType.value = 'info'
         showToast.value = true
+        return
+    }
+
+    currentView.value = view
+
+    if (view === 'canvas' && params?.roomId) {
+        currentRoomId.value = params.roomId
+    }
+
+    if (view === 'login' || view === 'home') {
+        stopTokenRefresh()
+    } else if (view === 'rooms' || view === 'recent' || view === 'favorites') {
+        startTokenRefresh()
     }
 }
+
+onMounted(() => {
+    const savedTheme = localStorage.getItem('theme') || 'light'
+    document.documentElement.setAttribute('data-theme', savedTheme)
+
+    try {
+        const savedSettings = JSON.parse(localStorage.getItem('settings') || '{}')
+        applyUiScale(savedSettings.uiScale ?? 100)
+    } catch {
+        applyUiScale(100)
+    }
+
+    if (toastManagerRef.value) {
+        setToastInstance(toastManagerRef.value)
+    }
+
+    settingsUpdatedHandler = event => {
+        applyUiScale(event?.detail?.uiScale ?? 100)
+    }
+    window.addEventListener('settings-updated', settingsUpdatedHandler)
+
+    startTokenRefresh()
+})
+
+onUnmounted(() => {
+    stopTokenRefresh()
+    if (settingsUpdatedHandler) {
+        window.removeEventListener('settings-updated', settingsUpdatedHandler)
+        settingsUpdatedHandler = null
+    }
+})
 </script>
 
 <style scoped>
-/* ==================== 页面切换动画 ==================== */
 .slide-enter-active,
 .slide-leave-active {
     transition: all 0.4s ease;

@@ -147,6 +147,7 @@
             :room-id="roomId"
             :current-users="currentUsers"
             :room-role="roomRole"
+            :can-manage-members="roomCapabilities.can_manage_members"
             :can-edit-canvas="canEditCanvas"
             :can-manage-snapshots="canManageSnapshots"
         />

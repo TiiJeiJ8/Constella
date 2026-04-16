@@ -134,7 +134,8 @@
         "roles": {
             "owner": "Owner",
             "admin": "Admin",
-            "member": "Member"
+            "member": "Member",
+            "editor": "Editor"
         },
         "time": {
             "justNow": "Just now",

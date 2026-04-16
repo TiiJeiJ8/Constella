@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <div class="room-card">
         <div class="card-body" @click="handleClick">
             <div class="card-header">
@@ -99,6 +99,9 @@ function roleLabel(role) {
     if (role === 'viewer') {
         return locale.value === 'zh-CN' ? '\u53ea\u8bfb' : 'Viewer'
     }
+    if (role === 'editor' || role === 'member') {
+        return locale.value === 'zh-CN' ? '\u53ef\u7f16\u8f91' : 'Editor'
+    }
     return t(`rooms.roles.${role}`)
 }
 
@@ -154,10 +157,12 @@ html[data-theme='dark'] .favorite-btn.is-favorite{color:#ffd54f;background:rgba(
 .card-content{flex:1;margin-bottom:12px}.room-description{margin:0;font-size:14px;line-height:1.5;color:var(--text-secondary);display:-webkit-box;line-clamp:2;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .card-footer{display:flex;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid var(--border-light)}
 .tags{display:flex;gap:8px}.role-badge{padding:4px 10px;border-radius:12px;font-size:12px;font-weight:500;white-space:nowrap}
-.role-badge.owner{background:rgba(255,193,7,.15);color:#f57c00}.role-badge.admin{background:rgba(103,126,234,.15);color:#667eea}.role-badge.member{background:rgba(158,158,158,.15);color:var(--text-secondary)}.role-badge.viewer{background:rgba(107,114,128,.15);color:#4b5563}
-html[data-theme='dark'] .role-badge.owner{background:rgba(255,193,7,.25);color:#ffb300}html[data-theme='dark'] .role-badge.admin{background:rgba(103,126,234,.25);color:#8b9bef}html[data-theme='dark'] .role-badge.member{background:rgba(158,158,158,.25)}html[data-theme='dark'] .role-badge.viewer{background:rgba(107,114,128,.25);color:#d1d5db}
+.role-badge.owner{background:rgba(255,193,7,.15);color:#f57c00}.role-badge.admin{background:rgba(103,126,234,.15);color:#667eea}.role-badge.member,.role-badge.editor{background:rgba(158,158,158,.15);color:var(--text-secondary)}.role-badge.viewer{background:rgba(107,114,128,.15);color:#4b5563}
+html[data-theme='dark'] .role-badge.owner{background:rgba(255,193,7,.25);color:#ffb300}html[data-theme='dark'] .role-badge.admin{background:rgba(103,126,234,.25);color:#8b9bef}html[data-theme='dark'] .role-badge.member,html[data-theme='dark'] .role-badge.editor{background:rgba(158,158,158,.25)}html[data-theme='dark'] .role-badge.viewer{background:rgba(107,114,128,.25);color:#d1d5db}
 .delete-btn{display:flex;align-items:center;gap:4px;white-space:nowrap;padding:6px 14px;border:none;border-radius:20px;background:rgba(244,67,54,.1);color:#f44336;font-size:13px;cursor:pointer;transition:all .2s;opacity:0}
 .room-card:hover .delete-btn{opacity:1}.delete-btn:hover{background:rgba(244,67,54,.2);transform:scale(1.1)}.delete-btn:active{transform:scale(.95)}
 .last-active{font-size:12px;color:var(--text-tertiary)}
 @media (max-width:768px){.room-card{padding:16px}.room-name{font-size:16px}.room-meta{font-size:12px}.room-description{font-size:13px}}
 </style>
+
+

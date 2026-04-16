@@ -585,6 +585,107 @@ class ApiService {
         }
     }
 
+    async inviteUser(roomId: string, email: string, role = 'editor'): Promise<ApiResponse> {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/v1/rooms/${roomId}/invite`, {
+                method: 'POST',
+                headers: this.getAuthHeaders(),
+                body: JSON.stringify({ email, role })
+            })
+
+            const result = await response.json()
+
+            if (response.ok) {
+                return {
+                    success: true,
+                    code: result.code,
+                    message: result.message,
+                    data: result.data
+                }
+            } else {
+                return {
+                    success: false,
+                    code: result.code || response.status,
+                    message: result.message || 'Failed to invite user',
+                    errorCode: result.data
+                }
+            }
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            }
+        }
+    }
+
+    async getRoomMembers(roomId: string): Promise<ApiResponse> {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/v1/rooms/${roomId}/members`, {
+                method: 'GET',
+                headers: this.getAuthHeaders()
+            })
+
+            const result = await response.json()
+
+            if (response.ok) {
+                return {
+                    success: true,
+                    code: result.code,
+                    message: result.message,
+                    data: result.data
+                }
+            } else {
+                return {
+                    success: false,
+                    code: result.code || response.status,
+                    message: result.message || 'Failed to fetch room members',
+                    errorCode: result.data
+                }
+            }
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            }
+        }
+    }
+
+    async updateRoomMemberRole(roomId: string, memberId: string, newRole: string): Promise<ApiResponse> {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/v1/rooms/${roomId}/permissions`, {
+                method: 'PUT',
+                headers: this.getAuthHeaders(),
+                body: JSON.stringify({
+                    member_id: memberId,
+                    new_role: newRole
+                })
+            })
+
+            const result = await response.json()
+
+            if (response.ok) {
+                return {
+                    success: true,
+                    code: result.code,
+                    message: result.message,
+                    data: result.data
+                }
+            } else {
+                return {
+                    success: false,
+                    code: result.code || response.status,
+                    message: result.message || 'Failed to update room member role',
+                    errorCode: result.data
+                }
+            }
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            }
+        }
+    }
+
     /**
      * 获取用户加入的房间列表
      */

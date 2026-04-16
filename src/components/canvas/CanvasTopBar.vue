@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <div class="canvas-topbar">
         <div class="topbar-section topbar-left">
             <button class="circular-btn exit-btn" :title="t('canvas.topBar.exitRoom')" @click="$emit('exit')">
@@ -134,6 +134,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SettingsPanel from '@/components/base/SettingsPanel.vue'
 
+const ZH = 'zh-CN'
 const { t, locale } = useI18n()
 
 const props = defineProps({
@@ -154,36 +155,33 @@ const isExportMenuOpen = ref(false)
 const fileInputRef = ref(null)
 const isDarkTheme = ref(false)
 
-const uiText = computed(() => ({
-    languageToggleTitle: locale.value === 'zh-CN' ? 'Switch to English' : '切换到中文',
-    themeToggleTitle: locale.value === 'zh-CN' ? '切换主题' : 'Toggle theme',
-    menuCollapseTitle: locale.value === 'zh-CN' ? '收起菜单' : 'Collapse menu',
-    menuExpandTitle: locale.value === 'zh-CN' ? '展开菜单' : 'Expand menu',
-    roleLabels: {
-        owner: locale.value === 'zh-CN' ? '所有者' : 'Owner',
-        admin: locale.value === 'zh-CN' ? '管理员' : 'Admin',
-        member: locale.value === 'zh-CN' ? '可编辑' : 'Editor',
-        viewer: locale.value === 'zh-CN' ? '只读' : 'Read only'
-    },
-    permissionReadOnly: locale.value === 'zh-CN'
-        ? '当前权限：可查看、选择和浏览画布，但不能修改内容。'
-        : 'Permission: browse and inspect only.',
-    permissionManageSnapshots: locale.value === 'zh-CN'
-        ? '当前权限：可编辑画布，并可创建、恢复与管理快照。'
-        : 'Permission: edit canvas and manage snapshots.',
-    permissionEditOnly: locale.value === 'zh-CN'
-        ? '当前权限：可编辑画布，但不可管理快照。'
-        : 'Permission: edit canvas, but snapshot management is disabled.'
-}))
-
-const languageToggleTitle = computed(() => uiText.value.languageToggleTitle)
-const themeToggleTitle = computed(() => uiText.value.themeToggleTitle)
-const menuToggleTitle = computed(() => (isMenuExpanded.value ? uiText.value.menuCollapseTitle : uiText.value.menuExpandTitle))
+const isZh = computed(() => locale.value === ZH)
+const languageToggleTitle = computed(() => (isZh.value ? 'Switch to English' : '\u5207\u6362\u5230\u4e2d\u6587'))
+const themeToggleTitle = computed(() => (isZh.value ? '\u5207\u6362\u6df1\u6d45\u8272\u4e3b\u9898' : 'Toggle theme'))
+const menuToggleTitle = computed(() => (isMenuExpanded.value
+    ? (isZh.value ? '\u6536\u8d77\u83dc\u5355' : 'Collapse menu')
+    : (isZh.value ? '\u5c55\u5f00\u83dc\u5355' : 'Expand menu')))
 
 const roleBadgeLabel = computed(() => {
-    const role = props.roomRole
-    if (!role) return ''
-    return uiText.value.roleLabels[role] || role
+    if (!props.roomRole) return ''
+
+    const labels = isZh.value
+        ? {
+            owner: '\u6240\u6709\u8005',
+            admin: '\u7ba1\u7406\u5458',
+            editor: '\u53ef\u7f16\u8f91',
+            member: '\u53ef\u7f16\u8f91',
+            viewer: '\u53ea\u8bfb'
+        }
+        : {
+            owner: 'Owner',
+            admin: 'Admin',
+            editor: 'Editor',
+            member: 'Editor',
+            viewer: 'Read only'
+        }
+
+    return labels[props.roomRole] || props.roomRole
 })
 
 const roleBadgeClass = computed(() => {
@@ -194,9 +192,21 @@ const roleBadgeClass = computed(() => {
 })
 
 const permissionTooltip = computed(() => {
-    if (!props.canEditCanvas) return uiText.value.permissionReadOnly
-    if (props.canManageSnapshots) return uiText.value.permissionManageSnapshots
-    return uiText.value.permissionEditOnly
+    if (!props.canEditCanvas) {
+        return isZh.value
+            ? '\u5f53\u524d\u4e3a\u53ea\u8bfb\u6a21\u5f0f\uff0c\u53ef\u67e5\u770b\u548c\u534f\u4f5c\u611f\u77e5\uff0c\u4f46\u4e0d\u53ef\u4fee\u6539\u5185\u5bb9'
+            : 'Read-only mode: you can browse and use presence, but cannot modify content.'
+    }
+
+    if (props.canManageSnapshots) {
+        return isZh.value
+            ? '\u5f53\u524d\u53ef\u7f16\u8f91\u753b\u5e03\uff0c\u5e76\u53ef\u521b\u5efa\u3001\u6062\u590d\u4e0e\u7ba1\u7406\u5feb\u7167'
+            : 'Editable mode: you can edit the canvas and manage snapshots.'
+    }
+
+    return isZh.value
+        ? '\u5f53\u524d\u53ef\u7f16\u8f91\u753b\u5e03\uff0c\u4f46\u4e0d\u53ef\u7ba1\u7406\u5feb\u7167'
+        : 'Editable mode: you can edit the canvas, but snapshot management is disabled.'
 })
 
 function toggleMenu() {
@@ -207,50 +217,61 @@ function toggleExportMenu() {
     isExportMenuOpen.value = !isExportMenuOpen.value
 }
 
+function closeExportMenu() {
+    isExportMenuOpen.value = false
+}
+
 function exportAsPNG() {
     emit('export', { format: 'png' })
-    isExportMenuOpen.value = false
+    closeExportMenu()
 }
 
 function exportAsSVG() {
     emit('export', { format: 'svg' })
-    isExportMenuOpen.value = false
+    closeExportMenu()
 }
 
 function exportAsJSON() {
     emit('export', { format: 'json' })
-    isExportMenuOpen.value = false
+    closeExportMenu()
 }
 
 function triggerImport() {
-    if (props.canEditCanvas) fileInputRef.value?.click()
+    if (props.canEditCanvas) {
+        fileInputRef.value?.click()
+    }
 }
 
 function handleFileImport(event) {
-    const file = event.target.files?.[0]
+    const input = event.target
+    const file = input?.files?.[0]
     if (!file) return
+
     const reader = new FileReader()
     reader.onload = loadEvent => {
         try {
             const content = loadEvent.target?.result
-            if (typeof content === 'string') emit('import', JSON.parse(content))
+            if (typeof content === 'string') {
+                emit('import', JSON.parse(content))
+            }
         } catch (error) {
             console.error('Failed to parse import file:', error)
             alert(t('canvas.topBar.importError'))
         }
     }
     reader.readAsText(file)
-    event.target.value = ''
+    input.value = ''
 }
 
 function handleClickOutside(event) {
-    if (isExportMenuOpen.value && !event.target.closest('.export-dropdown')) {
-        isExportMenuOpen.value = false
+    const target = event.target
+    if (isExportMenuOpen.value && target instanceof Element && !target.closest('.export-dropdown')) {
+        closeExportMenu()
     }
 }
 
 function toggleLanguage() {
-    locale.value = locale.value === 'zh-CN' ? 'en-US' : 'zh-CN'
+    locale.value = locale.value === ZH ? 'en-US' : ZH
     localStorage.setItem('locale', locale.value)
 }
 
@@ -268,11 +289,14 @@ function openSettings() {
 }
 
 onMounted(() => {
-    isDarkTheme.value = (document.documentElement.getAttribute('data-theme') || localStorage.getItem('theme') || 'light') === 'dark'
+    const theme = document.documentElement.getAttribute('data-theme') || localStorage.getItem('theme') || 'light'
+    isDarkTheme.value = theme === 'dark'
     document.addEventListener('click', handleClickOutside)
 })
 
-onUnmounted(() => document.removeEventListener('click', handleClickOutside))
+onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <style scoped>
@@ -288,11 +312,11 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
 .lang-icon{font-size:13px;font-weight:600;letter-spacing:0;line-height:1}
 .language-btn:hover{background:var(--accent-primary);border-color:var(--accent-primary);color:#fff;transform:scale(1.05)}
 .action-btn{width:40px;height:40px}
-.room-info-card{display:flex;flex-direction:column;gap:3px;min-width:184px;max-width:min(312px,31vw);padding:7px 11px;background:var(--canvas-toolbar-bg);backdrop-filter:blur(20px);border:1px solid var(--border-color);border-radius:18px;box-shadow:var(--shadow-sm);transition:all .25s ease}
+.room-info-card{display:flex;flex-direction:column;gap:3px;min-width:176px;max-width:min(288px,29vw);padding:6px 10px;background:var(--canvas-toolbar-bg);backdrop-filter:blur(20px);border:1px solid var(--border-color);border-radius:16px;box-shadow:var(--shadow-sm);transition:all .25s ease}
 .room-info-card:hover{box-shadow:var(--shadow-md)}
-.room-title-row{display:flex;align-items:center;gap:6px;min-width:0}
+.room-title-row{display:flex;align-items:center;gap:5px;min-width:0}
 .room-title{margin:0;font-size:14px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.role-badge{flex-shrink:0;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.01em}
+.role-badge{flex-shrink:0;padding:2px 6px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.01em}
 .permission-trigger{width:20px;height:20px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;padding:0;background:transparent;border:none;color:var(--text-tertiary);cursor:help}
 .permission-trigger:hover{color:var(--color-primary)}.permission-icon{width:14px;height:14px;display:block}
 .role-owner{background:rgba(245,158,11,.16);color:#b45309}.role-admin{background:rgba(59,130,246,.14);color:#1d4ed8}.role-member{background:rgba(16,185,129,.14);color:#047857}.role-viewer{background:rgba(107,114,128,.16);color:#4b5563}
@@ -312,3 +336,4 @@ html[data-theme='dark'] .role-owner{color:#fbbf24}html[data-theme='dark'] .role-
 .fade-enter-active,.fade-leave-active{transition:opacity .2s ease}.fade-enter-from,.fade-leave-to{opacity:0}
 @media (max-width:768px){.canvas-topbar{top:10px;left:10px;right:10px;height:52px}.topbar-section{gap:8px}.circular-btn,.action-btn{width:38px;height:38px}.btn-icon{width:17px;height:17px}.room-info-card{min-width:0;max-width:calc(100vw - 176px);padding:6px 10px;border-radius:16px}.room-title-row{gap:5px}.room-title{font-size:13px}.role-badge{padding:2px 6px}.sync-status{display:none}.menu-group,.menu-buttons{gap:6px}}
 </style>
+
