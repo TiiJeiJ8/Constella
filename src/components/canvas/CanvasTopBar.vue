@@ -34,7 +34,7 @@
             <div class="menu-group">
                 <Transition name="slide-fade">
                     <div v-if="isMenuExpanded" class="menu-buttons">
-                        <button class="circular-btn menu-item language-btn" :title="languageToggleTitle" @click="toggleLanguage">
+                        <button class="circular-btn menu-item" :title="languageToggleTitle" @click="toggleLanguage">
                             <span class="lang-icon">{{ locale === 'zh-CN' ? '中' : 'EN' }}</span>
                         </button>
                         <button class="circular-btn menu-item" :title="themeToggleTitle" @click="toggleTheme">
@@ -44,6 +44,17 @@
                             </svg>
                             <svg v-else class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
                                 <path d="M18.5 14.75A7.25 7.25 0 0 1 9.25 5.5a7.75 7.75 0 1 0 9.25 9.25Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
+                            </svg>
+                        </button>
+                        <button
+                            v-if="canManageRoom"
+                            class="circular-btn menu-item"
+                            :title="roomSettingsTitle"
+                            @click="openRoomSettings"
+                        >
+                            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 4.75 5.75 7.5v4.42c0 4 2.72 7.7 6.25 8.83 3.53-1.13 6.25-4.83 6.25-8.83V7.5L12 4.75Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.6" />
+                                <path d="M12 9.25v5.5M9.25 12h5.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.6" />
                             </svg>
                         </button>
                         <button class="circular-btn menu-item" :title="t('settings.title')" @click="openSettings">
@@ -145,10 +156,11 @@ const props = defineProps({
     isSyncing: { type: Boolean, default: false },
     onlineCount: { type: Number, default: 1 },
     canEditCanvas: { type: Boolean, default: true },
-    canManageSnapshots: { type: Boolean, default: true }
+    canManageSnapshots: { type: Boolean, default: true },
+    canManageRoom: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['exit', 'export', 'import', 'create-snapshot', 'members-click'])
+const emit = defineEmits(['exit', 'export', 'import', 'create-snapshot', 'members-click', 'room-settings-click'])
 
 const isMenuExpanded = ref(false)
 const isSettingsPanelOpen = ref(false)
@@ -159,6 +171,7 @@ const isDarkTheme = ref(false)
 const isZh = computed(() => locale.value === ZH)
 const languageToggleTitle = computed(() => (isZh.value ? 'Switch to English' : '\u5207\u6362\u5230\u4e2d\u6587'))
 const themeToggleTitle = computed(() => (isZh.value ? '\u5207\u6362\u6df1\u6d45\u8272\u4e3b\u9898' : 'Toggle theme'))
+const roomSettingsTitle = computed(() => (isZh.value ? '\u623f\u95f4\u8bbe\u7f6e' : 'Room settings'))
 const menuToggleTitle = computed(() => (isMenuExpanded.value
     ? (isZh.value ? '\u6536\u8d77\u83dc\u5355' : 'Collapse menu')
     : (isZh.value ? '\u5c55\u5f00\u83dc\u5355' : 'Expand menu')))
@@ -287,6 +300,11 @@ function openSettings() {
     isMenuExpanded.value = false
 }
 
+function openRoomSettings() {
+    emit('room-settings-click')
+    isMenuExpanded.value = false
+}
+
 onMounted(() => {
     const theme = document.documentElement.getAttribute('data-theme') || getStoredTheme()
     isDarkTheme.value = theme === 'dark'
@@ -309,7 +327,6 @@ onUnmounted(() => {
 .circular-btn.disabled:hover,.circular-btn:disabled:hover{background:var(--canvas-toolbar-bg);border-color:var(--border-color);box-shadow:var(--shadow-sm);transform:none}
 .btn-icon{width:18px;height:18px;display:block}
 .lang-icon{font-size:13px;font-weight:600;letter-spacing:0;line-height:1}
-.language-btn:hover{background:var(--accent-primary);border-color:var(--accent-primary);color:#fff;transform:scale(1.05)}
 .action-btn{width:40px;height:40px}
 .room-info-card{display:flex;flex-direction:column;gap:3px;min-width:176px;max-width:min(288px,29vw);padding:6px 10px;background:var(--canvas-toolbar-bg);backdrop-filter:blur(20px);border:1px solid var(--border-color);border-radius:16px;box-shadow:var(--shadow-sm);transition:all .25s ease}
 .room-info-card:hover{box-shadow:var(--shadow-md)}

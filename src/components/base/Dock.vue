@@ -34,7 +34,7 @@
         <div class="dock-divider"></div>
 
         <div class="dock-section">
-            <button class="dock-item language-btn" :title="t('dock.language')" @click="toggleLanguage">
+            <button class="dock-item" :title="t('dock.language')" @click="toggleLanguage">
                 <span class="dock-text">{{ locale === 'zh-CN' ? '中' : 'EN' }}</span>
             </button>
             <button class="dock-item" :title="t('dock.theme')" @click="toggleTheme">
@@ -308,19 +308,8 @@ html[data-theme='dark'] .dock-divider {
     transform: translateY(-4px);
 }
 
-.dock-item.language-btn:hover {
-    background: var(--accent-primary);
-    color: #fff;
-    transform: scale(1.05);
-}
-
 html[data-theme='dark'] .dock-item:hover {
     background: rgba(255, 255, 255, 0.1);
-}
-
-html[data-theme='dark'] .dock-item.language-btn:hover {
-    background: var(--accent-primary);
-    color: #fff;
 }
 
 .dock-item:active {

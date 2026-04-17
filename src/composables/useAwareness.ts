@@ -121,9 +121,11 @@ export function useAwareness(options: UseAwarenessOptions) {
 
     function destroy() {
         if (awareness) {
+            awareness.setLocalState(null)
             awareness.off('change', handleAwarenessChange)
             awareness = null
         }
+        otherUsers.value = []
     }
 
     onUnmounted(() => {

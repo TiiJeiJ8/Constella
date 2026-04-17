@@ -31,11 +31,13 @@
             :online-count="currentUsers.length"
             :can-edit-canvas="canEditCanvas"
             :can-manage-snapshots="canManageSnapshots"
+            :can-manage-room="roomCapabilities.can_manage_room"
             @exit="handleExit"
             @export="handleExport"
             @import="handleImport"
             @create-snapshot="handleTopBarSnapshot"
             @members-click="isMembersPanelOpen = true"
+            @room-settings-click="isRoomSettingsPanelOpen = true"
             style="margin-top: 10px"
         />
 
@@ -154,6 +156,15 @@
             :can-manage-snapshots="canManageSnapshots"
         />
 
+        <RoomSettingsPanel
+            v-if="isRoomReady"
+            v-model="isRoomSettingsPanelOpen"
+            :room-id="roomId"
+            :can-manage-room="roomCapabilities.can_manage_room"
+            :can-manage-security="roomRole === 'owner'"
+            @updated="handleRoomSettingsUpdated"
+        />
+
         <InputDialog
             v-if="isRoomReady"
             v-model="isEdgeLabelDialogOpen"
@@ -240,6 +251,7 @@ import NodeContentOverlay from '@/components/canvas/NodeContentOverlay.vue'
 import PerformancePanel from '@/components/canvas/PerformancePanel.vue'
 import NodeEditorModal from '@/components/canvas/NodeEditorModal.vue'
 import MembersPanel from '@/components/canvas/MembersPanel.vue'
+import RoomSettingsPanel from '@/components/canvas/RoomSettingsPanel.vue'
 import InputDialog from '@/components/base/InputDialog.vue'
 import ChatPanel from '@/components/canvas/ChatPanel.vue'
 import ChatBubbleContainer from '@/components/canvas/ChatBubbleContainer.vue'
@@ -271,6 +283,7 @@ const canvasAreaSize = ref({ width: 0, height: 0 })
 const bubbleContainerRef = ref<{ addBubble?: (message: unknown) => void } | null>(null)
 const editingNodeId = ref<string | null>(null)
 const editingCustomNodeId = ref<string | null>(null)
+const isRoomSettingsPanelOpen = ref(false)
 
 const {
     roomName,
@@ -291,12 +304,14 @@ const {
     yjsEdges,
     chatMessages,
     unreadCount,
+    refreshRoomPermissions,
     handleExit,
     handleSendMessage,
     retryRoomLoad
 } = useCanvasRoom({
     roomId: props.roomId,
     t,
+    toast,
     bubbleContainerRef,
     emitNavigate: (view) => emit('navigate', view)
 })
@@ -397,6 +412,10 @@ function handleTopBarSnapshot() {
     if (roomSnapshots.value.length > previousCount) {
         toast.success(t('canvas.toast.snapshotCreated'))
     }
+}
+
+function handleRoomSettingsUpdated() {
+    void refreshRoomPermissions()
 }
 
 const {

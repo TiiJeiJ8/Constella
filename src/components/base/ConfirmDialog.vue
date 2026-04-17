@@ -1,38 +1,34 @@
 <template>
-    <Transition name="overlay-fade">
-        <div v-if="modelValue" class="dialog-overlay" @click="handleOverlayClick">
-            <Transition name="dialog-scale">
-                <div v-if="modelValue" class="dialog-container" @click.stop>
-                    <!-- 对话框标题 -->
-                    <div class="dialog-header">
-                        <h3 class="dialog-title">{{ title }}</h3>
-                    </div>
+    <Teleport to="body">
+        <Transition name="overlay-fade">
+            <div v-if="modelValue" class="dialog-overlay" @click="handleOverlayClick">
+                <Transition name="dialog-scale">
+                    <div v-if="modelValue" class="dialog-container" @click.stop>
+                        <div class="dialog-header">
+                            <h3 class="dialog-title">{{ title }}</h3>
+                        </div>
 
-                    <!-- 对话框内容 -->
-                    <div class="dialog-content">
-                        <p class="dialog-message">{{ message }}</p>
-                    </div>
+                        <div class="dialog-content">
+                            <p class="dialog-message">{{ message }}</p>
+                        </div>
 
-                    <!-- 对话框按钮 -->
-                    <div class="dialog-actions">
-                        <button 
-                            class="dialog-btn cancel-btn" 
-                            @click="handleCancel"
-                        >
-                            {{ cancelText || t('common.cancel') }}
-                        </button>
-                        <button 
-                            class="dialog-btn confirm-btn"
-                            :class="{ danger: type === 'danger' }"
-                            @click="handleConfirm"
-                        >
-                            {{ confirmText || t('common.confirm') }}
-                        </button>
+                        <div class="dialog-actions">
+                            <button class="dialog-btn cancel-btn" @click="handleCancel">
+                                {{ cancelText || t('common.cancel') }}
+                            </button>
+                            <button
+                                class="dialog-btn confirm-btn"
+                                :class="{ danger: type === 'danger' }"
+                                @click="handleConfirm"
+                            >
+                                {{ confirmText || t('common.confirm') }}
+                            </button>
+                        </div>
                     </div>
-                </div>
-            </Transition>
-        </div>
-    </Transition>
+                </Transition>
+            </div>
+        </Transition>
+    </Teleport>
 </template>
 
 <script setup>
@@ -40,7 +36,7 @@ import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 
-const props = defineProps({
+defineProps({
     modelValue: {
         type: Boolean,
         default: false
@@ -63,7 +59,7 @@ const props = defineProps({
     },
     type: {
         type: String,
-        default: 'default', // 'default' | 'danger'
+        default: 'default',
         validator: (value) => ['default', 'danger'].includes(value)
     }
 })
@@ -86,34 +82,27 @@ function handleOverlayClick() {
 </script>
 
 <style scoped>
-/* ==================== 遮罩层 ==================== */
 .dialog-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    inset: 0;
+    background: rgba(0, 0, 0, 0.78);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2000;
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    z-index: 11000;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
-/* ==================== 对话框容器 ==================== */
 .dialog-container {
-    background: var(--bg-secondary);
+    width: min(420px, calc(100vw - 24px));
+    background: color-mix(in srgb, var(--bg-primary) 92%, #000 8%);
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    width: 90%;
-    max-width: 400px;
     overflow: hidden;
-    border: 1px solid var(--border-light);
+    border: 1px solid color-mix(in srgb, var(--border-color) 82%, #fff 18%);
 }
 
-/* ==================== 对话框头部 ==================== */
 .dialog-header {
     padding: 24px 24px 16px;
 }
@@ -125,7 +114,6 @@ function handleOverlayClick() {
     margin: 0;
 }
 
-/* ==================== 对话框内容 ==================== */
 .dialog-content {
     padding: 0 24px 24px;
 }
@@ -133,11 +121,10 @@ function handleOverlayClick() {
 .dialog-message {
     font-size: 14px;
     line-height: 1.6;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     margin: 0;
 }
 
-/* ==================== 对话框按钮 ==================== */
 .dialog-actions {
     padding: 16px 24px;
     display: flex;
@@ -183,7 +170,6 @@ function handleOverlayClick() {
     background: #c62828;
 }
 
-/* ==================== 遮罩层淡入淡出动画 ==================== */
 .overlay-fade-enter-active,
 .overlay-fade-leave-active {
     transition: all 0.3s ease;
@@ -196,7 +182,6 @@ function handleOverlayClick() {
     -webkit-backdrop-filter: blur(0);
 }
 
-/* ==================== 对话框缩放动画 ==================== */
 .dialog-scale-enter-active {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -215,10 +200,9 @@ function handleOverlayClick() {
     transform: scale(0.95);
 }
 
-/* ==================== 响应式设计 ==================== */
 @media (max-width: 768px) {
     .dialog-container {
-        width: 95%;
+        width: calc(100vw - 16px);
     }
 
     .dialog-header,

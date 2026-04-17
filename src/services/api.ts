@@ -652,12 +652,11 @@ class ApiService {
 
     async updateRoomMemberRole(roomId: string, memberId: string, newRole: string): Promise<ApiResponse> {
         try {
-            const response = await fetch(`${this.baseUrl}/api/v1/rooms/${roomId}/permissions`, {
-                method: 'PUT',
+            const response = await fetch(`${this.baseUrl}/api/v1/rooms/${roomId}/members/${memberId}/role`, {
+                method: 'PATCH',
                 headers: this.getAuthHeaders(),
                 body: JSON.stringify({
-                    member_id: memberId,
-                    new_role: newRole
+                    role: newRole
                 })
             })
 
@@ -675,6 +674,108 @@ class ApiService {
                     success: false,
                     code: result.code || response.status,
                     message: result.message || 'Failed to update room member role',
+                    errorCode: result.data
+                }
+            }
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            }
+        }
+    }
+
+    async removeRoomMember(roomId: string, memberId: string): Promise<ApiResponse> {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/v1/rooms/${roomId}/members/${memberId}`, {
+                method: 'DELETE',
+                headers: this.getAuthHeaders()
+            })
+
+            const result = await response.json()
+
+            if (response.ok) {
+                return {
+                    success: true,
+                    code: result.code,
+                    message: result.message,
+                    data: result.data
+                }
+            } else {
+                return {
+                    success: false,
+                    code: result.code || response.status,
+                    message: result.message || 'Failed to remove room member',
+                    errorCode: result.data
+                }
+            }
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            }
+        }
+    }
+
+    async transferRoomOwnership(roomId: string, memberId: string): Promise<ApiResponse> {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/v1/rooms/${roomId}/members/${memberId}/transfer-ownership`, {
+                method: 'POST',
+                headers: this.getAuthHeaders()
+            })
+
+            const result = await response.json()
+
+            if (response.ok) {
+                return {
+                    success: true,
+                    code: result.code,
+                    message: result.message,
+                    data: result.data
+                }
+            } else {
+                return {
+                    success: false,
+                    code: result.code || response.status,
+                    message: result.message || 'Failed to transfer ownership',
+                    errorCode: result.data
+                }
+            }
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            }
+        }
+    }
+
+    async updateRoomSettings(roomId: string, payload: {
+        name?: string
+        description?: string
+        is_private?: boolean
+        settings?: any
+    }): Promise<ApiResponse> {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/v1/rooms/${roomId}/settings`, {
+                method: 'PATCH',
+                headers: this.getAuthHeaders(),
+                body: JSON.stringify(payload)
+            })
+
+            const result = await response.json()
+
+            if (response.ok) {
+                return {
+                    success: true,
+                    code: result.code,
+                    message: result.message,
+                    data: result.data
+                }
+            } else {
+                return {
+                    success: false,
+                    code: result.code || response.status,
+                    message: result.message || 'Failed to update room settings',
                     errorCode: result.data
                 }
             }
