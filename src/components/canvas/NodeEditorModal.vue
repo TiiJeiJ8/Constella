@@ -31,7 +31,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div v-if="isMarkdown" class="view-mode-switch" role="tablist" :aria-label="t('canvas.editor.viewMode')">
+                            <div v-if="isMarkdown && !isReadOnly" class="view-mode-switch" role="tablist" :aria-label="t('canvas.editor.viewMode')">
                                 <button
                                     v-for="mode in viewModes"
                                     :key="mode.id"
@@ -82,8 +82,8 @@
                                     <Transition name="settings-pop">
                                     <div v-if="isPreviewSettingsOpen" class="editor-settings-menu" @pointerdown.stop>
                                         <div class="editor-settings-section">
-                                            <div class="editor-settings-group-title">{{ editorPanelTitle }}</div>
-                                            <div class="editor-settings-grid">
+                                            <div v-if="!isReadOnly" class="editor-settings-group-title">{{ editorPanelTitle }}</div>
+                                            <div v-if="!isReadOnly" class="editor-settings-grid">
                                                 <div class="editor-settings-item">
                                                     <div class="editor-settings-row editor-settings-row-spread">
                                                         <div class="editor-settings-label">{{ editorFontSizeLabel }}</div>
@@ -502,7 +502,7 @@
                                     </div>
                                 </div>
 
-                                <div v-if="isMarkdown" class="editor-toolbar">
+                                <div v-if="isMarkdown && !isReadOnly" class="editor-toolbar">
                                     <button
                                         v-for="action in toolbarActions"
                                         :key="action.id"
@@ -523,6 +523,7 @@
                                         :style="editorTextareaStyle"
                                         :value="localContent"
                                         :placeholder="placeholder"
+                                        :readonly="isReadOnly"
                                         spellcheck="false"
                                         @input="handleInput"
                                         @keydown="handleKeyDown"
@@ -932,6 +933,7 @@ const props = defineProps<{
     nodeId: string
     content: NodeContent
     allNodes?: Array<{ id: string; content: NodeContent }>
+    readOnly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -1280,8 +1282,10 @@ const pluginMeta = computed(() => {
     return pluginRegistry.getMeta(props.content.kind)
 })
 const isMarkdown = computed(() => props.content.kind === 'markdown')
+const isReadOnly = computed(() => Boolean(props.readOnly))
 const effectiveViewMode = computed<EditorViewMode>(() => {
     if (!isMarkdown.value) return 'edit'
+    if (isReadOnly.value) return 'preview'
     if (forceSingleColumn.value && viewMode.value === 'split') return 'edit'
     return viewMode.value
 })
@@ -1291,7 +1295,7 @@ const viewModes = computed(() => ([
     { id: 'preview' as EditorViewMode, label: t('canvas.editor.modePreview') }
 ]))
 const acceptedImportExtensions = '.txt,.md,.markdown,.mdown,.mkd'
-const canImportDocument = computed(() => props.content.kind === 'markdown' || props.content.kind === 'text')
+const canImportDocument = computed(() => !isReadOnly.value && (props.content.kind === 'markdown' || props.content.kind === 'text'))
 const canExportDocument = computed(() => props.content.kind === 'markdown' || props.content.kind === 'text')
 const supportsElectronPdf = computed(() => Boolean(window.electron?.exportDocumentPdf))
 const showEditorPane = computed(() => !isMarkdown.value || effectiveViewMode.value === 'edit' || effectiveViewMode.value === 'split')
@@ -1907,6 +1911,7 @@ function getLineRange(value: string, index: number): { start: number; end: numbe
 }
 
 function setEditorValue(value: string, selectionStart?: number, selectionEnd?: number) {
+    if (isReadOnly.value) return
     localContent.value = value
     emit('update', props.nodeId, value)
     nextTick(() => {
@@ -1956,6 +1961,7 @@ function prependToCurrentLine(prefix: string) {
 }
 
 function handleInput(event: Event) {
+    if (isReadOnly.value) return
     const target = event.target as HTMLTextAreaElement
     localContent.value = target.value
     emit('update', props.nodeId, target.value)
@@ -1964,6 +1970,7 @@ function handleInput(event: Event) {
 }
 
 function triggerImport() {
+    if (isReadOnly.value) return
     if (!canImportDocument.value) {
         toast.error(t('canvas.editor.importUnsupported'))
         return
@@ -1978,6 +1985,10 @@ function resetImportInput() {
 }
 
 async function handleImportFileChange(event: Event) {
+    if (isReadOnly.value) {
+        resetImportInput()
+        return
+    }
     const input = event.target as HTMLInputElement
     const file = input.files?.[0]
 
@@ -2346,6 +2357,30 @@ function getPreviewMermaidSvgSize(svg: SVGSVGElement) {
     return { width, height }
 }
 
+function getPreviewMermaidNaturalSize(svg: SVGSVGElement) {
+    const viewBox = svg.viewBox?.baseVal
+    if (viewBox?.width && viewBox?.height) {
+        return { width: viewBox.width, height: viewBox.height }
+    }
+
+    const widthAttr = Number.parseFloat(svg.getAttribute('width') || '')
+    const heightAttr = Number.parseFloat(svg.getAttribute('height') || '')
+    return {
+        width: Number.isFinite(widthAttr) ? widthAttr : 0,
+        height: Number.isFinite(heightAttr) ? heightAttr : 0
+    }
+}
+
+function getPreviewMermaidAvailableWidth(wrapper: HTMLElement, preview: HTMLElement) {
+    const wrapperStyle = window.getComputedStyle(wrapper)
+    const previewStyle = window.getComputedStyle(preview)
+    const wrapperPaddingX = (Number.parseFloat(wrapperStyle.paddingLeft) || 0) + (Number.parseFloat(wrapperStyle.paddingRight) || 0)
+    const previewPaddingX = (Number.parseFloat(previewStyle.paddingLeft) || 0) + (Number.parseFloat(previewStyle.paddingRight) || 0)
+    const previewWidth = preview.clientWidth - previewPaddingX
+    const wrapperWidth = wrapper.clientWidth - wrapperPaddingX
+    return Math.max(1, Math.max(wrapperWidth, previewWidth))
+}
+
 function applyPreviewMermaidSettings() {
     const preview = previewRef.value
     if (!preview) return
@@ -2367,12 +2402,15 @@ function applyPreviewMermaidSettings() {
         svg.style.removeProperty('transform')
         svg.style.removeProperty('transform-origin')
 
-        const { width, height } = getPreviewMermaidSvgSize(svg)
+        const naturalSize = getPreviewMermaidNaturalSize(svg)
+        const measuredSize = getPreviewMermaidSvgSize(svg)
+        const width = naturalSize.width || measuredSize.width
+        const height = naturalSize.height || measuredSize.height
         if (!width || !height) return
 
-        const wrapperWidth = Math.max(1, wrapper.clientWidth - 4)
+        const availableWidth = getPreviewMermaidAvailableWidth(wrapper, preview)
         const baseScale = previewMermaidScalePercent.value / 100
-        const widthScale = wrapperWidth / width
+        const widthScale = availableWidth / width
         const scaledNaturalWidth = Math.max(1, width * baseScale)
         const scaledNaturalHeight = Math.max(1, height * baseScale)
         const fitScale = Math.min(widthScale, 1) * baseScale
@@ -2487,6 +2525,7 @@ function handlePreviewClick(event: MouseEvent) {
 }
 
 function handlePaste(event: ClipboardEvent) {
+    if (isReadOnly.value) return
     if (!isMarkdown.value || !textareaRef.value) return
     const clipboardText = event.clipboardData?.getData('text/plain')?.trim()
     if (!clipboardText) return
@@ -2694,6 +2733,44 @@ function handlePairing(event: KeyboardEvent): boolean {
 }
 
 function handleKeyDown(event: KeyboardEvent) {
+    if (isReadOnly.value) {
+        if (replaceBarOpen.value && event.key === 'Escape') {
+            event.preventDefault()
+            event.stopPropagation()
+            replaceBarOpen.value = false
+            focusSearchInput()
+            return
+        }
+        if (searchBarOpen.value && event.key === 'Escape') {
+            event.preventDefault()
+            event.stopPropagation()
+            closeSearchBar()
+            return
+        }
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
+            event.preventDefault()
+            openSearchBar()
+            return
+        }
+        if (event.key === 'F3') {
+            event.preventDefault()
+            if (!searchBarOpen.value) {
+                openSearchBar()
+                return
+            }
+            if (searchScope.value === 'room') {
+                const nextIndex = event.shiftKey
+                    ? Math.max(activeRoomSearchIndex.value - 1, 0)
+                    : Math.min(activeRoomSearchIndex.value + 1, Math.max(0, roomSearchResults.value.length - 1))
+                jumpToRoomSearchResult(nextIndex)
+                return
+            }
+            jumpToCurrentSearchMatch(event.shiftKey ? -1 : 1)
+            return
+        }
+        return
+    }
+
     if (replaceBarOpen.value && event.key === 'Escape') {
         event.preventDefault()
         event.stopPropagation()
@@ -3017,30 +3094,27 @@ async function renderMermaidDiagrams() {
     await nextTick()
     const preview = previewRef.value
     if (!preview) return
-    const mermaidElements = Array.from(preview.querySelectorAll<HTMLElement>('.mermaid'))
+    const mermaidElements = Array.from(preview.querySelectorAll<HTMLElement>('pre.mermaid'))
     if (mermaidElements.length > 0) {
         try {
             const themeMode: MermaidThemeMode = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
             mermaid.initialize(getMermaidConfig(themeMode))
-            const ganttElements = mermaidElements.filter(element => isGanttMermaidSource(element.textContent?.trim() ?? ''))
-            const standardElements = mermaidElements.filter(element => !ganttElements.includes(element))
 
-            if (standardElements.length > 0) {
-                await mermaid.run({
-                    nodes: standardElements,
-                    suppressErrors: true
-                })
-            }
-
-            for (const element of ganttElements) {
+            for (const element of mermaidElements) {
                 const source = element.textContent?.trim()
                 if (!source) continue
+
                 try {
-                    const renderId = `mermaid-preview-gantt-${mermaidCounter++}`
+                    const renderId = `mermaid-preview-${isGanttMermaidSource(source) ? 'gantt' : 'diagram'}-${mermaidCounter++}`
                     const result = await mermaid.render(renderId, source)
-                    element.outerHTML = result.svg
-                } catch (ganttError) {
-                    console.warn('[Mermaid] Gantt preview render error:', ganttError)
+                    element.outerHTML = `<div class="mermaid mermaid-rendered">${result.svg}</div>`
+                    const renderedElement = preview.querySelector<HTMLElement>(`.mermaid-rendered > svg#${renderId}`)?.parentElement
+                    if (renderedElement && typeof result.bindFunctions === 'function') {
+                        result.bindFunctions(renderedElement)
+                    }
+                } catch (renderError) {
+                    console.warn('[Mermaid] Preview render error:', renderError)
+                    element.outerHTML = `<pre class="mermaid-fallback">${md.utils.escapeHtml(source)}</pre>`
                 }
             }
         } catch (error) {
@@ -3048,6 +3122,9 @@ async function renderMermaidDiagrams() {
         }
     }
     applyPreviewMermaidSettings()
+    requestAnimationFrame(() => {
+        applyPreviewMermaidSettings()
+    })
     decoratePreviewImages()
     restorePreviewSessionIfNeeded()
     requestPreviewRealignment()
@@ -3267,6 +3344,14 @@ watch(viewMode, (mode) => {
         window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode)
     } catch {}
 })
+
+watch(showPreviewPane, async (visible) => {
+    if (!visible) return
+    await nextTick()
+    setupPreviewObserver()
+    renderMermaidDiagrams()
+    restorePreviewSessionIfNeeded()
+}, { flush: 'post' })
 
 watch([previewMermaidScaleMode, previewMermaidScalePercent, previewMermaidDensity], ([scaleMode, scalePercent, density]) => {
     previewMermaidScalePercent.value = Math.min(
@@ -3581,6 +3666,7 @@ onUnmounted(() => {
 .preview-content :deep(.mermaid-block-lang) { position: absolute; top: 10px; left: 12px; z-index: 1; display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.68); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .preview-content :deep(.mermaid) { display: flex; justify-content: center; width: fit-content; max-width: 100%; min-width: 0; margin: 0 auto; }
 .preview-content :deep(.mermaid svg) { display: block; width: auto !important; max-width: 100%; height: auto; margin: 0 auto; }
+.preview-content :deep(.mermaid-fallback) { margin: 0; padding: 12px 14px; overflow-x: auto; overflow-y: hidden; border-radius: 12px; background: rgba(15, 18, 24, 0.72); border: 1px dashed rgba(248, 113, 113, 0.26); color: #fecaca; white-space: pre; }
 .preview-content :deep(.mermaid-wrapper.is-wide-mermaid) { width: 100%; margin-left: 0; margin-right: 0; overflow-x: auto; overflow-y: hidden; justify-content: flex-start; }
 .preview-content :deep(.mermaid-wrapper.is-wide-mermaid .mermaid) { justify-content: flex-start; min-width: max-content; }
 .preview-content :deep(.mermaid-wrapper.is-wide-mermaid .mermaid svg) { max-width: none !important; width: auto !important; min-width: max-content; margin: 0; }
@@ -3750,6 +3836,7 @@ html[data-theme='light'] .image-lightbox-caption { background: rgba(255, 255, 25
 html[data-theme='light'] .preview-content :deep(.katex-block) { background: rgba(0, 0, 0, 0.03); }
 html[data-theme='light'] .preview-content :deep(.mermaid-wrapper) { border-color: rgba(0, 0, 0, 0.08); background: rgba(0, 0, 0, 0.02); }
 html[data-theme='light'] .preview-content :deep(.mermaid-block-lang) { background: rgba(255, 255, 255, 0.72); color: rgba(15, 23, 42, 0.52); }
+html[data-theme='light'] .preview-content :deep(.mermaid-fallback) { background: rgba(255, 255, 255, 0.92); border-color: rgba(220, 38, 38, 0.16); color: #b91c1c; }
 html[data-theme='light'] .preview-content :deep(.mermaid text),
 html[data-theme='light'] .preview-content :deep(.mermaid .label),
 html[data-theme='light'] .preview-content :deep(.mermaid .nodeLabel),

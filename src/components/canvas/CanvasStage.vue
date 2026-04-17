@@ -926,9 +926,6 @@ function handleNodeClick(node, e) {
 
 // 节点双击 - 进入编辑模式
 function handleNodeDblClick(node, e) {
-    if (props.isReadOnly) {
-        return
-    }
     e.cancelBubble = true
     emit('node-dblclick', node.id)
     console.log('[CanvasStage] Node double-clicked:', node.id)

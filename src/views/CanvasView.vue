@@ -123,10 +123,11 @@
         </div>
 
         <NodeEditorModal
-            v-if="isRoomReady && editingNode && canEditCanvas"
+            v-if="isRoomReady && editingNode"
             :node-id="editingNode.id"
             :content="editingNode.content"
             :all-nodes="canvasNodes"
+            :read-only="!canEditCanvas"
             @update="handleContentUpdate"
             @jump-to-node="handleJumpToNode"
             @close="handleCloseEditor"
@@ -610,7 +611,6 @@ function handleContentUpdate(nodeId: string, data: string) {
 }
 
 function openNodeEditor(nodeId: string) {
-    if (!canEditCanvas.value) return false
     const node = canvasNodes.value.find(item => item.id === nodeId)
     if (!node) return false
 
