@@ -18,6 +18,7 @@
 
 <script setup>
 import { onMounted, ref, watch } from 'vue'
+import { applyTheme, getStoredTheme, setTheme } from '@/utils/theme'
 
 const props = defineProps({
     modelValue: {
@@ -36,31 +37,30 @@ const isDark = ref(false)
 watch(() => props.modelValue, val => {
     if (typeof val === 'boolean') {
         isDark.value = val
-        document.documentElement.setAttribute('data-theme', val ? 'dark' : 'light')
+        applyTheme(val ? 'dark' : 'light')
     }
 })
 
 watch(() => props.theme, val => {
     if (val === 'dark' || val === 'light') {
         isDark.value = val === 'dark'
-        document.documentElement.setAttribute('data-theme', val)
+        applyTheme(val)
     }
 })
 
 function toggleTheme() {
     isDark.value = !isDark.value
     const theme = isDark.value ? 'dark' : 'light'
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('theme', theme)
+    setTheme(theme)
     emit('update:modelValue', isDark.value)
     emit('change', theme)
 }
 
 onMounted(() => {
     if (props.modelValue === undefined && props.theme === undefined) {
-        const savedTheme = localStorage.getItem('theme') || 'light'
+        const savedTheme = getStoredTheme()
         isDark.value = savedTheme === 'dark'
-        document.documentElement.setAttribute('data-theme', savedTheme)
+        applyTheme(savedTheme)
     }
 })
 </script>

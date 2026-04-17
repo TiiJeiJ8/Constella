@@ -133,6 +133,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SettingsPanel from '@/components/base/SettingsPanel.vue'
+import { getStoredTheme, setTheme } from '@/utils/theme'
 
 const ZH = 'zh-CN'
 const { t, locale } = useI18n()
@@ -276,10 +277,8 @@ function toggleLanguage() {
 }
 
 function toggleTheme() {
-    const currentTheme = document.documentElement.getAttribute('data-theme')
-    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark'
-    document.documentElement.setAttribute('data-theme', nextTheme)
-    localStorage.setItem('theme', nextTheme)
+    const nextTheme = isDarkTheme.value ? 'light' : 'dark'
+    setTheme(nextTheme)
     isDarkTheme.value = nextTheme === 'dark'
 }
 
@@ -289,7 +288,7 @@ function openSettings() {
 }
 
 onMounted(() => {
-    const theme = document.documentElement.getAttribute('data-theme') || localStorage.getItem('theme') || 'light'
+    const theme = document.documentElement.getAttribute('data-theme') || getStoredTheme()
     isDarkTheme.value = theme === 'dark'
     document.addEventListener('click', handleClickOutside)
 })
@@ -336,4 +335,3 @@ html[data-theme='dark'] .role-owner{color:#fbbf24}html[data-theme='dark'] .role-
 .fade-enter-active,.fade-leave-active{transition:opacity .2s ease}.fade-enter-from,.fade-leave-to{opacity:0}
 @media (max-width:768px){.canvas-topbar{top:10px;left:10px;right:10px;height:52px}.topbar-section{gap:8px}.circular-btn,.action-btn{width:38px;height:38px}.btn-icon{width:17px;height:17px}.room-info-card{min-width:0;max-width:calc(100vw - 176px);padding:6px 10px;border-radius:16px}.room-title-row{gap:5px}.room-title{font-size:13px}.role-badge{padding:2px 6px}.sync-status{display:none}.menu-group,.menu-buttons{gap:6px}}
 </style>
-

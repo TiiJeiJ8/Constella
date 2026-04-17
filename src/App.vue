@@ -28,6 +28,7 @@ import ToastManager from './components/base/ToastManager.vue'
 import { setToastInstance } from './utils/useToast'
 import { apiService } from './services/api'
 import { clearAuthStorage, getAccessToken, getRefreshToken, setAuthTokens } from './utils/storage'
+import { applyStoredTheme } from './utils/theme'
 
 const currentView = ref('home')
 const currentRoomId = ref('')
@@ -119,8 +120,7 @@ function handleNavigate(view, params) {
 }
 
 onMounted(() => {
-    const savedTheme = localStorage.getItem('theme') || 'light'
-    document.documentElement.setAttribute('data-theme', savedTheme)
+    applyStoredTheme()
 
     try {
         const savedSettings = JSON.parse(localStorage.getItem('settings') || '{}')

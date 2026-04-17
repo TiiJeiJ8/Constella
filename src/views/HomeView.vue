@@ -198,6 +198,7 @@ import SettingsPanel from '../components/base/SettingsPanel.vue'
 import WindowControls from '../components/base/WindowControls.vue'
 import { apiService } from '../services/api'
 import { handleApiError } from '../utils/errorHandler'
+import { getStoredTheme, setTheme } from '../utils/theme'
 
 interface DiscoveredServer {
     id: string
@@ -306,8 +307,7 @@ onMounted(() => {
         showIntro.value = false
     }, 2000)
 
-    const savedTheme = localStorage.getItem('theme') || 'light'
-    isDark.value = savedTheme === 'dark'
+    isDark.value = getStoredTheme() === 'dark'
 
     const savedServerUrl = localStorage.getItem('serverUrl')
     if (savedServerUrl) {
@@ -331,13 +331,7 @@ function toggleLanguage() {
 
 function toggleTheme() {
     isDark.value = !isDark.value
-    const theme = isDark.value ? 'dark' : 'light'
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('theme', theme)
-
-    const settings = JSON.parse(localStorage.getItem('settings') || '{}')
-    settings.theme = theme
-    localStorage.setItem('settings', JSON.stringify(settings))
+    setTheme(isDark.value ? 'dark' : 'light')
 }
 
 function openGithub() {

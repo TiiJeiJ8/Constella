@@ -19,6 +19,7 @@
                             v-model="url"
                             type="url"
                             class="field-input"
+                            :readonly="readOnly"
                             :placeholder="t('plugins.hyperlink.editor.urlPlaceholder')"
                             @keydown.enter="handleSave"
                             @keydown.esc.stop="$emit('close')"
@@ -31,6 +32,7 @@
                             v-model="title"
                             type="text"
                             class="field-input"
+                            :readonly="readOnly"
                             :placeholder="t('plugins.hyperlink.editor.titlePlaceholder')"
                             @keydown.enter="handleSave"
                             @keydown.esc.stop="$emit('close')"
@@ -44,7 +46,7 @@
                     </button>
                     <div class="footer-right">
                         <button class="btn btn-cancel" @click="$emit('close')">{{ t('plugins.hyperlink.editor.cancel') }}</button>
-                        <button class="btn btn-save" @click="handleSave" :disabled="!url.trim()">{{ t('plugins.hyperlink.editor.save') }}</button>
+                        <button v-if="!readOnly" class="btn btn-save" @click="handleSave" :disabled="!url.trim()">{{ t('plugins.hyperlink.editor.save') }}</button>
                     </div>
                 </div>
             </div>
@@ -58,7 +60,8 @@ import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     nodeId: { type: String, required: true },
-    content: { type: Object, required: true }
+    content: { type: Object, required: true },
+    readOnly: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['update', 'close'])
@@ -75,6 +78,7 @@ onMounted(() => {
 })
 
 function handleSave() {
+    if (props.readOnly) return
     const trimmed = url.value.trim()
     if (!trimmed) return
 
@@ -156,6 +160,7 @@ function handleOpen() {
     transition: border-color 0.2s;
 }
 .field-input:focus { border-color: #667eea; }
+.field-input[readonly] { opacity: 0.82; cursor: default; }
 .field-error { font-size: 12px; color: #f56565; }
 
 .dialog-footer {

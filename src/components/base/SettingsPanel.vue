@@ -428,6 +428,7 @@ import {
     setInstalledPluginEnabled
 } from '@/plugins/installed'
 import { reloadPlugins } from '@/plugins/register'
+import { getStoredTheme, setTheme } from '@/utils/theme'
 
 const { t, locale } = useI18n()
 
@@ -571,7 +572,7 @@ const settingsData = reactive({
     language: 'zh-CN',
     developerMode: false,
     // 外观设置（仅保留主题）
-    theme: 'light',
+    theme: getStoredTheme(),
     uiScale: 100,
     windowSize: {
         width: DEFAULT_WINDOW_WIDTH,
@@ -769,7 +770,7 @@ const loadSettings = () => {
     }
 
     // 优先使用 localStorage 中的 theme 和 locale 值
-    const savedTheme = localStorage.getItem('theme')
+    const savedTheme = getStoredTheme()
     if (savedTheme) {
         settingsData.theme = savedTheme
     }
@@ -833,8 +834,7 @@ const applySettings = () => {
 
     // 应用主题设置
     if (normalized.theme) {
-        document.documentElement.setAttribute('data-theme', normalized.theme)
-        localStorage.setItem('theme', normalized.theme)
+        setTheme(normalized.theme)
     }
 
     if (window.electron?.setWindowZoomFactor) {
@@ -895,7 +895,6 @@ async function syncWindowState() {
     if (!window.electron?.getWindowState) return
 
     try {
-        isSyncingSettings.value = true
         const state = await window.electron.getWindowState()
         displayState.width = state.display.width
         displayState.height = state.display.height
@@ -926,8 +925,6 @@ async function syncWindowState() {
         }
     } catch (error) {
         console.warn('Failed to query native window state', error)
-    } finally {
-        isSyncingSettings.value = false
     }
 }
 

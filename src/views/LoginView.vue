@@ -100,6 +100,7 @@ import WindowControls from '@/components/base/WindowControls.vue'
 import { apiService } from '@/services/api'
 import { handleApiError } from '@/utils/errorHandler'
 import { setAuthTokens, setStoredUser } from '@/utils/storage'
+import { getStoredTheme, setTheme } from '@/utils/theme'
 
 const { t, te, locale } = useI18n()
 const emit = defineEmits(['navigate'])
@@ -151,8 +152,7 @@ const loginHintText = computed(() => (
 ))
 
 onMounted(() => {
-    const savedTheme = localStorage.getItem('theme') || 'light'
-    isDark.value = savedTheme === 'dark'
+    isDark.value = getStoredTheme() === 'dark'
 })
 
 function toggleLanguage() {
@@ -163,13 +163,7 @@ function toggleLanguage() {
 
 function toggleTheme() {
     isDark.value = !isDark.value
-    const theme = isDark.value ? 'dark' : 'light'
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('theme', theme)
-
-    const nextSettings = JSON.parse(localStorage.getItem('settings') || '{}')
-    nextSettings.theme = theme
-    localStorage.setItem('settings', JSON.stringify(nextSettings))
+    setTheme(isDark.value ? 'dark' : 'light')
 }
 
 function goBack() {

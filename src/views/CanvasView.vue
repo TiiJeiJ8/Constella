@@ -134,10 +134,11 @@
         />
 
         <component
-            v-if="isRoomReady && editingCustomNode && editingCustomPlugin?.editor && canEditCanvas"
+            v-if="isRoomReady && editingCustomNode && editingCustomPlugin?.editor"
             :is="editingCustomPlugin.editor"
             :node-id="editingCustomNode.id"
             :content="editingCustomNode.content"
+            :read-only="!canEditCanvas"
             @update="handleCustomEditorUpdate"
             @close="editingCustomNodeId = null"
         />

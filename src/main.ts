@@ -7,8 +7,10 @@ import 'element-plus/dist/index.css'
 import './style.css'
 import App from './App.vue'
 import { registerPlugins } from './plugins/register'
+import { applyStoredTheme } from './utils/theme'
 
 // 创建应用实例
+applyStoredTheme()
 const app = createApp(App)
 
 // 异步注册所有内容类型插件

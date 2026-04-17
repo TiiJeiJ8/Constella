@@ -2418,6 +2418,9 @@ function resetEditorSettings() {
     previewParagraphSpacing.value = 'standard'
     compactToolbar.value = false
     splitRatio.value = 'balanced'
+    previewMermaidScaleMode.value = 'fit-width'
+    previewMermaidScalePercent.value = 100
+    previewMermaidDensity.value = 'compact'
 }
 
 function getPreviewMermaidSvgSize(svg: SVGSVGElement) {
@@ -3823,6 +3826,7 @@ onUnmounted(() => {
 .footer-hint, .char-count, .collab-indicator { font-size: 12px; }
 .footer-hint, .char-count { color: rgba(255, 255, 255, 0.42); }
 .collab-indicator { color: #4ade80; }
+.footer-right { gap: 14px; flex-wrap: wrap; justify-content: flex-end; }
 .footer-hint kbd { display: inline-block; margin: 0 3px; padding: 3px 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.1); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
 .preview-content :deep(h1) { margin: 0.5em 0; font-size: 1.8em; font-weight: 700; }
 .preview-content :deep(h2) { margin: 0.5em 0; font-size: 1.45em; font-weight: 700; }

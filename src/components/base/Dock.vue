@@ -93,6 +93,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { getStoredTheme, setTheme } from '@/utils/theme'
 
 const { t, locale } = useI18n()
 
@@ -149,8 +150,7 @@ const navItems = ref([
 ])
 
 onMounted(() => {
-    const savedTheme = localStorage.getItem('theme') || 'light'
-    isDark.value = savedTheme === 'dark'
+    isDark.value = getStoredTheme() === 'dark'
     document.addEventListener('click', handleClickOutside)
 })
 
@@ -172,13 +172,7 @@ function toggleLanguage() {
 
 function toggleTheme() {
     isDark.value = !isDark.value
-    const theme = isDark.value ? 'dark' : 'light'
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('theme', theme)
-
-    const nextSettings = JSON.parse(localStorage.getItem('settings') || '{}')
-    nextSettings.theme = theme
-    localStorage.setItem('settings', JSON.stringify(nextSettings))
+    setTheme(isDark.value ? 'dark' : 'light')
 }
 
 function openSettings() {
