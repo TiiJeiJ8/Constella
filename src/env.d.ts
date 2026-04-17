@@ -24,6 +24,25 @@ interface ElectronBridgeApi {
     toggleMaximize: () => void
     close: () => void
     openExternal: (url: string) => void
+    getWindowState: () => Promise<{
+        width: number
+        height: number
+        zoomFactor: number
+        isMaximized: boolean
+        display: {
+            width: number
+            height: number
+            scaleFactor: number
+        }
+    }>
+    setWindowZoomFactor: (factor: number) => Promise<{
+        zoomFactor: number
+    }>
+    setWindowSize: (width: number, height: number) => Promise<{
+        width: number
+        height: number
+        isMaximized: boolean
+    }>
     discoverLanServers: (timeoutMs?: number) => Promise<ElectronLanServer[]>
     exportDocumentPdf: (payload: {
         html: string

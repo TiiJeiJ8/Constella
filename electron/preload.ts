@@ -39,6 +39,24 @@ contextBridge.exposeInMainWorld('electron', {
     toggleMaximize: () => ipcRenderer.send('window-maximize'),
     close: () => ipcRenderer.send('window-close'),
     openExternal: (url: string) => ipcRenderer.send('open-external', url),
+    getWindowState: (): Promise<{
+        width: number
+        height: number
+        zoomFactor: number
+        isMaximized: boolean
+        display: {
+            width: number
+            height: number
+            scaleFactor: number
+        }
+    }> => ipcRenderer.invoke('window-get-state'),
+    setWindowZoomFactor: (factor: number): Promise<{ zoomFactor: number }> =>
+        ipcRenderer.invoke('window-set-zoom-factor', factor),
+    setWindowSize: (width: number, height: number): Promise<{
+        width: number
+        height: number
+        isMaximized: boolean
+    }> => ipcRenderer.invoke('window-set-size', { width, height }),
     discoverLanServers: (timeoutMs?: number): Promise<LanServerDescriptor[]> =>
         ipcRenderer.invoke('discover-lan-servers', timeoutMs),
     exportDocumentPdf: (payload: ExportPdfPayload): Promise<ExportPdfResult> =>
@@ -76,6 +94,23 @@ declare global {
             toggleMaximize: () => void
             close: () => void
             openExternal: (url: string) => void
+            getWindowState: () => Promise<{
+                width: number
+                height: number
+                zoomFactor: number
+                isMaximized: boolean
+                display: {
+                    width: number
+                    height: number
+                    scaleFactor: number
+                }
+            }>
+            setWindowZoomFactor: (factor: number) => Promise<{ zoomFactor: number }>
+            setWindowSize: (width: number, height: number) => Promise<{
+                width: number
+                height: number
+                isMaximized: boolean
+            }>
             discoverLanServers: (timeoutMs?: number) => Promise<LanServerDescriptor[]>
             exportDocumentPdf: (payload: ExportPdfPayload) => Promise<ExportPdfResult>
             installPluginPackage: (sourcePath?: string) => Promise<InstalledPluginRecord>

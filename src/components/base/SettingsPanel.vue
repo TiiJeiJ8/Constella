@@ -170,6 +170,35 @@
                                 </div>
                             </div>
 
+                            <div v-if="supportsNativeWindowControls" class="setting-item setting-item-column">
+                                <label class="setting-label">
+                                    <span>{{ locale === 'zh-CN' ? '窗口尺寸' : 'Window Size' }}</span>
+                                    <span class="setting-subtext">
+                                        {{ locale === 'zh-CN'
+                                            ? `会根据当前屏幕可用区域生成更多推荐尺寸。当前屏幕可用区域：${displayState.width} x ${displayState.height}。`
+                                            : `Recommended sizes are generated from your current display work area. Current work area: ${displayState.width} x ${displayState.height}.` }}
+                                    </span>
+                                </label>
+                                <select
+                                    :value="selectedWindowSizeKey"
+                                    class="setting-select window-size-select"
+                                    @change="handleWindowSizeSelect"
+                                >
+                                    <option
+                                        v-for="preset in windowSizePresets"
+                                        :key="preset.key"
+                                        :value="preset.key"
+                                    >
+                                        {{ preset.label }}
+                                    </option>
+                                </select>
+                                <p class="setting-hint">
+                                    {{ locale === 'zh-CN'
+                                        ? '应用后会自动退出最大化状态，并立即调整窗口大小。'
+                                        : 'Applying a size exits maximized mode and resizes the window immediately.' }}
+                                </p>
+                            </div>
+
                             <div class="setting-item setting-item-column">
                                 <label class="setting-label">{{ t('settings.appearance.markdownLodThreshold') }}</label>
                                 <input
@@ -414,6 +443,7 @@ const emit = defineEmits(['update:modelValue'])
 const isOpen = ref(props.modelValue)
 const activeCategory = ref('general')
 const lastAppliedDeveloperMode = ref(false)
+const isSyncingSettings = ref(false)
 const appVersion = __APP_VERSION__
 const appRepositoryUrl = 'https://github.com/TiiJeiJ8/constella'
 
@@ -463,6 +493,27 @@ const defaultPerformanceSettings = {
     showCanvasPerformancePanel: true,
     markdownLodScaleThreshold: 0.6
 }
+const MIN_WINDOW_WIDTH = 1100
+const MIN_WINDOW_HEIGHT = 700
+const COMMON_WINDOW_PRESETS = [
+    [1024, 768],
+    [1280, 720],
+    [1280, 800],
+    [1366, 768],
+    [1440, 900],
+    [1600, 900],
+    [1600, 1000],
+    [1680, 1050],
+    [1920, 1080],
+    [1920, 1200],
+    [2048, 1280],
+    [2560, 1440],
+    [2560, 1600],
+    [2560, 1920],
+    [2880, 1800],
+    [3200, 1800],
+    [3840, 2160]
+]
 
 function normalizeMarkdownLodScaleThreshold(value) {
     const n = Number(value)
@@ -476,17 +527,34 @@ function normalizeUiScale(value) {
     return Math.max(85, Math.min(115, Math.round(n / 5) * 5))
 }
 
-function applyUiScale(value) {
-    const scale = normalizeUiScale(value) / 100
-    const appRoot = document.getElementById('app')
-    if (!appRoot) return
+function normalizeWindowDimension(value, min, max, fallback) {
+    const n = Number(value)
+    if (!Number.isFinite(n)) return fallback
+    return Math.max(min, Math.min(max, Math.round(n)))
+}
 
-    document.documentElement.style.zoom = ''
-    document.body.style.zoom = ''
-    appRoot.style.transformOrigin = 'top left'
-    appRoot.style.transform = `scale(${scale})`
-    appRoot.style.width = `${100 / scale}%`
-    appRoot.style.height = `${100 / scale}%`
+function buildNormalizedSettingsSnapshot(source = settingsData) {
+    const fallbackWidth = Math.min(displayState.width, Math.max(MIN_WINDOW_WIDTH, Number(source.windowSize?.width) || 1280))
+    const fallbackHeight = Math.min(displayState.height, Math.max(MIN_WINDOW_HEIGHT, Number(source.windowSize?.height) || 800))
+
+    return {
+        ...source,
+        uiScale: normalizeUiScale(source.uiScale),
+        shortcuts: {
+            ...defaultShortcuts,
+            ...(source.shortcuts || {})
+        },
+        performance: {
+            ...defaultPerformanceSettings,
+            ...(source.performance || {}),
+            markdownLodScaleThreshold: normalizeMarkdownLodScaleThreshold(source.performance?.markdownLodScaleThreshold),
+            showCanvasPerformancePanel: source.performance?.showCanvasPerformancePanel !== false
+        },
+        windowSize: {
+            width: normalizeWindowDimension(source.windowSize?.width, MIN_WINDOW_WIDTH, displayState.width, fallbackWidth),
+            height: normalizeWindowDimension(source.windowSize?.height, MIN_WINDOW_HEIGHT, displayState.height, fallbackHeight)
+        }
+    }
 }
 
 // 设置数据（仅保留必要项）
@@ -503,6 +571,10 @@ const settingsData = reactive({
     // 外观设置（仅保留主题）
     theme: 'light',
     uiScale: 100,
+    windowSize: {
+        width: 1280,
+        height: 800
+    },
     // 快捷键
     shortcuts: { ...defaultShortcuts },
     // 性能相关
@@ -515,6 +587,16 @@ const installedPlugins = ref([])
 const pluginBusy = ref(false)
 const pluginError = ref('')
 const supportsPluginManagement = computed(() => Boolean(window.electron?.listInstalledPlugins))
+const supportsNativeWindowControls = computed(() => Boolean(
+    window.electron?.getWindowState &&
+    window.electron?.setWindowSize &&
+    window.electron?.setWindowZoomFactor
+))
+const displayState = reactive({
+    width: 1280,
+    height: 800,
+    scaleFactor: 1
+})
 const uiScalePresets = computed(() => locale.value === 'zh-CN'
     ? [
         { value: 90, label: '紧凑 90%' },
@@ -527,6 +609,43 @@ const uiScalePresets = computed(() => locale.value === 'zh-CN'
         { value: 110, label: 'Large 110%' }
     ]
 )
+const windowSizePresets = computed(() => {
+    const map = new Map()
+
+    const appendPreset = (width, height, labelSuffix = '') => {
+        if (width > displayState.width || height > displayState.height) return
+        if (width < MIN_WINDOW_WIDTH || height < MIN_WINDOW_HEIGHT) return
+
+        const key = `${width}x${height}`
+        if (map.has(key)) return
+
+        const labelBase = `${width} x ${height}`
+        map.set(key, {
+            key,
+            width,
+            height,
+            label: labelSuffix ? `${labelBase} ${labelSuffix}` : labelBase
+        })
+    }
+
+    appendPreset(
+        settingsData.windowSize.width,
+        settingsData.windowSize.height,
+        locale.value === 'zh-CN' ? '(当前)' : '(Current)'
+    )
+    appendPreset(
+        displayState.width,
+        displayState.height,
+        locale.value === 'zh-CN' ? '(屏幕可用区)' : '(Display)'
+    )
+
+    for (const [width, height] of COMMON_WINDOW_PRESETS) {
+        appendPreset(width, height)
+    }
+
+    return Array.from(map.values()).sort((left, right) => (left.width * left.height) - (right.width * right.height))
+})
+const selectedWindowSizeKey = computed(() => `${settingsData.windowSize.width}x${settingsData.windowSize.height}`)
 const settingsCopy = computed(() => ({
     uiScaleTitle: locale.value === 'zh-CN' ? '界面缩放' : 'Interface Scale',
     uiScaleHint: locale.value === 'zh-CN'
@@ -632,6 +751,20 @@ const loadSettings = () => {
         settingsData.performance.markdownLodScaleThreshold
     )
     settingsData.uiScale = normalizeUiScale(parsed.uiScale ?? settingsData.uiScale)
+    settingsData.windowSize = {
+        width: normalizeWindowDimension(
+            parsed.windowSize?.width ?? settingsData.windowSize.width,
+            MIN_WINDOW_WIDTH,
+            displayState.width,
+            Math.min(displayState.width, Math.max(MIN_WINDOW_WIDTH, settingsData.windowSize.width))
+        ),
+        height: normalizeWindowDimension(
+            parsed.windowSize?.height ?? settingsData.windowSize.height,
+            MIN_WINDOW_HEIGHT,
+            displayState.height,
+            Math.min(displayState.height, Math.max(MIN_WINDOW_HEIGHT, settingsData.windowSize.height))
+        )
+    }
 
     // 优先使用 localStorage 中的 theme 和 locale 值
     const savedTheme = localStorage.getItem('theme')
@@ -670,13 +803,7 @@ const initializeAccount = () => {
 
 // 保存设置
 const saveSettings = () => {
-    settingsData.performance.markdownLodScaleThreshold = normalizeMarkdownLodScaleThreshold(
-        settingsData.performance.markdownLodScaleThreshold
-    )
-    settingsData.uiScale = normalizeUiScale(settingsData.uiScale)
-    settingsData.performance.showCanvasPerformancePanel = settingsData.performance.showCanvasPerformancePanel !== false
-
-    const payload = JSON.stringify(settingsData)
+    const payload = JSON.stringify(buildNormalizedSettingsSnapshot())
     localStorage.setItem('settings', payload)
     try {
         // 广播设置更新，方便其他组件实时响应
@@ -688,28 +815,36 @@ const saveSettings = () => {
 
 // 监听设置变化并自动保存
 watch(settingsData, () => {
+    if (isSyncingSettings.value) return
     saveSettings()
     applySettings()
 }, { deep: true })
 
 // 应用设置
 const applySettings = () => {
+    const normalized = buildNormalizedSettingsSnapshot()
     // 应用语言设置
-    if (settingsData.language !== locale.value) {
-        locale.value = settingsData.language
-        localStorage.setItem('locale', settingsData.language)
+    if (normalized.language !== locale.value) {
+        locale.value = normalized.language
+        localStorage.setItem('locale', normalized.language)
     }
 
     // 应用主题设置
-    if (settingsData.theme) {
-        document.documentElement.setAttribute('data-theme', settingsData.theme)
-        localStorage.setItem('theme', settingsData.theme)
+    if (normalized.theme) {
+        document.documentElement.setAttribute('data-theme', normalized.theme)
+        localStorage.setItem('theme', normalized.theme)
     }
 
-    applyUiScale(settingsData.uiScale)
+    if (window.electron?.setWindowZoomFactor) {
+        void window.electron.setWindowZoomFactor(normalized.uiScale / 100)
+    }
 
-    if (settingsData.developerMode !== lastAppliedDeveloperMode.value) {
-        lastAppliedDeveloperMode.value = settingsData.developerMode === true
+    if (window.electron?.setWindowSize) {
+        void window.electron.setWindowSize(normalized.windowSize.width, normalized.windowSize.height)
+    }
+
+    if (normalized.developerMode !== lastAppliedDeveloperMode.value) {
+        lastAppliedDeveloperMode.value = normalized.developerMode === true
         void reloadPlugins()
     }
 
@@ -752,6 +887,60 @@ function openRepository() {
     }
 
     window.open(appRepositoryUrl, '_blank')
+}
+
+async function syncWindowState() {
+    if (!window.electron?.getWindowState) return
+
+    try {
+        isSyncingSettings.value = true
+        const state = await window.electron.getWindowState()
+        displayState.width = state.display.width
+        displayState.height = state.display.height
+        displayState.scaleFactor = state.display.scaleFactor
+
+        if (!localStorage.getItem('settings')) {
+            settingsData.windowSize = {
+                width: state.width || Math.min(displayState.width, 1280),
+                height: state.height || Math.min(displayState.height, 800)
+            }
+            settingsData.uiScale = normalizeUiScale((state.zoomFactor || 1) * 100)
+            return
+        }
+
+        settingsData.windowSize = {
+            width: normalizeWindowDimension(
+                settingsData.windowSize.width || state.width,
+                MIN_WINDOW_WIDTH,
+                displayState.width,
+                Math.min(displayState.width, state.width || 1280)
+            ),
+            height: normalizeWindowDimension(
+                settingsData.windowSize.height || state.height,
+                MIN_WINDOW_HEIGHT,
+                displayState.height,
+                Math.min(displayState.height, state.height || 800)
+            )
+        }
+    } catch (error) {
+        console.warn('Failed to query native window state', error)
+    } finally {
+        isSyncingSettings.value = false
+    }
+}
+
+function selectWindowSizePreset(preset) {
+    settingsData.windowSize = {
+        width: preset.width,
+        height: preset.height
+    }
+}
+
+function handleWindowSizeSelect(event) {
+    const value = event?.target?.value
+    const preset = windowSizePresets.value.find(item => item.key === value)
+    if (!preset) return
+    selectWindowSizePreset(preset)
 }
 
 async function handleInstallPlugin() {
@@ -882,8 +1071,12 @@ const checkUserId = () => {
 }
 
 // 初始化时加载设置
-loadSettings()
-applySettings()
+isSyncingSettings.value = true
+void syncWindowState().finally(() => {
+    loadSettings()
+    applySettings()
+    isSyncingSettings.value = false
+})
 </script>
 
 <style scoped>
@@ -1330,6 +1523,10 @@ applySettings()
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+.window-size-select {
+    width: min(360px, 100%);
 }
 
 .scale-preset-btn {

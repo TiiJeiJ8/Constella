@@ -623,8 +623,8 @@ function showInfo() {
 }
 
 .title {
-    font-size: clamp(2.8rem, 9vw, 6.5rem);
-    font-weight: 700;
+    font-size: clamp(3.5rem, 12vw, 8rem);
+    font-weight: 450;
     color: var(--text-primary);
     margin-bottom: 12px;
     letter-spacing: -0.02em;

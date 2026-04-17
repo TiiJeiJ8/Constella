@@ -38,27 +38,7 @@ const toastManagerRef = ref(null)
 const isRoomWorkspace = computed(() => ['rooms', 'recent', 'favorites'].includes(currentView.value))
 
 let tokenRefreshInterval = null
-let settingsUpdatedHandler = null
 const TOKEN_REFRESH_INTERVAL = 15 * 60 * 1000
-
-function normalizeUiScale(value) {
-    const n = Number(value)
-    if (!Number.isFinite(n)) return 100
-    return Math.max(85, Math.min(115, Math.round(n / 5) * 5))
-}
-
-function applyUiScale(value) {
-    const scale = normalizeUiScale(value) / 100
-    const appRoot = document.getElementById('app')
-    if (!appRoot) return
-
-    document.documentElement.style.zoom = ''
-    document.body.style.zoom = ''
-    appRoot.style.transformOrigin = 'top left'
-    appRoot.style.transform = `scale(${scale})`
-    appRoot.style.width = `${100 / scale}%`
-    appRoot.style.height = `${100 / scale}%`
-}
 
 function startTokenRefresh() {
     const accessToken = getAccessToken()
@@ -144,29 +124,28 @@ onMounted(() => {
 
     try {
         const savedSettings = JSON.parse(localStorage.getItem('settings') || '{}')
-        applyUiScale(savedSettings.uiScale ?? 100)
+        if (window.electron?.setWindowZoomFactor) {
+            const scalePercent = Number(savedSettings.uiScale)
+            const normalizedPercent = Number.isFinite(scalePercent)
+                ? Math.max(85, Math.min(115, Math.round(scalePercent / 5) * 5))
+                : 100
+            void window.electron.setWindowZoomFactor(normalizedPercent / 100)
+        }
+        if (window.electron?.setWindowSize && savedSettings.windowSize?.width && savedSettings.windowSize?.height) {
+            void window.electron.setWindowSize(savedSettings.windowSize.width, savedSettings.windowSize.height)
+        }
     } catch {
-        applyUiScale(100)
+        // Ignore malformed persisted settings and keep native defaults.
     }
 
     if (toastManagerRef.value) {
         setToastInstance(toastManagerRef.value)
     }
-
-    settingsUpdatedHandler = event => {
-        applyUiScale(event?.detail?.uiScale ?? 100)
-    }
-    window.addEventListener('settings-updated', settingsUpdatedHandler)
-
     startTokenRefresh()
 })
 
 onUnmounted(() => {
     stopTokenRefresh()
-    if (settingsUpdatedHandler) {
-        window.removeEventListener('settings-updated', settingsUpdatedHandler)
-        settingsUpdatedHandler = null
-    }
 })
 </script>
 

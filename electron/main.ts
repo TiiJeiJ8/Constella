@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, shell, screen } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
@@ -81,6 +81,10 @@ let serverProcess: ChildProcess | null = null
 const developmentPluginDiagnostics = new Map<string, PluginDiagnosticRecord>()
 const developmentPluginWatchers = new Map<string, fs.FSWatcher>()
 const developmentPluginWatchDebounceTimers = new Map<string, NodeJS.Timeout>()
+const MIN_WINDOW_WIDTH = 1100
+const MIN_WINDOW_HEIGHT = 700
+const MAX_DEFAULT_WINDOW_WIDTH = 1920
+const MAX_DEFAULT_WINDOW_HEIGHT = 1280
 
 function resolveBundledNodePath(): string | null {
     if (process.platform !== 'win32') {
@@ -754,9 +758,22 @@ async function removeDevelopmentPluginInternal(pluginId: string): Promise<void> 
 }
 
 function createWindow() {
+    const primaryDisplay = screen.getPrimaryDisplay()
+    const workArea = primaryDisplay.workAreaSize
+    const defaultWidth = Math.max(
+        MIN_WINDOW_WIDTH,
+        Math.min(MAX_DEFAULT_WINDOW_WIDTH, workArea.width, Math.round(workArea.width * 0.82))
+    )
+    const defaultHeight = Math.max(
+        MIN_WINDOW_HEIGHT,
+        Math.min(MAX_DEFAULT_WINDOW_HEIGHT, workArea.height, Math.round(workArea.height * 0.82))
+    )
+
     mainWindow = new BrowserWindow({
-        width: 1280,
-        height: 800,
+        width: defaultWidth,
+        height: defaultHeight,
+        minWidth: MIN_WINDOW_WIDTH,
+        minHeight: MIN_WINDOW_HEIGHT,
         frame: false,
         transparent: false,
         backgroundColor: '#ffffff',
@@ -1159,6 +1176,75 @@ ipcMain.on('window-close', () => {
 
 ipcMain.on('open-external', (_event, url) => {
     shell.openExternal(url)
+})
+
+ipcMain.handle('window-get-state', (event) => {
+    const targetWindow = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
+    const activeWindow = targetWindow && !targetWindow.isDestroyed() ? targetWindow : null
+    const currentDisplay = activeWindow
+        ? screen.getDisplayMatching(activeWindow.getBounds())
+        : screen.getPrimaryDisplay()
+    const [contentWidth, contentHeight] = activeWindow?.getContentSize() ?? [0, 0]
+    const zoomFactor = activeWindow?.webContents.getZoomFactor() ?? 1
+
+    return {
+        width: contentWidth,
+        height: contentHeight,
+        zoomFactor,
+        isMaximized: activeWindow?.isMaximized() ?? false,
+        display: {
+            width: currentDisplay.workAreaSize.width,
+            height: currentDisplay.workAreaSize.height,
+            scaleFactor: currentDisplay.scaleFactor
+        }
+    }
+})
+
+ipcMain.handle('window-set-zoom-factor', (event, factor: number) => {
+    const targetWindow = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
+    if (!targetWindow || targetWindow.isDestroyed()) {
+        throw new Error('Main window is not available')
+    }
+
+    const numericFactor = Number(factor)
+    const safeFactor = Number.isFinite(numericFactor) ? Math.max(0.5, Math.min(2, numericFactor)) : 1
+    targetWindow.webContents.setZoomFactor(safeFactor)
+
+    return {
+        zoomFactor: targetWindow.webContents.getZoomFactor()
+    }
+})
+
+ipcMain.handle('window-set-size', (event, payload: { width?: number; height?: number }) => {
+    const targetWindow = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
+    if (!targetWindow || targetWindow.isDestroyed()) {
+        throw new Error('Main window is not available')
+    }
+
+    const currentDisplay = screen.getDisplayMatching(targetWindow.getBounds())
+    const maxWidth = currentDisplay.workAreaSize.width
+    const maxHeight = currentDisplay.workAreaSize.height
+    const nextWidth = Math.max(
+        MIN_WINDOW_WIDTH,
+        Math.min(maxWidth, Math.round(Number(payload?.width) || MIN_WINDOW_WIDTH))
+    )
+    const nextHeight = Math.max(
+        MIN_WINDOW_HEIGHT,
+        Math.min(maxHeight, Math.round(Number(payload?.height) || MIN_WINDOW_HEIGHT))
+    )
+
+    if (targetWindow.isMaximized()) {
+        targetWindow.unmaximize()
+    }
+
+    targetWindow.setContentSize(nextWidth, nextHeight)
+
+    const [width, height] = targetWindow.getContentSize()
+    return {
+        width,
+        height,
+        isMaximized: targetWindow.isMaximized()
+    }
 })
 
 ipcMain.handle('discover-lan-servers', async (_event, timeoutMs?: number) => {
