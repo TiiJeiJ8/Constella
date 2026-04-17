@@ -85,6 +85,8 @@ const MIN_WINDOW_WIDTH = 1100
 const MIN_WINDOW_HEIGHT = 700
 const MAX_DEFAULT_WINDOW_WIDTH = 1920
 const MAX_DEFAULT_WINDOW_HEIGHT = 1280
+const DEFAULT_WINDOW_WIDTH = 1280
+const DEFAULT_WINDOW_HEIGHT = 800
 
 function resolveBundledNodePath(): string | null {
     if (process.platform !== 'win32') {
@@ -762,11 +764,11 @@ function createWindow() {
     const workArea = primaryDisplay.workAreaSize
     const defaultWidth = Math.max(
         MIN_WINDOW_WIDTH,
-        Math.min(MAX_DEFAULT_WINDOW_WIDTH, workArea.width, Math.round(workArea.width * 0.82))
+        Math.min(MAX_DEFAULT_WINDOW_WIDTH, workArea.width, DEFAULT_WINDOW_WIDTH)
     )
     const defaultHeight = Math.max(
         MIN_WINDOW_HEIGHT,
-        Math.min(MAX_DEFAULT_WINDOW_HEIGHT, workArea.height, Math.round(workArea.height * 0.82))
+        Math.min(MAX_DEFAULT_WINDOW_HEIGHT, workArea.height, DEFAULT_WINDOW_HEIGHT)
     )
 
     mainWindow = new BrowserWindow({

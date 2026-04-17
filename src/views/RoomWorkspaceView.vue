@@ -158,8 +158,8 @@ function confirmDisconnect() {
 
 <style scoped>
 .room-workspace-view {
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
     background: var(--bg-primary);
     position: relative;
     overflow: hidden;

@@ -495,6 +495,8 @@ const defaultPerformanceSettings = {
 }
 const MIN_WINDOW_WIDTH = 1100
 const MIN_WINDOW_HEIGHT = 700
+const DEFAULT_WINDOW_WIDTH = 1280
+const DEFAULT_WINDOW_HEIGHT = 800
 const COMMON_WINDOW_PRESETS = [
     [1024, 768],
     [1280, 720],
@@ -534,8 +536,8 @@ function normalizeWindowDimension(value, min, max, fallback) {
 }
 
 function buildNormalizedSettingsSnapshot(source = settingsData) {
-    const fallbackWidth = Math.min(displayState.width, Math.max(MIN_WINDOW_WIDTH, Number(source.windowSize?.width) || 1280))
-    const fallbackHeight = Math.min(displayState.height, Math.max(MIN_WINDOW_HEIGHT, Number(source.windowSize?.height) || 800))
+    const fallbackWidth = Math.min(displayState.width, Math.max(MIN_WINDOW_WIDTH, Number(source.windowSize?.width) || DEFAULT_WINDOW_WIDTH))
+    const fallbackHeight = Math.min(displayState.height, Math.max(MIN_WINDOW_HEIGHT, Number(source.windowSize?.height) || DEFAULT_WINDOW_HEIGHT))
 
     return {
         ...source,
@@ -572,8 +574,8 @@ const settingsData = reactive({
     theme: 'light',
     uiScale: 100,
     windowSize: {
-        width: 1280,
-        height: 800
+        width: DEFAULT_WINDOW_WIDTH,
+        height: DEFAULT_WINDOW_HEIGHT
     },
     // 快捷键
     shortcuts: { ...defaultShortcuts },
@@ -593,8 +595,8 @@ const supportsNativeWindowControls = computed(() => Boolean(
     window.electron?.setWindowZoomFactor
 ))
 const displayState = reactive({
-    width: 1280,
-    height: 800,
+    width: DEFAULT_WINDOW_WIDTH,
+    height: DEFAULT_WINDOW_HEIGHT,
     scaleFactor: 1
 })
 const uiScalePresets = computed(() => locale.value === 'zh-CN'
@@ -753,16 +755,16 @@ const loadSettings = () => {
     settingsData.uiScale = normalizeUiScale(parsed.uiScale ?? settingsData.uiScale)
     settingsData.windowSize = {
         width: normalizeWindowDimension(
-            parsed.windowSize?.width ?? settingsData.windowSize.width,
-            MIN_WINDOW_WIDTH,
-            displayState.width,
-            Math.min(displayState.width, Math.max(MIN_WINDOW_WIDTH, settingsData.windowSize.width))
+                parsed.windowSize?.width ?? settingsData.windowSize.width,
+                MIN_WINDOW_WIDTH,
+                displayState.width,
+                Math.min(displayState.width, Math.max(MIN_WINDOW_WIDTH, settingsData.windowSize.width))
         ),
         height: normalizeWindowDimension(
-            parsed.windowSize?.height ?? settingsData.windowSize.height,
-            MIN_WINDOW_HEIGHT,
-            displayState.height,
-            Math.min(displayState.height, Math.max(MIN_WINDOW_HEIGHT, settingsData.windowSize.height))
+                parsed.windowSize?.height ?? settingsData.windowSize.height,
+                MIN_WINDOW_HEIGHT,
+                displayState.height,
+                Math.min(displayState.height, Math.max(MIN_WINDOW_HEIGHT, settingsData.windowSize.height))
         )
     }
 
@@ -901,8 +903,8 @@ async function syncWindowState() {
 
         if (!localStorage.getItem('settings')) {
             settingsData.windowSize = {
-                width: state.width || Math.min(displayState.width, 1280),
-                height: state.height || Math.min(displayState.height, 800)
+                width: state.width || Math.min(displayState.width, DEFAULT_WINDOW_WIDTH),
+                height: state.height || Math.min(displayState.height, DEFAULT_WINDOW_HEIGHT)
             }
             settingsData.uiScale = normalizeUiScale((state.zoomFactor || 1) * 100)
             return
@@ -913,13 +915,13 @@ async function syncWindowState() {
                 settingsData.windowSize.width || state.width,
                 MIN_WINDOW_WIDTH,
                 displayState.width,
-                Math.min(displayState.width, state.width || 1280)
+                Math.min(displayState.width, state.width || DEFAULT_WINDOW_WIDTH)
             ),
             height: normalizeWindowDimension(
                 settingsData.windowSize.height || state.height,
                 MIN_WINDOW_HEIGHT,
                 displayState.height,
-                Math.min(displayState.height, state.height || 800)
+                Math.min(displayState.height, state.height || DEFAULT_WINDOW_HEIGHT)
             )
         }
     } catch (error) {

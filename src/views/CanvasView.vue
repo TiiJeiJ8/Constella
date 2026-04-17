@@ -797,8 +797,8 @@ onUnmounted(() => {
 
 <style scoped>
 .canvas-view {
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
     background: var(--canvas-bg);
     position: relative;
     overflow: hidden;
