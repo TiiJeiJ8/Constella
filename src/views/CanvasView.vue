@@ -561,6 +561,9 @@ function handleEdgeDelete(edgeIds: string[]) {
 }
 
 function handleEdgeDblClick(edgeId: string) {
+    if (!canEditCanvas.value) {
+        return
+    }
     const edge = canvasEdges.value.find(item => item.id === edgeId)
     if (!edge) return
     editingEdgeId.value = edgeId
