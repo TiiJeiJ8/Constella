@@ -3628,17 +3628,19 @@ onUnmounted(() => {
 .editor-overlay { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: stretch; justify-content: stretch; padding: 0; background: rgba(0, 0, 0, 0.92); }
 .editor-container { width: 100vw; height: 100vh; max-width: none; max-height: none; display: flex; flex-direction: column; overflow: hidden; border-radius: 0; background: #17181c; box-shadow: none; }
 .editor-header, .editor-footer { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; background: rgba(255, 255, 255, 0.03); }
-.editor-header { position: relative; z-index: 40; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); overflow: visible; column-gap: 16px; }
+.editor-header { position: relative; z-index: 240; isolation: isolate; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.08); overflow: visible; gap: 16px; }
 .editor-footer { border-top: 1px solid rgba(255, 255, 255, 0.08); }
 .header-left, .header-center, .header-actions, .footer-right, .collab-users, .pane-header-row, .pane-subtools, .editor-toolbar, .preview-stats, .view-mode-switch { display: flex; align-items: center; }
+.editor-header, .header-left, .header-center, .header-actions, .view-mode-switch, .view-mode-btn, .header-action-btn, .close-btn { -webkit-app-region: no-drag; }
 .header-left { gap: 10px; }
-.header-center { min-width: 0; justify-content: center; position: relative; z-index: 120; }
-.header-center .view-mode-switch { position: relative; z-index: 121; }
-.view-mode-switch { gap: 6px; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.05); }
+.header-center { min-width: 0; justify-content: center; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 1200; pointer-events: none; }
+.header-center .view-mode-switch { position: relative; z-index: 1201; }
+.view-mode-switch { position: relative; z-index: 1201; gap: 6px; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.05); pointer-events: auto; }
+.view-mode-btn { position: relative; z-index: 1202; }
 .view-mode-btn { min-width: 74px; height: 32px; padding: 0 14px; border: none; border-radius: 999px; background: transparent; color: rgba(255, 255, 255, 0.58); cursor: pointer; font-size: 12px; font-weight: 700; transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease; }
 .view-mode-btn:hover { color: rgba(255, 255, 255, 0.9); }
 .view-mode-btn.active { background: rgba(96, 165, 250, 0.18); color: #dbeafe; box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.16); }
-.header-actions { justify-self: end; gap: 10px; }
+.header-actions { gap: 10px; position: relative; z-index: 200; }
 .editor-search-shell { position: relative; z-index: 55; }
 .editor-search-panel { position: absolute; top: calc(100% + 10px); right: 0; z-index: 90; width: min(420px, calc(100vw - 32px)); padding: 12px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; background: rgba(15, 18, 24, 0.98); box-shadow: 0 22px 44px rgba(0, 0, 0, 0.3); backdrop-filter: blur(16px); }
 .editor-search-row { display: flex; align-items: center; gap: 8px; }
@@ -3773,8 +3775,7 @@ onUnmounted(() => {
     .editor-body.split-view .edit-pane,
     .editor-body.split-view .preview-pane { flex: 1 1 50%; }
     .editor-header { display: flex; flex-wrap: wrap; gap: 10px; }
-    .header-center { width: 100%; justify-content: center; order: 3; margin-top: 10px; }
-    .header-actions { justify-self: auto; }
+    .header-center { position: static; left: auto; top: auto; transform: none; width: 100%; justify-content: center; order: 3; margin-top: 10px; pointer-events: auto; }
 }
 .outline-pane { width: 240px; max-height: min(66vh, 560px); overflow-y: auto; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; padding: 14px 12px 14px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; background: rgba(20, 24, 31, 0.82); box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24); backdrop-filter: blur(18px); }
 .outline-header { margin-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.35); }
