@@ -31,18 +31,20 @@
                                     </div>
                                 </div>
                             </div>
-                            <div v-if="isMarkdown && !isReadOnly" class="view-mode-switch" role="tablist" :aria-label="t('canvas.editor.viewMode')">
-                                <button
-                                    v-for="mode in viewModes"
-                                    :key="mode.id"
-                                    type="button"
-                                    class="view-mode-btn"
-                                    :class="{ active: effectiveViewMode === mode.id }"
-                                    :title="mode.label"
-                                    @click="viewMode = mode.id"
-                                >
-                                    {{ mode.label }}
-                                </button>
+                            <div v-if="isMarkdown && !isReadOnly" class="header-center">
+                                <div class="view-mode-switch" role="tablist" :aria-label="t('canvas.editor.viewMode')">
+                                    <button
+                                        v-for="mode in viewModes"
+                                        :key="mode.id"
+                                        type="button"
+                                        class="view-mode-btn"
+                                        :class="{ active: effectiveViewMode === mode.id }"
+                                        :title="mode.label"
+                                        @click="viewMode = mode.id"
+                                    >
+                                        {{ mode.label }}
+                                    </button>
+                                </div>
                             </div>
                             <div class="header-actions">
                                 <button
@@ -531,9 +533,9 @@
                                         @wheel="markEditorIntent"
                                         @pointerdown="markEditorIntent"
                                         @scroll="handleEditorScroll"
-                                        @select="handleSelection"
-                                        @click="handleCursorChange"
-                                        @keyup="handleCursorChange"
+                                        @select="handleSelection($event)"
+                                        @click="handleCursorChange($event)"
+                                        @keyup="handleCursorChange($event)"
                                     />
                                     <div
                                         v-for="cursor in remoteCursors"
@@ -734,6 +736,7 @@ const { t, te, locale } = useI18n()
 const toast = useToast()
 
 type MermaidThemeMode = 'light' | 'dark'
+type PreviewMermaidKind = 'default' | 'gantt' | 'journey' | 'pie' | 'timeline'
 
 function getMermaidThemeVariables(mode: MermaidThemeMode) {
     if (mode === 'light') {
@@ -842,6 +845,35 @@ function isGanttMermaidSource(source: string) {
         ?.toLowerCase() ?? ''
 
     return /^gantt\b/.test(firstMeaningfulLine)
+}
+
+function getPreviewMermaidKind(source: string): PreviewMermaidKind {
+    const firstMeaningfulLine = source
+        .split('\n')
+        .map(line => line.trim())
+        .find(line => Boolean(line))
+        ?.toLowerCase() ?? ''
+
+    if (/^gantt\b/.test(firstMeaningfulLine)) return 'gantt'
+    if (/^journey\b/.test(firstMeaningfulLine)) return 'journey'
+    if (/^pie\b/.test(firstMeaningfulLine)) return 'pie'
+    if (/^timeline\b/.test(firstMeaningfulLine)) return 'timeline'
+    return 'default'
+}
+
+function getPreviewMermaidKindScale(kind: PreviewMermaidKind) {
+    switch (kind) {
+    case 'gantt':
+        return 1.3
+    case 'journey':
+        return 0.80
+    case 'pie':
+        return 0.85
+    case 'timeline':
+        return 0.87
+    default:
+        return 1
+    }
 }
 
 mermaid.initialize(getMermaidConfig('dark'))
@@ -1031,14 +1063,22 @@ const commonCodeLanguages = ['text', 'javascript', 'typescript', 'python', 'bash
 
 let placeholderCounter = 0
 let mermaidCounter = 0
+let mermaidRenderSequence = 0
 let previewObserver: IntersectionObserver | null = null
 let previewSyncFrame: number | null = null
 let previewRealignFrame: number | null = null
+let previewMermaidReflowTimer: number | null = null
+let previewMermaidSettlingTimer: number | null = null
+let previewMermaidRenderRetryTimer: number | null = null
+let previewMermaidRecoveryAttempts = 0
+let previewIntentReleaseTimer: number | null = null
 let pendingEditorScrollTop = 0
-let syncingSource: 'editor' | null = null
+let syncingSource: 'editor' | 'preview' | null = null
 let editorLayoutResizeObserver: ResizeObserver | null = null
 let previewBlockResizeObserver: ResizeObserver | null = null
 let restoringPreviewSession = false
+let mermaidLayoutSettling = false
+let allowEditorDrivenPreviewSync = true
 let closeEmitTimer: number | null = null
 let pendingPreviewSessionRestore: StoredPreviewSessionState | null = null
 let hasRestoredPreviewSession = false
@@ -1183,6 +1223,10 @@ function summarizeBlock(text: string): string {
     return plain ? plain.slice(0, 120) : 'Heavy block will render when it enters the viewport.'
 }
 
+function isMermaidBlock(text: string): boolean {
+    return /^```mermaid[\s\S]*```$/i.test(text.trim())
+}
+
 function hashText(text: string): string {
     let hash = 0
     for (let i = 0; i < text.length; i += 1) {
@@ -1274,6 +1318,7 @@ function splitMarkdownBlocks(text: string): string[] {
 }
 
 function isHeavyBlock(text: string): boolean {
+    if (isMermaidBlock(text)) return false
     return /```|^\$\$|^\|.*\|$/m.test(text) || text.length > 600
 }
 
@@ -1963,6 +2008,7 @@ function prependToCurrentLine(prefix: string) {
 function handleInput(event: Event) {
     if (isReadOnly.value) return
     const target = event.target as HTMLTextAreaElement
+    markEditorIntent()
     localContent.value = target.value
     emit('update', props.nodeId, target.value)
     checkSlashCommand(target)
@@ -2021,6 +2067,8 @@ async function handleImportFileChange(event: Event) {
 
 function syncPreviewFromEditor() {
     if (restoringPreviewSession) return
+    if (!allowEditorDrivenPreviewSync) return
+    if (syncingSource === 'preview') return
     const textarea = textareaRef.value
     const preview = previewRef.value
     if (!textarea || !preview) return
@@ -2104,6 +2152,7 @@ function updateActiveOutline() {
 }
 
 function handlePreviewScroll() {
+    markPreviewIntent()
     const preview = previewRef.value
     previewScrollTop.value = preview?.scrollTop ?? 0
     updateActiveOutline()
@@ -2123,12 +2172,20 @@ function handleWorkspacePointerDown(event: PointerEvent) {
 
 function requestPreviewRealignment() {
     if (restoringPreviewSession) return
+    if (!allowEditorDrivenPreviewSync) return
+    if (mermaidLayoutSettling) return
+    if (syncingSource === 'preview') return
     if (!showEditorPane.value || !showPreviewPane.value) return
     if (previewRealignFrame !== null) return
     previewRealignFrame = requestAnimationFrame(() => {
         previewRealignFrame = null
         syncPreviewFromEditor()
     })
+}
+
+function blockContainsMermaidContent(element: Element) {
+    if (element.matches('.mermaid-wrapper, .mermaid-rendered, pre.mermaid, .mermaid-fallback')) return true
+    return Boolean(element.querySelector('.mermaid-wrapper, .mermaid-rendered, pre.mermaid, .mermaid-fallback'))
 }
 
 function setupPreviewBlockResizeObserver() {
@@ -2141,6 +2198,9 @@ function setupPreviewBlockResizeObserver() {
 
     previewBlockResizeObserver = new ResizeObserver((entries) => {
         if (entries.length === 0) return
+        if (mermaidLayoutSettling) return
+        if (syncingSource === 'preview') return
+        if (entries.some(entry => blockContainsMermaidContent(entry.target))) return
         requestPreviewRealignment()
     })
 
@@ -2159,11 +2219,25 @@ function handleEditorScroll() {
 }
 
 function markEditorIntent() {
-    // Keep editor interactions explicit even though preview no longer drives editor scroll.
+    allowEditorDrivenPreviewSync = true
+    if (previewIntentReleaseTimer !== null) {
+        window.clearTimeout(previewIntentReleaseTimer)
+        previewIntentReleaseTimer = null
+    }
+    if (syncingSource === 'preview') {
+        syncingSource = null
+    }
 }
 
 function markPreviewIntent() {
-    // Preview is now read-follow by default; clicking can still trigger explicit jumps.
+    syncingSource = 'preview'
+    if (previewIntentReleaseTimer !== null) {
+        window.clearTimeout(previewIntentReleaseTimer)
+    }
+    previewIntentReleaseTimer = window.setTimeout(() => {
+        if (syncingSource === 'preview') syncingSource = null
+        previewIntentReleaseTimer = null
+    }, 1200)
 }
 
 function handleBackToTop() {
@@ -2381,6 +2455,64 @@ function getPreviewMermaidAvailableWidth(wrapper: HTMLElement, preview: HTMLElem
     return Math.max(1, Math.max(wrapperWidth, previewWidth))
 }
 
+function schedulePreviewMermaidReflow() {
+    if (previewMermaidReflowTimer !== null) {
+        window.clearTimeout(previewMermaidReflowTimer)
+    }
+
+    requestAnimationFrame(() => {
+        applyPreviewMermaidSettings()
+        requestAnimationFrame(() => {
+            applyPreviewMermaidSettings()
+        })
+    })
+
+    previewMermaidReflowTimer = window.setTimeout(() => {
+        previewMermaidReflowTimer = null
+        applyPreviewMermaidSettings()
+        requestAnimationFrame(() => {
+            applyPreviewMermaidSettings()
+        })
+    }, 260)
+}
+
+function hasUnrenderedPreviewMermaid(preview: HTMLElement) {
+    return Boolean(preview.querySelector('pre.mermaid'))
+}
+
+function hasCollapsedPreviewMermaid(preview: HTMLElement) {
+    return Array.from(preview.querySelectorAll<HTMLElement>('.mermaid-wrapper')).some((wrapper) => {
+        const svg = wrapper.querySelector<SVGSVGElement>('svg')
+        if (!svg) return false
+        const wrapperRect = wrapper.getBoundingClientRect()
+        const svgRect = svg.getBoundingClientRect()
+        const hasDrawableContent = Boolean(svg.querySelector('path, rect, circle, ellipse, polygon, polyline, line, text, foreignObject, image, use'))
+        if (!hasDrawableContent) return false
+        return wrapperRect.width < 48 || wrapperRect.height < 48 || svgRect.width < 24 || svgRect.height < 24
+    })
+}
+
+function schedulePreviewMermaidRenderRetry(delay = 180) {
+    if (previewMermaidRenderRetryTimer !== null) {
+        window.clearTimeout(previewMermaidRenderRetryTimer)
+    }
+    previewMermaidRenderRetryTimer = window.setTimeout(() => {
+        previewMermaidRenderRetryTimer = null
+        renderMermaidDiagrams()
+    }, delay)
+}
+
+function startMermaidLayoutSettling(duration = 520) {
+    mermaidLayoutSettling = true
+    if (previewMermaidSettlingTimer !== null) {
+        window.clearTimeout(previewMermaidSettlingTimer)
+    }
+    previewMermaidSettlingTimer = window.setTimeout(() => {
+        mermaidLayoutSettling = false
+        previewMermaidSettlingTimer = null
+    }, duration)
+}
+
 function applyPreviewMermaidSettings() {
     const preview = previewRef.value
     if (!preview) return
@@ -2394,6 +2526,9 @@ function applyPreviewMermaidSettings() {
     wrappers.forEach((wrapper) => {
         const svg = wrapper.querySelector<SVGSVGElement>('svg')
         if (!svg) return
+        const mermaidElement = wrapper.querySelector<HTMLElement>('.mermaid')
+        const mermaidKind = (mermaidElement?.dataset.mermaidKind as PreviewMermaidKind | undefined) ?? 'default'
+        const kindScale = getPreviewMermaidKindScale(mermaidKind)
         wrapper.classList.remove('is-wide-mermaid')
         svg.style.removeProperty('width')
         svg.style.removeProperty('height')
@@ -2409,7 +2544,11 @@ function applyPreviewMermaidSettings() {
         if (!width || !height) return
 
         const availableWidth = getPreviewMermaidAvailableWidth(wrapper, preview)
-        const baseScale = previewMermaidScalePercent.value / 100
+        if (availableWidth < 160 || preview.clientWidth < 200 || width < 24 || height < 24) {
+            schedulePreviewMermaidReflow()
+            return
+        }
+        const baseScale = (previewMermaidScalePercent.value / 100) * kindScale
         const widthScale = availableWidth / width
         const scaledNaturalWidth = Math.max(1, width * baseScale)
         const scaledNaturalHeight = Math.max(1, height * baseScale)
@@ -2463,6 +2602,7 @@ function focusEditorAtOffset(offset: number) {
     const textarea = textareaRef.value
     if (!textarea) return
 
+    markEditorIntent()
     const safeOffset = Math.max(0, Math.min(localContent.value.length, offset))
     const lineHeight = 27
     const lineIndex = localContent.value.slice(0, safeOffset).split('\n').length - 1
@@ -2527,6 +2667,7 @@ function handlePreviewClick(event: MouseEvent) {
 function handlePaste(event: ClipboardEvent) {
     if (isReadOnly.value) return
     if (!isMarkdown.value || !textareaRef.value) return
+    markEditorIntent()
     const clipboardText = event.clipboardData?.getData('text/plain')?.trim()
     if (!clipboardText) return
     const textarea = textareaRef.value
@@ -2548,13 +2689,16 @@ function handlePaste(event: ClipboardEvent) {
     }
 }
 
-function handleSelection() {
-    handleCursorChange()
+function handleSelection(event?: Event) {
+    handleCursorChange(event)
 }
 
-function handleCursorChange() {
+function handleCursorChange(event?: Event) {
     const textarea = textareaRef.value
     if (!textarea) return
+    if (event?.isTrusted) {
+        markEditorIntent()
+    }
     editorSelectionStart.value = textarea.selectionStart
     awareness.updateTextCursor?.(props.nodeId, textarea.selectionStart, textarea.selectionEnd)
     syncPreviewFromEditor()
@@ -2769,6 +2913,10 @@ function handleKeyDown(event: KeyboardEvent) {
             return
         }
         return
+    }
+
+    if (event.isTrusted) {
+        markEditorIntent()
     }
 
     if (replaceBarOpen.value && event.key === 'Escape') {
@@ -3091,9 +3239,19 @@ function restorePreviewSessionIfNeeded() {
 }
 
 async function renderMermaidDiagrams() {
+    const renderSequence = ++mermaidRenderSequence
+    startMermaidLayoutSettling()
     await nextTick()
+    if (renderSequence !== mermaidRenderSequence) return
     const preview = previewRef.value
     if (!preview) return
+    if (preview.clientWidth < 220) {
+        if (previewMermaidRecoveryAttempts < 3) {
+            previewMermaidRecoveryAttempts += 1
+            schedulePreviewMermaidRenderRetry(220)
+        }
+        return
+    }
     const mermaidElements = Array.from(preview.querySelectorAll<HTMLElement>('pre.mermaid'))
     if (mermaidElements.length > 0) {
         try {
@@ -3101,13 +3259,16 @@ async function renderMermaidDiagrams() {
             mermaid.initialize(getMermaidConfig(themeMode))
 
             for (const element of mermaidElements) {
+                if (renderSequence !== mermaidRenderSequence) return
                 const source = element.textContent?.trim()
                 if (!source) continue
 
                 try {
                     const renderId = `mermaid-preview-${isGanttMermaidSource(source) ? 'gantt' : 'diagram'}-${mermaidCounter++}`
                     const result = await mermaid.render(renderId, source)
-                    element.outerHTML = `<div class="mermaid mermaid-rendered">${result.svg}</div>`
+                    if (renderSequence !== mermaidRenderSequence) return
+                    const mermaidKind = getPreviewMermaidKind(source)
+                    element.outerHTML = `<div class="mermaid mermaid-rendered" data-mermaid-kind="${mermaidKind}">${result.svg}</div>`
                     const renderedElement = preview.querySelector<HTMLElement>(`.mermaid-rendered > svg#${renderId}`)?.parentElement
                     if (renderedElement && typeof result.bindFunctions === 'function') {
                         result.bindFunctions(renderedElement)
@@ -3121,13 +3282,23 @@ async function renderMermaidDiagrams() {
             console.warn('[Mermaid] Render error:', error)
         }
     }
+    if (renderSequence !== mermaidRenderSequence) return
     applyPreviewMermaidSettings()
     requestAnimationFrame(() => {
+        if (renderSequence !== mermaidRenderSequence) return
         applyPreviewMermaidSettings()
     })
+    schedulePreviewMermaidReflow()
     decoratePreviewImages()
+    if (hasUnrenderedPreviewMermaid(preview) || hasCollapsedPreviewMermaid(preview)) {
+        if (previewMermaidRecoveryAttempts < 3) {
+            previewMermaidRecoveryAttempts += 1
+            schedulePreviewMermaidRenderRetry(220)
+        }
+    } else {
+        previewMermaidRecoveryAttempts = 0
+    }
     restorePreviewSessionIfNeeded()
-    requestPreviewRealignment()
 }
 
 function setupPreviewObserver() {
@@ -3268,6 +3439,7 @@ onMounted(() => {
     readStoredEditorSettings()
     nextTick(() => {
         const storedSession = getStoredPreviewSessionState()
+        allowEditorDrivenPreviewSync = Boolean(storedSession)
         pendingPreviewSessionRestore = storedSession
         hasRestoredPreviewSession = false
         overlayRef.value?.focus()
@@ -3389,6 +3561,7 @@ watch([
 }, { deep: false })
 
 watch(rawBlocks, async () => {
+    previewMermaidRecoveryAttempts = 0
     const restorableSession = !hasRestoredPreviewSession ? (pendingPreviewSessionRestore ?? getStoredPreviewSessionState()) : null
     if (restorableSession && !pendingPreviewSessionRestore) {
         pendingPreviewSessionRestore = restorableSession
@@ -3427,6 +3600,22 @@ onUnmounted(() => {
     if (previewRealignFrame !== null) {
         cancelAnimationFrame(previewRealignFrame)
     }
+    if (previewMermaidReflowTimer !== null) {
+        window.clearTimeout(previewMermaidReflowTimer)
+        previewMermaidReflowTimer = null
+    }
+    if (previewMermaidSettlingTimer !== null) {
+        window.clearTimeout(previewMermaidSettlingTimer)
+        previewMermaidSettlingTimer = null
+    }
+    if (previewMermaidRenderRetryTimer !== null) {
+        window.clearTimeout(previewMermaidRenderRetryTimer)
+        previewMermaidRenderRetryTimer = null
+    }
+    if (previewIntentReleaseTimer !== null) {
+        window.clearTimeout(previewIntentReleaseTimer)
+        previewIntentReleaseTimer = null
+    }
     previewObserver?.disconnect()
     editorLayoutResizeObserver?.disconnect()
     previewBlockResizeObserver?.disconnect()
@@ -3439,15 +3628,17 @@ onUnmounted(() => {
 .editor-overlay { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: stretch; justify-content: stretch; padding: 0; background: rgba(0, 0, 0, 0.92); }
 .editor-container { width: 100vw; height: 100vh; max-width: none; max-height: none; display: flex; flex-direction: column; overflow: hidden; border-radius: 0; background: #17181c; box-shadow: none; }
 .editor-header, .editor-footer { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; background: rgba(255, 255, 255, 0.03); }
-.editor-header { position: relative; z-index: 40; border-bottom: 1px solid rgba(255, 255, 255, 0.08); overflow: visible; }
+.editor-header { position: relative; z-index: 40; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); overflow: visible; column-gap: 16px; }
 .editor-footer { border-top: 1px solid rgba(255, 255, 255, 0.08); }
-.header-left, .header-actions, .footer-right, .collab-users, .pane-header-row, .pane-subtools, .editor-toolbar, .preview-stats, .view-mode-switch { display: flex; align-items: center; }
+.header-left, .header-center, .header-actions, .footer-right, .collab-users, .pane-header-row, .pane-subtools, .editor-toolbar, .preview-stats, .view-mode-switch { display: flex; align-items: center; }
 .header-left { gap: 10px; }
+.header-center { min-width: 0; justify-content: center; position: relative; z-index: 120; }
+.header-center .view-mode-switch { position: relative; z-index: 121; }
 .view-mode-switch { gap: 6px; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.05); }
 .view-mode-btn { min-width: 74px; height: 32px; padding: 0 14px; border: none; border-radius: 999px; background: transparent; color: rgba(255, 255, 255, 0.58); cursor: pointer; font-size: 12px; font-weight: 700; transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease; }
 .view-mode-btn:hover { color: rgba(255, 255, 255, 0.9); }
 .view-mode-btn.active { background: rgba(96, 165, 250, 0.18); color: #dbeafe; box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.16); }
-.header-actions { gap: 10px; }
+.header-actions { justify-self: end; gap: 10px; }
 .editor-search-shell { position: relative; z-index: 55; }
 .editor-search-panel { position: absolute; top: calc(100% + 10px); right: 0; z-index: 90; width: min(420px, calc(100vw - 32px)); padding: 12px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; background: rgba(15, 18, 24, 0.98); box-shadow: 0 22px 44px rgba(0, 0, 0, 0.3); backdrop-filter: blur(16px); }
 .editor-search-row { display: flex; align-items: center; gap: 8px; }
@@ -3581,6 +3772,9 @@ onUnmounted(() => {
     .editor-body.split-view { flex-direction: column; }
     .editor-body.split-view .edit-pane,
     .editor-body.split-view .preview-pane { flex: 1 1 50%; }
+    .editor-header { display: flex; flex-wrap: wrap; gap: 10px; }
+    .header-center { width: 100%; justify-content: center; order: 3; margin-top: 10px; }
+    .header-actions { justify-self: auto; }
 }
 .outline-pane { width: 240px; max-height: min(66vh, 560px); overflow-y: auto; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; padding: 14px 12px 14px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; background: rgba(20, 24, 31, 0.82); box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24); backdrop-filter: blur(18px); }
 .outline-header { margin-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.35); }
@@ -3588,7 +3782,7 @@ onUnmounted(() => {
 .outline-item.active { background: rgba(96, 165, 250, 0.16); color: #dbeafe; box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.16); }
 .outline-item.level-2 { padding-left: 18px; }
 .outline-item.level-3, .outline-item.level-4, .outline-item.level-5, .outline-item.level-6 { padding-left: 26px; }
-.preview-content { --preview-mermaid-padding-top: 38px; --preview-mermaid-padding-side: 18px; --preview-mermaid-padding-bottom: 18px; --preview-mermaid-margin: 1.25em 0; --preview-paragraph-spacing: 0.85em; --preview-block-gap: 18px; flex: 1; width: min(100%, 940px); min-width: 0; margin: 0 auto; color: rgba(255, 255, 255, 0.92); scroll-behavior: smooth; }
+.preview-content { --preview-mermaid-padding-top: 38px; --preview-mermaid-padding-side: 18px; --preview-mermaid-padding-bottom: 18px; --preview-mermaid-margin: 1.25em 0; --preview-paragraph-spacing: 0.85em; --preview-block-gap: 18px; flex: 1; width: min(100%, 940px); min-width: 0; margin: 0 auto; color: rgba(255, 255, 255, 0.92); scroll-behavior: smooth; overflow-anchor: none; }
 .preview-empty { color: rgba(255, 255, 255, 0.34); font-style: italic; }
 .preview-top-spacer { height: 28px; pointer-events: none; }
 .preview-block { position: relative; margin-bottom: var(--preview-block-gap); border-radius: 14px; opacity: 0; transform: translateY(10px) scale(0.992); animation: preview-block-enter 0.26s ease forwards; transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.22s ease; }
@@ -3662,7 +3856,7 @@ onUnmounted(() => {
 .preview-content :deep(th) { font-weight: 700; background: rgba(255, 255, 255, 0.04); }
 .preview-content :deep(.katex-block) { display: flex; justify-content: center; margin: 1.2em 0; padding: 1em; border-radius: 12px; background: rgba(255, 255, 255, 0.03); overflow-x: auto; }
 .preview-content :deep(.katex-error) { padding: 2px 6px; border-radius: 6px; color: #fca5a5; background: rgba(239, 68, 68, 0.1); }
-.preview-content :deep(.mermaid-wrapper) { position: relative; display: flex; justify-content: center; width: fit-content; max-width: 100%; margin: var(--preview-mermaid-margin); margin-left: auto; margin-right: auto; padding: var(--preview-mermaid-padding-top) var(--preview-mermaid-padding-side) var(--preview-mermaid-padding-bottom); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; background: rgba(255, 255, 255, 0.03); overflow: auto; break-inside: avoid; }
+.preview-content :deep(.mermaid-wrapper) { position: relative; display: flex; justify-content: center; width: fit-content; max-width: 100%; margin: var(--preview-mermaid-margin); margin-left: auto; margin-right: auto; padding: var(--preview-mermaid-padding-top) var(--preview-mermaid-padding-side) var(--preview-mermaid-padding-bottom); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; background: rgba(255, 255, 255, 0.03); overflow: auto; break-inside: avoid; overflow-anchor: none; }
 .preview-content :deep(.mermaid-block-lang) { position: absolute; top: 10px; left: 12px; z-index: 1; display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.68); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .preview-content :deep(.mermaid) { display: flex; justify-content: center; width: fit-content; max-width: 100%; min-width: 0; margin: 0 auto; }
 .preview-content :deep(.mermaid svg) { display: block; width: auto !important; max-width: 100%; height: auto; margin: 0 auto; }
@@ -3670,53 +3864,6 @@ onUnmounted(() => {
 .preview-content :deep(.mermaid-wrapper.is-wide-mermaid) { width: 100%; margin-left: 0; margin-right: 0; overflow-x: auto; overflow-y: hidden; justify-content: flex-start; }
 .preview-content :deep(.mermaid-wrapper.is-wide-mermaid .mermaid) { justify-content: flex-start; min-width: max-content; }
 .preview-content :deep(.mermaid-wrapper.is-wide-mermaid .mermaid svg) { max-width: none !important; width: auto !important; min-width: max-content; margin: 0; }
-.preview-content :deep(.mermaid text),
-.preview-content :deep(.mermaid .label),
-.preview-content :deep(.mermaid .nodeLabel),
-.preview-content :deep(.mermaid .edgeLabel),
-.preview-content :deep(.mermaid .edgeLabel p),
-.preview-content :deep(.mermaid .edgeLabel span),
-.preview-content :deep(.mermaid .cluster-label text),
-.preview-content :deep(.mermaid .cluster-label span),
-.preview-content :deep(.mermaid .mindmap-node .label),
-.preview-content :deep(.mermaid .mindmap-node text),
-.preview-content :deep(.mermaid .mindmap-node foreignObject),
-.preview-content :deep(.mermaid .mindmap-node foreignObject div) { fill: #e5eefc !important; color: #e5eefc !important; }
-.preview-content :deep(.mermaid .edgeLabel rect),
-.preview-content :deep(.mermaid .labelBkg) { fill: rgba(23, 24, 28, 0.92) !important; }
-.preview-content :deep(.mermaid .edgePath path),
-.preview-content :deep(.mermaid .flowchart-link),
-.preview-content :deep(.mermaid .relationshipLine),
-.preview-content :deep(.mermaid .messageLine0),
-.preview-content :deep(.mermaid .messageLine1),
-.preview-content :deep(.mermaid .mindmap-link),
-.preview-content :deep(.mermaid .section-edge) { stroke: #8aa4d0 !important; }
-.preview-content :deep(.mermaid .arrowheadPath),
-.preview-content :deep(.mermaid marker path) { fill: #8aa4d0 !important; stroke: #8aa4d0 !important; }
-.preview-content :deep(.mermaid .node rect),
-.preview-content :deep(.mermaid .node circle),
-.preview-content :deep(.mermaid .node ellipse),
-.preview-content :deep(.mermaid .node polygon),
-.preview-content :deep(.mermaid .node path),
-.preview-content :deep(.mermaid .cluster rect),
-.preview-content :deep(.mermaid .cluster polygon),
-.preview-content :deep(.mermaid .mindmap-node rect),
-.preview-content :deep(.mermaid .mindmap-node circle),
-.preview-content :deep(.mermaid .mindmap-node path) { stroke: rgba(191, 219, 254, 0.34) !important; }
-.preview-content :deep(.mermaid .cluster rect),
-.preview-content :deep(.mermaid .cluster polygon) { fill: rgba(17, 26, 40, 0.78) !important; }
-.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 1) rect),
-.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 1) circle),
-.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 1) path) { fill: #26476b !important; }
-.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 2) rect),
-.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 2) circle),
-.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 2) path) { fill: #1f5a4c !important; }
-.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 3) rect),
-.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 3) circle),
-.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 3) path) { fill: #6a4f1f !important; }
-.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 4) rect),
-.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 4) circle),
-.preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 4) path) { fill: #4b2e67 !important; }
 .preview-content::-webkit-scrollbar, .editor-textarea::-webkit-scrollbar, .slash-menu-scroll::-webkit-scrollbar { width: 8px; }
 .preview-content::-webkit-scrollbar-track, .editor-textarea::-webkit-scrollbar-track, .slash-menu-scroll::-webkit-scrollbar-track { background: transparent; }
 .preview-content::-webkit-scrollbar-thumb, .editor-textarea::-webkit-scrollbar-thumb, .slash-menu-scroll::-webkit-scrollbar-thumb { border-radius: 4px; background: rgba(255, 255, 255, 0.16); }
@@ -3837,53 +3984,6 @@ html[data-theme='light'] .preview-content :deep(.katex-block) { background: rgba
 html[data-theme='light'] .preview-content :deep(.mermaid-wrapper) { border-color: rgba(0, 0, 0, 0.08); background: rgba(0, 0, 0, 0.02); }
 html[data-theme='light'] .preview-content :deep(.mermaid-block-lang) { background: rgba(255, 255, 255, 0.72); color: rgba(15, 23, 42, 0.52); }
 html[data-theme='light'] .preview-content :deep(.mermaid-fallback) { background: rgba(255, 255, 255, 0.92); border-color: rgba(220, 38, 38, 0.16); color: #b91c1c; }
-html[data-theme='light'] .preview-content :deep(.mermaid text),
-html[data-theme='light'] .preview-content :deep(.mermaid .label),
-html[data-theme='light'] .preview-content :deep(.mermaid .nodeLabel),
-html[data-theme='light'] .preview-content :deep(.mermaid .edgeLabel),
-html[data-theme='light'] .preview-content :deep(.mermaid .edgeLabel p),
-html[data-theme='light'] .preview-content :deep(.mermaid .edgeLabel span),
-html[data-theme='light'] .preview-content :deep(.mermaid .cluster-label text),
-html[data-theme='light'] .preview-content :deep(.mermaid .cluster-label span),
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node .label),
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node text),
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node foreignObject),
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node foreignObject div) { fill: #172033 !important; color: #172033 !important; }
-html[data-theme='light'] .preview-content :deep(.mermaid .edgeLabel rect),
-html[data-theme='light'] .preview-content :deep(.mermaid .labelBkg) { fill: rgba(255, 255, 255, 0.96) !important; }
-html[data-theme='light'] .preview-content :deep(.mermaid .edgePath path),
-html[data-theme='light'] .preview-content :deep(.mermaid .flowchart-link),
-html[data-theme='light'] .preview-content :deep(.mermaid .relationshipLine),
-html[data-theme='light'] .preview-content :deep(.mermaid .messageLine0),
-html[data-theme='light'] .preview-content :deep(.mermaid .messageLine1),
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-link),
-html[data-theme='light'] .preview-content :deep(.mermaid .section-edge) { stroke: #7a93b8 !important; }
-html[data-theme='light'] .preview-content :deep(.mermaid .arrowheadPath),
-html[data-theme='light'] .preview-content :deep(.mermaid marker path) { fill: #7a93b8 !important; stroke: #7a93b8 !important; }
-html[data-theme='light'] .preview-content :deep(.mermaid .node rect),
-html[data-theme='light'] .preview-content :deep(.mermaid .node circle),
-html[data-theme='light'] .preview-content :deep(.mermaid .node ellipse),
-html[data-theme='light'] .preview-content :deep(.mermaid .node polygon),
-html[data-theme='light'] .preview-content :deep(.mermaid .node path),
-html[data-theme='light'] .preview-content :deep(.mermaid .cluster rect),
-html[data-theme='light'] .preview-content :deep(.mermaid .cluster polygon),
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node rect),
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node circle),
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node path) { stroke: rgba(122, 147, 184, 0.46) !important; }
-html[data-theme='light'] .preview-content :deep(.mermaid .cluster rect),
-html[data-theme='light'] .preview-content :deep(.mermaid .cluster polygon) { fill: rgba(245, 247, 251, 0.96) !important; }
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 1) rect),
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 1) circle),
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 1) path) { fill: #d8e7ff !important; }
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 2) rect),
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 2) circle),
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 2) path) { fill: #dff4ea !important; }
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 3) rect),
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 3) circle),
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 3) path) { fill: #fff1d6 !important; }
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 4) rect),
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 4) circle),
-html[data-theme='light'] .preview-content :deep(.mermaid .mindmap-node:nth-of-type(4n + 4) path) { fill: #f4e3ff !important; }
 html[data-theme='light'] .preview-content::-webkit-scrollbar-thumb, html[data-theme='light'] .editor-textarea::-webkit-scrollbar-thumb, html[data-theme='light'] .slash-menu-scroll::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.14); }
 html[data-theme='light'] .preview-content::-webkit-scrollbar-thumb:hover, html[data-theme='light'] .editor-textarea::-webkit-scrollbar-thumb:hover, html[data-theme='light'] .slash-menu-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.22); }
 </style>
