@@ -35,7 +35,7 @@
 
         <div class="dock-section">
             <button class="dock-item language-btn" :title="t('dock.language')" @click="toggleLanguage">
-                <span class="dock-text">{{ locale === 'zh-CN' ? 'EN' : '中' }}</span>
+                <span class="dock-text">{{ locale === 'zh-CN' ? '中' : 'EN' }}</span>
             </button>
             <button class="dock-item" :title="t('dock.theme')" @click="toggleTheme">
                 <svg v-if="isDark" class="dock-icon" viewBox="0 0 24 24" aria-hidden="true">

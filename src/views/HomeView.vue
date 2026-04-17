@@ -15,7 +15,7 @@
                 <MoonIcon v-else />
             </button>
             <button class="ctrl-btn lang-btn" @click="toggleLanguage" :title="t('language.switch')">
-                <span class="lang-text">{{ currentLocale === 'zh-CN' ? 'EN' : '中' }}</span>
+                <span class="lang-text">{{ currentLocale === 'zh-CN' ? '中' : 'EN' }}</span>
             </button>
             <button class="ctrl-btn info-btn" @click="showInfo" :title="t('home.footer.info')">
                 <HelpCircleIcon />

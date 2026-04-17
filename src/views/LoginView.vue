@@ -4,7 +4,7 @@
 
         <div class="control-buttons" :class="{ 'no-electron': !isElectron }">
             <button class="ctrl-btn" @click="toggleLanguage" :title="t('home.controls.language')">
-                <span class="lang-text">{{ currentLocale === 'zh-CN' ? 'EN' : '中' }}</span>
+                <span class="lang-text">{{ currentLocale === 'zh-CN' ? '中' : 'EN' }}</span>
             </button>
             <button class="ctrl-btn" @click="toggleTheme" :title="t('home.controls.theme')">
                 <SunnyIcon v-if="isDark" />

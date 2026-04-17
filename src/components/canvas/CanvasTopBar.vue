@@ -35,7 +35,7 @@
                 <Transition name="slide-fade">
                     <div v-if="isMenuExpanded" class="menu-buttons">
                         <button class="circular-btn menu-item language-btn" :title="languageToggleTitle" @click="toggleLanguage">
-                            <span class="lang-icon">{{ locale === 'zh-CN' ? 'EN' : '中' }}</span>
+                            <span class="lang-icon">{{ locale === 'zh-CN' ? '中' : 'EN' }}</span>
                         </button>
                         <button class="circular-btn menu-item" :title="themeToggleTitle" @click="toggleTheme">
                             <svg v-if="isDarkTheme" class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
