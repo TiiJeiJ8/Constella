@@ -74,8 +74,8 @@
                                         isConnecting
                                             ? t('home.serverInput.cancel')
                                             : connectionSuccess
-                                              ? t('home.serverInput.success')
-                                              : t('home.serverInput.connect')
+                                                ? t('home.serverInput.success')
+                                                : t('home.serverInput.connect')
                                     }}
                                 </button>
                             </div>
