@@ -184,7 +184,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
     SettingIcon,
@@ -257,12 +257,17 @@ const EN_DISCOVERY_TEXT: DiscoveryText = {
     hintTitle: 'Click to preview, double-click to connect'
 }
 
+const props = withDefaults(defineProps<{ playIntro?: boolean }>(), {
+    playIntro: true
+})
 const { t, locale } = useI18n()
 const emit = defineEmits<{
     (event: 'navigate', view: string): void
+    (event: 'intro-finished'): void
 }>()
 
-const showIntro = ref(true)
+const showIntro = ref(props.playIntro)
+let introTimer: number | null = null
 const serverUrl = ref('')
 const logoChars = 'Constella'.split('')
 const isDark = ref(false)
@@ -300,6 +305,22 @@ const discoveryCountText = computed(() => {
 })
 const selectedServer = computed(() => {
     return discoveredServers.value.find((server) => server.id === selectedDiscoveryId.value) || null
+})
+
+onMounted(() => {
+    if (!props.playIntro) {
+        showIntro.value = false
+        return
+    }
+
+    introTimer = window.setTimeout(() => {
+        showIntro.value = false
+        emit('intro-finished')
+    }, 2000)
+})
+
+onUnmounted(() => {
+    if (introTimer !== null) window.clearTimeout(introTimer)
 })
 
 onMounted(() => {

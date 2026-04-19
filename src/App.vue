@@ -1,6 +1,6 @@
 <template>
     <Transition name="slide" mode="out-in">
-        <HomeView v-if="currentView === 'home'" @navigate="handleNavigate" />
+        <HomeView v-if="currentView === 'home'" :play-intro="!hasPlayedStartupIntro" @intro-finished="hasPlayedStartupIntro = true" @navigate="handleNavigate" />
         <LoginView v-else-if="currentView === 'login'" @navigate="handleNavigate" />
         <RoomWorkspaceView v-else-if="isRoomWorkspace" :subview="currentView" @navigate="handleNavigate" />
         <CanvasView v-else-if="currentView === 'canvas'" :room-id="currentRoomId" @navigate="handleNavigate" />
@@ -30,6 +30,7 @@ import { apiService } from './services/api'
 import { clearAuthStorage, getAccessToken, getRefreshToken, setAuthTokens } from './utils/storage'
 import { applyStoredTheme } from './utils/theme'
 
+const hasPlayedStartupIntro = ref(false)
 const currentView = ref('home')
 const currentRoomId = ref('')
 const showToast = ref(false)
