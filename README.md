@@ -20,7 +20,7 @@
 
 </div>
 
-![DEMO](IMG/demo.gif)
+![DEMO](IMG/canvas_demo.jpg)
 
 ## 说明
 
