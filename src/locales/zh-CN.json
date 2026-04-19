@@ -2,6 +2,10 @@
     "home": {
         "title": "Constella",
         "subtitle": "开源 ⦁ 协作 ⦁ 无限可能",
+        "controls": {
+            "language": "切换语言",
+            "theme": "切换主题"
+        },
         "serverInput": {
             "label": "服务器地址",
             "placeholder": "输入服务器 URL 或 IP 地址",
