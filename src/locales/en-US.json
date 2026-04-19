@@ -181,7 +181,7 @@
             "nameRequired": "Please enter a room name",
             "nameTooShort": "Room name must be at least 2 characters",
             "passwordRequired": "Private rooms require a password",
-            "passwordTooShort": "Password must be at least 4 characters",
+            "passwordTooShort": "Password must be at least 6 characters",
             "createFailed": "Failed to create room, please try again"
         }
     },

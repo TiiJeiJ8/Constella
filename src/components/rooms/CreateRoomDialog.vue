@@ -152,6 +152,29 @@ const errors = reactive({
 
 const loading = ref(false)
 
+//TODO 可以考虑引入更全面的密码强度验证库,后端相关验证在room.service.ts中validateRoomPasswordStrength方法
+function validatePasswordStrength(password) {
+    const trimmed = password.trim()
+
+    if (trimmed.length < 6) {
+        return t('createRoom.errors.passwordTooShort')
+    }
+    // if (!/[a-z]/.test(value)) {
+    //     return t('createRoom.errors.passwordMissingLowercase')
+    // }
+    // if (!/[A-Z]/.test(value)) {
+    //     return t('createRoom.errors.passwordMissingUppercase')
+    // }
+    // if (!/[0-9]/.test(value)) {
+    //     return t('createRoom.errors.passwordMissingNumber')
+    // }
+    // if (!/[^A-Za-z0-9]/.test(value)) {
+    //     return t('createRoom.errors.passwordMissingSpecialChar')
+    // }
+
+    return ''
+}
+
 function validateForm() {
     errors.name = ''
     errors.password = ''
@@ -166,14 +189,17 @@ function validateForm() {
         return false
     }
 
-    if (formData.isPrivate && !formData.password) {
-        errors.password = t('createRoom.errors.passwordRequired')
-        return false
-    }
+    if (formData.isPrivate) {
+        if (!formData.password.trim()) {
+            errors.password = t('createRoom.errors.passwordRequired')
+            return false
+        }
 
-    if (formData.password && formData.password.length < 4) {
-        errors.password = t('createRoom.errors.passwordTooShort')
-        return false
+        const passwordError = validatePasswordStrength(formData.password)
+        if (passwordError) {
+            errors.password = passwordError
+            return false
+        }
     }
 
     return true

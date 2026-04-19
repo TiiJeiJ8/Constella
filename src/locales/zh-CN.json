@@ -167,7 +167,7 @@
             "nameRequired": "请输入房间名称",
             "nameTooShort": "房间名称至少需要2个字符",
             "passwordRequired": "私密房间需要设置密码",
-            "passwordTooShort": "密码至少需要4个字符",
+            "passwordTooShort": "密码至少需要6个字符",
             "createFailed": "创建房间失败，请重试"
         }
     },
