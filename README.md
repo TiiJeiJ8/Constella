@@ -33,6 +33,7 @@
 > - 当前项目仍在持续迭代，欢迎通过 Issue 和 PR 参与改进
 
 > [!NOTE]
+>
 > - **从源码开发/构建需要 Node.js 环境**
 > - **桌面发行版（installer / zip）已内置 Node.js 环境，终端用户无需额外安装**
 
@@ -54,6 +55,8 @@
 ### 构建桌面端
 
 - 执行 `npm run version:bump -- 1.x.x` 更新版本号（构建前必做）
+- 该命令会同步更新 `web/package.json`、`web/package-lock.json`，并尝试同步 `../server/package.json`、`../server/package-lock.json`
+- 当找不到 `server` 目录或后端版本文件时，会自动跳过后端同步，不影响前端版本更新
 - 执行 `npm run build:electron:release` 进行生产构建（一次性生成 installer + zip）
 - 或执行 `npm run build:electron:installer` 构建安装程序版本
 - 或执行 `npm run build:electron:zip` 构建 zip 版本
@@ -69,7 +72,7 @@
 - 🧭 无限画布：节点、连线、拖拽、缩放
 - 🤝 实时协作：多人同步编辑与状态共享
 - 🧩 插件化节点系统：Text / Markdown / Image / Hyperlink 等，支持节点插件导入
-- 🔐 房间机制：公开 / 私有房间基础能力
+- 🔐 房间权限控制：清晰区分成员角色与协作边界
 - 🌍 国际化与主题：中英文切换、亮色 / 暗色
 - 💾 数据持久化：IndexedDB（Web）+ electron-store（桌面端）
 

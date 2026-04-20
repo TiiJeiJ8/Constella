@@ -1408,6 +1408,7 @@ ipcMain.handle('remove-development-plugin', async (_event, pluginId: string) => 
 
 function startBackendServer() {
     const isDev = process.env.VITE_DEV_SERVER_URL !== undefined
+    const appVersion = app.getVersion()
 
     const logDir = path.join(app.getPath('userData'), 'logs')
     if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true })
@@ -1428,7 +1429,8 @@ function startBackendServer() {
         serverCwd = parentDir
         serverEnv = {
             ...process.env,
-            NODE_ENV: 'development'
+            NODE_ENV: 'development',
+            CONSTELLA_VERSION: appVersion
         }
     } else {
         const serverJsPath = path.join(process.resourcesPath, 'server', 'dist', 'server.js')
@@ -1448,6 +1450,7 @@ function startBackendServer() {
             serverEnv = {
                 ...process.env,
                 NODE_ENV: 'production',
+                CONSTELLA_VERSION: appVersion,
                 CONSTELLA_BUNDLED_NODE: bundledNodePath,
                 PATH: `${path.dirname(bundledNodePath)}${path.delimiter}${process.env.PATH || ''}`
             }

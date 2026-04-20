@@ -16,6 +16,7 @@ if (!/^\d+\.\d+\.\d+$/.test(normalizedVersion)) {
 }
 
 const projectRoot = path.resolve(__dirname, '..')
+const serverRoot = path.resolve(projectRoot, '..', 'server')
 const packageVersion = `v${normalizedVersion}`
 
 function readText(relativePath) {
@@ -33,6 +34,12 @@ function updateJson(relativePath, updater) {
   fs.writeFileSync(fullPath, `${JSON.stringify(json, null, 2)}\n`, 'utf8')
 }
 
+function updateJsonByFullPath(fullPath, updater) {
+  const json = JSON.parse(fs.readFileSync(fullPath, 'utf8'))
+  updater(json)
+  fs.writeFileSync(fullPath, `${JSON.stringify(json, null, 2)}\n`, 'utf8')
+}
+
 updateJson('package.json', (json) => {
   json.version = packageVersion
 })
@@ -43,6 +50,32 @@ updateJson('package-lock.json', (json) => {
     json.packages[''].version = normalizedVersion
   }
 })
+
+if (fs.existsSync(serverRoot) && fs.statSync(serverRoot).isDirectory()) {
+  const serverPackageJsonPath = path.join(serverRoot, 'package.json')
+  const serverPackageLockPath = path.join(serverRoot, 'package-lock.json')
+
+  if (fs.existsSync(serverPackageJsonPath)) {
+    updateJsonByFullPath(serverPackageJsonPath, (json) => {
+      json.version = normalizedVersion
+    })
+  } else {
+    console.warn(`[version:bump] Skip backend package sync: missing ${serverPackageJsonPath}`)
+  }
+
+  if (fs.existsSync(serverPackageLockPath)) {
+    updateJsonByFullPath(serverPackageLockPath, (json) => {
+      json.version = normalizedVersion
+      if (json.packages && json.packages['']) {
+        json.packages[''].version = normalizedVersion
+      }
+    })
+  } else {
+    console.warn(`[version:bump] Skip backend lock sync: missing ${serverPackageLockPath}`)
+  }
+} else {
+  console.warn(`[version:bump] Server folder not found, skip backend sync: ${serverRoot}`)
+}
 
 const compatibilityTargets = [
   'examples/plugins/notice-card-plugin/manifest.json',

@@ -54,6 +54,8 @@
 ### Build Desktop Package
 
 - Run `npm run version:bump -- 1.x.x` to update version number before building
+- This command updates `web/package.json` and `web/package-lock.json`, then tries to sync `../server/package.json` and `../server/package-lock.json`
+- If the `server` folder or backend version files are missing, backend sync is skipped automatically and frontend bump still succeeds
 - Run `npm run build:electron:release` for production build (generates both installer and zip)
 - Run `npm run build:electron:installer` for installer version
 - Run `npm run build:electron:zip` for zip version
@@ -69,7 +71,7 @@
 - 🧭 Infinite canvas: nodes, edges, free dragging, zooming
 - 🤝 Real-time collaboration: multi-user synchronous editing
 - 🧩 Plugin-based node system: Text / Markdown / Image / Hyperlink and more. Installing Node Plugin is available now.
-- 🔐 Room model: public/private rooms foundation
+- 🔐 Room Permission Control: Clearly Distinguish Member Roles and Collaboration Boundaries
 - 🌍 i18n and theming: Chinese/English + light/dark
 - 💾 Persistence: IndexedDB (Web) + electron-store (desktop)
 
