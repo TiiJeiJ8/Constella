@@ -102,7 +102,7 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
         }
 
         if (event.type === 'room_deleted') {
-            toast.error(t('canvas.toast.removedFromRoom'))
+            toast.error(t('canvas.toast.roomDeleted'))
             yjs.disconnect()
             setTimeout(() => {
                 emitNavigate('rooms')

@@ -317,6 +317,7 @@
             "deleteFailed": "删除失败",
             "exportSuccess": "导出 {format} 成功",
             "exportFailed": "导出失败",
+            "roomDeleted": "房间已被房主删除，正在返回房间列表。",
             "removedFromRoom": "你已不在此房间。正在返回房间列表。",
             "edgeLabelUpdated": "连线标签已更新"
         },

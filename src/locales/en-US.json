@@ -333,6 +333,7 @@
             "deleteFailed": "Delete failed",
             "exportSuccess": "Export {format} successfully",
             "exportFailed": "Export failed",
+            "roomDeleted": "This room was deleted by the owner. Returning to rooms.",
             "removedFromRoom": "You were removed from this room. Returning to rooms.",
             "edgeLabelUpdated": "Edge label updated"
         },
