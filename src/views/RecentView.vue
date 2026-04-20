@@ -45,6 +45,7 @@ import RoomCard from '@/components/rooms/RoomCard.vue'
 import JoinRoomDialog from '@/components/rooms/JoinRoomDialog.vue'
 import { apiService } from '@/services/api'
 import { mapRoomCollection } from '@/utils/roomMapper'
+import { getErrorMessage } from '@/utils/errorHandler'
 import { getRecentVisits } from '@/utils/storage'
 
 const { t } = useI18n()
@@ -88,7 +89,7 @@ async function loadRecentRooms() {
 
         const response = await apiService.getAllRooms()
         if (!response.success) {
-            error.value = response.message || t('recent.loadError')
+            error.value = getErrorMessage(response.errorCode, t('recent.loadError'))
             return
         }
 

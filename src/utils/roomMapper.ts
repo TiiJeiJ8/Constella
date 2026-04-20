@@ -8,6 +8,8 @@ export interface RoomListItem {
     memberCount: number
     isPrivate: boolean
     role: string | null
+    accessScope?: 'member' | 'preview'
+    joinMode?: 'direct'
     lastActive: number
     createdAt?: string
     settings: Record<string, any>
@@ -19,12 +21,14 @@ export function mapRoomSummary(room: any): RoomListItem | null {
     try {
         return {
             id: room.id,
-            name: room.name || 'Untitled Room',
+            name: room.name || '',
             description: room.description || '',
-            creator: room.owner?.id || 'Unknown',
+            creator: room.owner?.id || '',
             memberCount: Math.max(0, room.member_count || 0),
             isPrivate: Boolean(room.is_private),
             role: room.user_role || null,
+            accessScope: room.access_scope || 'preview',
+            joinMode: 'direct',
             lastActive: parseServerTimestamp(room.updated_at),
             createdAt: room.created_at,
             settings: room.settings || {}

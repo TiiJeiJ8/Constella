@@ -130,6 +130,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ConfirmDialog from '@/components/base/ConfirmDialog.vue'
 import { apiService } from '@/services/api'
+import { getErrorMessage } from '@/utils/errorHandler'
 import { getStoredUser, getUserId, getUsername } from '@/utils/storage'
 
 const { t, locale } = useI18n()
@@ -305,6 +306,10 @@ const permissionSummary = computed(() => {
 
 const presenceSummary = computed(() => `${copy.value.online} ${onlineMembers.value.length} · ${copy.value.offline} ${offlineMembers.value.length}`)
 
+function resolveApiError(source: any, fallback: string): string {
+    return getErrorMessage(source?.errorCode, fallback)
+}
+
 function normalizeRole(role: string) {
     return role === 'member' ? 'editor' : role
 }
@@ -429,14 +434,14 @@ async function loadMembers() {
     try {
         const response = await apiService.getRoomMembers(props.roomId)
         if (!response.success) {
-            loadError.value = response.message || copy.value.loadMembersFailed
+            loadError.value = resolveApiError(response, copy.value.loadMembersFailed)
             roomMembers.value = []
             return
         }
 
         roomMembers.value = Array.isArray(response.data?.members) ? response.data.members : []
     } catch (error: any) {
-        loadError.value = error?.message || copy.value.loadMembersFailed
+        loadError.value = resolveApiError(error, copy.value.loadMembersFailed)
         roomMembers.value = []
     } finally {
         loading.value = false
@@ -461,7 +466,7 @@ async function handleRoleChange(member: RoomMemberItem, nextRole: string) {
                 const response = await apiService.updateRoomMemberRole(props.roomId, member.id, nextRole)
                 if (!response.success) {
                     actionError.value = true
-                    actionMessage.value = response.message || copy.value.updateRoleFailed
+                    actionMessage.value = resolveApiError(response, copy.value.updateRoleFailed)
                     return
                 }
 
@@ -469,7 +474,7 @@ async function handleRoleChange(member: RoomMemberItem, nextRole: string) {
                 actionMessage.value = copy.value.roleUpdated
             } catch (error: any) {
                 actionError.value = true
-                actionMessage.value = error?.message || copy.value.updateRoleFailed
+                actionMessage.value = resolveApiError(error, copy.value.updateRoleFailed)
             } finally {
                 updatingMemberId.value = ''
             }
@@ -517,7 +522,7 @@ async function handleMemberRemove(member: RoomMemberItem) {
                 const response = await apiService.removeRoomMember(props.roomId, member.id)
                 if (!response.success) {
                     actionError.value = true
-                    actionMessage.value = response.message || copy.value.removeMemberFailed
+                    actionMessage.value = resolveApiError(response, copy.value.removeMemberFailed)
                     return
                 }
 
@@ -525,7 +530,7 @@ async function handleMemberRemove(member: RoomMemberItem) {
                 actionMessage.value = copy.value.memberRemoved
             } catch (error: any) {
                 actionError.value = true
-                actionMessage.value = error?.message || copy.value.removeMemberFailed
+                actionMessage.value = resolveApiError(error, copy.value.removeMemberFailed)
             } finally {
                 removingMemberId.value = ''
             }
@@ -549,7 +554,7 @@ async function handleOwnershipTransfer(member: RoomMemberItem) {
                 const response = await apiService.transferRoomOwnership(props.roomId, member.id)
                 if (!response.success) {
                     actionError.value = true
-                    actionMessage.value = response.message || copy.value.transferFailed
+                    actionMessage.value = resolveApiError(response, copy.value.transferFailed)
                     return
                 }
 
@@ -563,7 +568,7 @@ async function handleOwnershipTransfer(member: RoomMemberItem) {
                 actionMessage.value = copy.value.transferDone
             } catch (error: any) {
                 actionError.value = true
-                actionMessage.value = error?.message || copy.value.transferFailed
+                actionMessage.value = resolveApiError(error, copy.value.transferFailed)
             } finally {
                 transferringMemberId.value = ''
             }

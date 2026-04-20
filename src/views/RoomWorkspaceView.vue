@@ -30,6 +30,7 @@
                 :search-value="searchQuery"
                 :active-tab="roomsTab"
                 @createRoom="handleCreateRoom"
+                @directJoin="handleDirectJoin"
                 @search="handleSearch"
                 @tabChange="handleTabChange"
             />
@@ -43,6 +44,7 @@
                     :search-query="searchQuery"
                     :active-tab="roomsTab"
                     :create-room-signal="createRoomSignal"
+                    :direct-join-signal="directJoinSignal"
                     @navigate="handleNavigate"
                 />
             </Transition>
@@ -93,6 +95,7 @@ const showDisconnectDialog = ref(false)
 const searchQuery = ref('')
 const roomsTab = ref('all')
 const createRoomSignal = ref(0)
+const directJoinSignal = ref(0)
 
 const currentSubviewComponent = computed(() => {
     if (props.subview === 'recent') return RecentView
@@ -134,6 +137,11 @@ function handleTabChange(tab) {
 function handleCreateRoom() {
     if (props.subview !== 'rooms') return
     createRoomSignal.value += 1
+}
+
+function handleDirectJoin() {
+    if (props.subview !== 'rooms') return
+    directJoinSignal.value += 1
 }
 
 function handleLogout() {

@@ -1,6 +1,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { apiService } from '@/services/api'
 import { mapRoomCollection, type RoomListItem } from '@/utils/roomMapper'
+import { getErrorMessage } from '@/utils/errorHandler'
 import { getUserId } from '@/utils/storage'
 
 interface UseRoomsListOptions {
@@ -59,15 +60,18 @@ export function useRoomsList(options: UseRoomsListOptions) {
                 if (response.errorCode === 'USER_NOT_LOGGED_IN') {
                     error.value = t('common.errors.userNotLoggedIn')
                 } else {
-                    error.value = response.message || t('rooms.errors.loadFailed')
+                    error.value = getErrorMessage(response.errorCode, t('rooms.errors.loadFailed'))
                 }
                 rooms.value = []
                 return
             }
 
-            rooms.value = mapRoomCollection(response.data)
+            const mappedRooms = mapRoomCollection(response.data)
+            rooms.value = activeTab.value === 'public'
+                ? mappedRooms.filter(room => !room.isPrivate)
+                : mappedRooms
         } catch (err: any) {
-            error.value = err?.message || t('rooms.errors.loadFailed')
+            error.value = getErrorMessage(err?.errorCode, t('rooms.errors.loadFailed'))
             rooms.value = []
         } finally {
             loading.value = false

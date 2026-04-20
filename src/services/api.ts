@@ -618,6 +618,72 @@ class ApiService {
         }
     }
 
+    async joinRoomByInviteCode(token: string): Promise<ApiResponse> {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/v1/rooms/join-by-invite`, {
+                method: 'POST',
+                headers: this.getAuthHeaders(),
+                body: JSON.stringify({ token })
+            })
+
+            const result = await response.json()
+
+            if (response.ok) {
+                return {
+                    success: true,
+                    code: result.code,
+                    message: result.message,
+                    data: result.data
+                }
+            } else {
+                return {
+                    success: false,
+                    code: result.code || response.status,
+                    message: result.message || 'Failed to join room by invite code',
+                    errorCode: result.data
+                }
+            }
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            }
+        }
+    }
+
+    async createInviteCode(roomId: string, role = 'editor'): Promise<ApiResponse> {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/v1/rooms/${roomId}/invite-codes`, {
+                method: 'POST',
+                headers: this.getAuthHeaders(),
+                body: JSON.stringify({ role })
+            })
+
+            const result = await response.json()
+
+            if (response.ok) {
+                return {
+                    success: true,
+                    code: result.code,
+                    message: result.message,
+                    data: result.data
+                }
+            } else {
+                return {
+                    success: false,
+                    code: result.code || response.status,
+                    message: result.message || 'Failed to create invite code',
+                    errorCode: result.data
+                }
+            }
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            }
+        }
+    }
+
     async getRoomMembers(roomId: string): Promise<ApiResponse> {
         try {
             const response = await fetch(`${this.baseUrl}/api/v1/rooms/${roomId}/members`, {
@@ -776,6 +842,43 @@ class ApiService {
                     success: false,
                     code: result.code || response.status,
                     message: result.message || 'Failed to update room settings',
+                    errorCode: result.data
+                }
+            }
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            }
+        }
+    }
+
+    async updateRoomPassword(roomId: string, payload: {
+        current_password?: string
+        new_password?: string
+        is_private?: boolean
+    }): Promise<ApiResponse> {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/v1/rooms/${roomId}/password`, {
+                method: 'PATCH',
+                headers: this.getAuthHeaders(),
+                body: JSON.stringify(payload)
+            })
+
+            const result = await response.json()
+
+            if (response.ok) {
+                return {
+                    success: true,
+                    code: result.code,
+                    message: result.message,
+                    data: result.data
+                }
+            } else {
+                return {
+                    success: false,
+                    code: result.code || response.status,
+                    message: result.message || 'Failed to update room password',
                     errorCode: result.data
                 }
             }

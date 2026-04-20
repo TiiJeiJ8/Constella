@@ -44,6 +44,7 @@ import RoomCard from '@/components/rooms/RoomCard.vue'
 import JoinRoomDialog from '@/components/rooms/JoinRoomDialog.vue'
 import { apiService } from '@/services/api'
 import { mapRoomCollection } from '@/utils/roomMapper'
+import { getErrorMessage } from '@/utils/errorHandler'
 import { getFavoriteRooms } from '@/utils/storage'
 
 const { t } = useI18n()
@@ -84,7 +85,7 @@ async function loadFavorites() {
 
         const response = await apiService.getAllRooms()
         if (!response.success) {
-            error.value = response.message || t('favorites.loadError')
+            error.value = getErrorMessage(response.errorCode, t('favorites.loadError'))
             return
         }
 

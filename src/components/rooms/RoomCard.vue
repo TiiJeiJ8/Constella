@@ -5,9 +5,9 @@
                 <div v-if="roomIcon" class="room-icon">{{ roomIcon }}</div>
 
                 <div class="room-info">
-                    <h3 class="room-name">{{ room.name }}</h3>
+                    <h3 class="room-name">{{ room.name || t('rooms.untitled') }}</h3>
                     <div class="room-meta">
-                        <span class="creator">{{ room.creator || 'Unknown' }}</span>
+                        <span class="creator">{{ room.creator || t('common.unknown') }}</span>
                         <span class="separator">·</span>
                         <span class="member-count">{{ memberCountLabel }}</span>
                     </div>

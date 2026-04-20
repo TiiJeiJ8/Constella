@@ -17,6 +17,10 @@ let developmentPluginReloadTimer: number | null = null
 let lastDevelopmentDiagnosticFingerprints = new Set<string>()
 const toast = useToast()
 
+function tr(key: string, params?: Record<string, unknown>) {
+    return i18n.global.t(key, params || {}) as string
+}
+
 function isDeveloperModeEnabled(): boolean {
     try {
         const settings = JSON.parse(localStorage.getItem('settings') || '{}')
@@ -107,11 +111,11 @@ function bindDevelopmentPluginWatcher() {
             try {
                 await reloadPlugins()
                 const changedTarget = payload.changedPath || payload.sourcePath
-                toast.info(`Development plugin reloaded: ${changedTarget}`)
+                toast.info(tr('settings.plugins.runtimeReloaded', { target: changedTarget }))
                 notifyNewDevelopmentPluginErrors()
             } catch (error) {
                 const message = error instanceof Error ? error.message : String(error)
-                toast.error(`Development plugin reload failed: ${message}`)
+                toast.error(tr('settings.plugins.runtimeReloadFailed', { message }))
             }
         }, 220)
     })
@@ -165,7 +169,7 @@ function notifyNewDevelopmentPluginErrorsFromDiagnostics(diagnostics: ReturnType
 
     const firstError = newErrors[0]
     if (!firstError) return
-    const pluginLabel = firstError.pluginName || firstError.pluginId || 'development plugin'
+    const pluginLabel = firstError.pluginName || firstError.pluginId || tr('settings.plugins.developmentPlugin')
     const suffix = newErrors.length > 1 ? ` (+${newErrors.length - 1} more)` : ''
-    toast.error(`Plugin error detected in ${pluginLabel}. Open Settings > Plugins > Plugin Diagnostics.${suffix}`, 7000)
+    toast.error(tr('settings.plugins.runtimeDiagnosticError', { plugin: pluginLabel, suffix }), 7000)
 }

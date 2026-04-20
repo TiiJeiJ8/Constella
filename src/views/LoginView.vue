@@ -34,8 +34,8 @@
                             <img :src="userAvatar" :alt="userIdValue" class="avatar-image" />
                         </div>
                         <div class="user-info">
-                            <div class="user-id">{{ userIdValue }}</div>
                             <div class="user-name">{{ userName }}</div>
+                            <div class="user-id">{{ userIdValue }}</div>
                         </div>
                     </div>
 
@@ -57,6 +57,7 @@
                         <div v-if="needsRegistrationConfirm" class="input-group">
                             <label class="input-label">{{ confirmPasswordLabel }}</label>
                             <input
+                                ref="confirmPasswordInputRef"
                                 v-model="confirmPassword"
                                 type="password"
                                 class="password-input"
@@ -93,7 +94,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ChevronLeftIcon, MoonIcon, SunnyIcon } from 'tdesign-icons-vue-next'
 import WindowControls from '@/components/base/WindowControls.vue'
@@ -102,7 +103,7 @@ import { handleApiError } from '@/utils/errorHandler'
 import { setAuthTokens, setStoredUser } from '@/utils/storage'
 import { getStoredTheme, setTheme } from '@/utils/theme'
 
-const { t, te, locale } = useI18n()
+const { t, locale } = useI18n()
 const emit = defineEmits(['navigate'])
 
 const isElectron = ref(!!window.electron)
@@ -113,22 +114,15 @@ const isLoading = ref(false)
 const loginError = ref('')
 const loginSuccess = ref(false)
 const needsRegistrationConfirm = ref(false)
+const confirmPasswordInputRef = ref<HTMLInputElement | null>(null)
 
 const settings = JSON.parse(localStorage.getItem('settings') || '{}')
 const userIdValue = ref(settings.userId || '')
 const userAvatar = ref(settings.avatar || '')
 const serverUrl = ref(localStorage.getItem('serverUrl') || apiService.getBaseUrl())
 const currentLocale = computed(() => locale.value)
-const confirmPasswordLabel = computed(() => (
-    te('login.confirmPassword')
-        ? t('login.confirmPassword')
-        : (locale.value === 'zh-CN' ? '确认密码' : 'Confirm Password')
-))
-const confirmPasswordPlaceholder = computed(() => (
-    te('login.confirmPasswordPlaceholder')
-        ? t('login.confirmPasswordPlaceholder')
-        : (locale.value === 'zh-CN' ? '请再次输入密码' : 'Re-enter your password')
-))
+const confirmPasswordLabel = computed(() => t('login.confirmPassword'))
+const confirmPasswordPlaceholder = computed(() => t('login.confirmPasswordPlaceholder'))
 
 const userName = computed(() => {
     if (settings.lastName && settings.firstName) {
@@ -141,13 +135,7 @@ const userName = computed(() => {
 
 const loginHintText = computed(() => (
     needsRegistrationConfirm.value
-        ? (
-            te('login.hintConfirm')
-                ? t('login.hintConfirm')
-                : (locale.value === 'zh-CN'
-                    ? '未检测到该账户，请确认密码以创建新账户。'
-                    : 'Account not found. Confirm password to create a new account.')
-        )
+        ? t('login.hintConfirm')
         : t('login.hint')
 ))
 
@@ -174,9 +162,7 @@ async function handleLogin() {
     if (!password.value || isLoading.value || loginSuccess.value) return
 
     if (needsRegistrationConfirm.value && !confirmPassword.value) {
-        loginError.value = te('login.errors.confirmPasswordRequired')
-            ? t('login.errors.confirmPasswordRequired')
-            : (locale.value === 'zh-CN' ? '请先确认密码' : 'Please confirm your password')
+        loginError.value = t('login.errors.confirmPasswordRequired')
         return
     }
 
@@ -192,24 +178,18 @@ async function handleLogin() {
 
         let result = await apiService.login(userData.username, userData.password)
 
-        if (!result.success && result.errorCode === 'AUTH_INVALID_CREDENTIALS') {
+        if (!result.success && result.errorCode === 'AUTH_USER_NOT_FOUND') {
             if (!needsRegistrationConfirm.value) {
                 needsRegistrationConfirm.value = true
                 confirmPassword.value = ''
-                loginError.value = te('login.errors.confirmPasswordToRegister')
-                    ? t('login.errors.confirmPasswordToRegister')
-                    : (locale.value === 'zh-CN'
-                        ? '该账户可能尚未创建，请确认密码后注册'
-                        : 'Account may not exist yet. Please confirm password to register')
+                loginError.value = t('login.errors.confirmPasswordToRegister')
+                await nextTick()
+                confirmPasswordInputRef.value?.focus()
                 return
             }
 
             if (password.value !== confirmPassword.value) {
-                throw new Error(
-                    te('login.errors.passwordMismatch')
-                        ? t('login.errors.passwordMismatch')
-                        : (locale.value === 'zh-CN' ? '两次密码输入不一致' : 'Passwords do not match')
-                )
+                throw new Error(t('login.errors.passwordMismatch'))
             }
 
             const registerResult = await apiService.register(userData.username, userData.email, userData.password)
@@ -224,6 +204,8 @@ async function handleLogin() {
 
             result = registerResult
         } else if (!result.success) {
+            needsRegistrationConfirm.value = false
+            confirmPassword.value = ''
             throw new Error(handleApiError(result))
         }
 
@@ -426,14 +408,14 @@ watch(password, () => {
     text-align: center;
 }
 
-.user-id {
+.user-name {
     font-size: 1.125rem;
     font-weight: 600;
     color: var(--text-primary);
     margin-bottom: 4px;
 }
 
-.user-name {
+.user-id {
     font-size: 0.875rem;
     color: var(--text-secondary);
 }

@@ -75,15 +75,13 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">{{ locale === 'zh-CN' ? '默认加入角色' : 'Default Join Role' }}</label>
+                            <label class="form-label">{{ t('createRoom.defaultRole') }}</label>
                             <select v-model="formData.defaultRole" class="form-input">
-                                <option value="editor">{{ locale === 'zh-CN' ? '可编辑' : 'Editor' }}</option>
-                                <option value="viewer">{{ locale === 'zh-CN' ? '只读' : 'Viewer' }}</option>
+                                <option value="editor">{{ t('createRoom.defaultRoleOptions.editor') }}</option>
+                                <option value="viewer">{{ t('createRoom.defaultRoleOptions.viewer') }}</option>
                             </select>
                             <p class="form-hint">
-                                {{ locale === 'zh-CN'
-                                    ? '新成员主动加入房间时会获得这个默认角色。'
-                                    : 'Members who join the room will receive this role by default.' }}
+                                {{ t('createRoom.defaultRoleHint') }}
                             </p>
                         </div>
 
@@ -122,8 +120,9 @@
 import { reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { apiService } from '@/services/api'
+import { getErrorMessage } from '@/utils/errorHandler'
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 
 defineProps({
     modelValue: {
@@ -235,10 +234,10 @@ async function handleSubmit() {
         } else if (response.errorCode === 'UNAUTHORIZED' || response.message?.includes('token')) {
             errors.name = t('common.errors.tokenExpired')
         } else {
-            errors.name = response.message || t('createRoom.errors.createFailed')
+            errors.name = getErrorMessage(response.errorCode, t('createRoom.errors.createFailed'))
         }
     } catch (error) {
-        errors.name = error.message || t('createRoom.errors.createFailed')
+        errors.name = getErrorMessage(error?.errorCode, t('createRoom.errors.createFailed'))
     } finally {
         loading.value = false
     }

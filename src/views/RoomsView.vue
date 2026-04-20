@@ -11,6 +11,11 @@
             @joined="handleRoomJoined"
         />
 
+        <DirectJoinRoomDialog
+            v-model="showDirectJoinDialog"
+            @joined="handleDirectRoomJoined"
+        />
+
         <DeleteRoomDialog
             v-model="showDeleteDialog"
             :room="selectedRoom"
@@ -54,12 +59,13 @@ import { useI18n } from 'vue-i18n'
 import RoomCardSkeleton from '@/components/rooms/RoomCardSkeleton.vue'
 import RoomCard from '@/components/rooms/RoomCard.vue'
 import CreateRoomDialog from '@/components/rooms/CreateRoomDialog.vue'
+import DirectJoinRoomDialog from '@/components/rooms/DirectJoinRoomDialog.vue'
 import JoinRoomDialog from '@/components/rooms/JoinRoomDialog.vue'
 import DeleteRoomDialog from '@/components/rooms/DeleteRoomDialog.vue'
 import { apiService } from '@/services/api'
 import { useRoomsList } from '@/composables/useRoomsList'
 import { removeRoomFromLocalCollections } from '@/utils/storage'
-
+import { getErrorMessage } from '@/utils/errorHandler'
 const { t } = useI18n()
 const props = defineProps({
     searchQuery: {
@@ -71,6 +77,10 @@ const props = defineProps({
         default: 'all'
     },
     createRoomSignal: {
+        type: Number,
+        default: 0
+    },
+    directJoinSignal: {
         type: Number,
         default: 0
     }
@@ -91,11 +101,16 @@ const {
 
 const showCreateDialog = ref(false)
 const showJoinDialog = ref(false)
+const showDirectJoinDialog = ref(false)
 const showDeleteDialog = ref(false)
 const selectedRoom = ref(null)
 
 function handleCreateRoom() {
     showCreateDialog.value = true
+}
+
+function handleDirectJoin() {
+    showDirectJoinDialog.value = true
 }
 
 async function handleRoomCreated() {
@@ -123,13 +138,21 @@ async function handleRoomClick(room) {
             return
         }
 
-        error.value = response.message || t('joinRoom.errors.joinFailed')
+        error.value = getErrorMessage(response.errorCode, t('joinRoom.errors.joinFailed'))
     } catch (err) {
-        error.value = err?.message || t('joinRoom.errors.joinFailed')
+        error.value = getErrorMessage(err?.errorCode, t('joinRoom.errors.joinFailed'))
     }
 }
 
-async function handleRoomJoined(room) {
+async function handleRoomJoined(payload) {
+    const room = payload?.room || payload
+    if (!room) return
+    markRoomJoined(room.id)
+    await loadRooms(true)
+    emit('navigate', 'canvas', { roomId: room.id })
+}
+
+async function handleDirectRoomJoined(room) {
     markRoomJoined(room.id)
     await loadRooms(true)
     emit('navigate', 'canvas', { roomId: room.id })
@@ -152,9 +175,9 @@ async function handleDeleteConfirm({ roomId, password, callback }) {
             return
         }
 
-        callback(false, result.message || t('rooms.delete.failed'))
+        callback(false, getErrorMessage(result.errorCode, t('rooms.delete.failed')))
     } catch (error) {
-        callback(false, error.message || t('rooms.delete.failed'))
+        callback(false, getErrorMessage(error?.errorCode, t('rooms.delete.failed')))
     }
 }
 
@@ -171,6 +194,12 @@ watch(() => props.createRoomSignal, (value, previousValue) => {
         showCreateDialog.value = true
     }
 })
+
+watch(() => props.directJoinSignal, (value, previousValue) => {
+    if (value && value !== previousValue) {
+        showDirectJoinDialog.value = true
+    }
+}, { immediate: true })
 </script>
 
 <style scoped>

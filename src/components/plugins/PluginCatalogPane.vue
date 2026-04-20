@@ -443,11 +443,7 @@ async function toggleDevelopmentPlugin(pluginId: string, enabled: boolean) {
 }
 
 async function removeInstalled(pluginId: string, pluginName: string) {
-    const confirmed = confirm(
-        locale.value === 'zh-CN'
-            ? `确认移除已安装插件“${pluginName}”吗？`
-            : `Remove installed plugin "${pluginName}"?`
-    )
+    const confirmed = confirm(t('settings.plugins.removeInstalledConfirm', { name: pluginName }))
     if (!confirmed) return
 
     await runBusyAction(async () => {
@@ -457,11 +453,7 @@ async function removeInstalled(pluginId: string, pluginName: string) {
 }
 
 async function removeDevelopment(pluginId: string, pluginName: string) {
-    const confirmed = confirm(
-        locale.value === 'zh-CN'
-            ? `确认移除开发插件“${pluginName}”吗？这不会删除原始目录。`
-            : `Remove development plugin "${pluginName}"? This will not delete the source directory.`
-    )
+    const confirmed = confirm(t('settings.plugins.removeDevelopmentConfirm', { name: pluginName }))
     if (!confirmed) return
 
     await runBusyAction(async () => {

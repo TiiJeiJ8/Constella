@@ -6,6 +6,7 @@ import { useYjsChat } from '@/composables/useYjsChat'
 import { useAwareness } from '@/composables/useAwareness'
 import { apiService } from '@/services/api'
 import { registerPlugins } from '@/plugins/register'
+import { getErrorMessage } from '@/utils/errorHandler'
 import { getUserId, getUsername, recordRecentVisit } from '@/utils/storage'
 
 interface UseCanvasRoomOptions {
@@ -108,7 +109,7 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
         if (event.type === 'room_members_updated' && event.targetUserId === currentUserId) {
             const stillAccessible = await syncRoomState(false)
             if (!stillAccessible || !roomCapabilities.value.can_view) {
-                toast.error(localStorage.getItem('locale') === 'zh-CN' ? '你已不在此房间。正在返回房间列表。' : 'You were removed from this room. Returning to rooms.')
+                toast.error(t('canvas.toast.removedFromRoom'))
                 yjs.disconnect()
                 setTimeout(() => {
                     emitNavigate('rooms')
@@ -222,7 +223,7 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
             if (!response.success) {
                 if (showLoading) {
                     roomName.value = fallbackName
-                    roomLoadError.value = response.message || t('canvas.loadError')
+                    roomLoadError.value = getErrorMessage(response.errorCode, t('canvas.loadError'))
                 }
                 return false
             }

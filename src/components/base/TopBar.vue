@@ -54,6 +54,14 @@
                     </div>
 
                     <button
+                        class="secondary-action-btn"
+                        :title="t('inviteRoom.title')"
+                        @click="emit('directJoin')"
+                    >
+                        <span class="lock-glyph" aria-hidden="true"></span>
+                    </button>
+
+                    <button
                         class="create-btn"
                         :title="t('topbar.createRoom')"
                         @click="emit('createRoom')"
@@ -109,7 +117,7 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['createRoom', 'search', 'tabChange'])
+const emit = defineEmits(['createRoom', 'directJoin', 'search', 'tabChange'])
 
 const topbarRef = ref(null)
 const searchInputRef = ref(null)
@@ -430,6 +438,52 @@ html[data-theme='dark'] .topbar {
     font-weight: 500;
 }
 
+.secondary-action-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 18px;
+    border: 1px solid rgba(103, 126, 234, 0.14);
+    background: transparent;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.22s ease;
+    flex-shrink: 0;
+}
+
+.secondary-action-btn:hover {
+    background: rgba(103, 126, 234, 0.08);
+    border-color: rgba(103, 126, 234, 0.22);
+    transform: translateY(-1px);
+}
+
+.lock-glyph {
+    position: relative;
+    width: 12px;
+    height: 10px;
+    border: 1.8px solid currentColor;
+    border-radius: 3px;
+    display: inline-block;
+    box-sizing: border-box;
+}
+
+.lock-glyph::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% - 1px);
+    width: 8px;
+    height: 7px;
+    border: 1.8px solid currentColor;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    transform: translateX(-50%);
+    box-sizing: border-box;
+}
+
 .create-btn {
     width: 36px;
     height: 36px;
@@ -480,6 +534,16 @@ html[data-theme='dark'] .topbar {
 
 html[data-theme='dark'] .create-btn {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+html[data-theme='dark'] .secondary-action-btn {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: transparent;
+}
+
+html[data-theme='dark'] .secondary-action-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.14);
 }
 
 html[data-theme='dark'] .create-btn:hover {
@@ -540,6 +604,11 @@ html[data-theme='dark'] .create-btn:hover {
         width: 32px;
         height: 32px;
     }
+
+    .secondary-action-btn {
+        height: 32px;
+        width: 32px;
+    }
 }
 
 @media (max-width: 560px) {
@@ -572,6 +641,10 @@ html[data-theme='dark'] .create-btn:hover {
 
     .collection-title-text {
         font-size: 14px;
+    }
+
+    .secondary-action-btn {
+        width: 32px;
     }
 }
 </style>

@@ -2,6 +2,7 @@
     "AUTH_MISSING_FIELDS": "Please fill in all required fields",
     "AUTH_EMAIL_EXISTS": "This account already exists",
     "AUTH_USERNAME_EXISTS": "This User ID is already taken",
+    "AUTH_USER_NOT_FOUND": "This User ID is not registered",
     "AUTH_INVALID_CREDENTIALS": "Invalid User ID or password",
     "AUTH_INVALID_TOKEN": "Invalid token",
     "AUTH_TOKEN_REVOKED": "Token has been revoked",

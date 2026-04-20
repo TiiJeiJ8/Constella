@@ -52,7 +52,7 @@
                             <div class="setting-item userid-item">
                                 <div class="label-with-help">
                                     <label class="setting-label">{{ t('settings.account.userId') }}</label>
-                                    <div class="help-icon-wrapper" :title="t('settings.account.userIdHint')">
+                                    <div class="help-icon-wrapper" :title="userIdHelpTitle">
                                         <HelpCircleIcon class="help-icon" />
                                     </div>
                                 </div>
@@ -395,6 +395,14 @@
                 </div>
             </div>
         </Transition>
+
+        <ConfirmDialog
+            v-model="showRegenerateUserIdConfirm"
+            :title="t('settings.account.regenerateIdConfirm.title')"
+            :message="t('settings.account.regenerateIdConfirm.message')"
+            :confirm-text="t('settings.account.regenerateIdConfirm.confirm')"
+            @confirm="confirmRegenerateUserId"
+        />
     </Teleport>
 </template>
 
@@ -413,6 +421,7 @@ import {
     AddIcon,
     KeyboardIcon
 } from 'tdesign-icons-vue-next'
+import ConfirmDialog from '@/components/base/ConfirmDialog.vue'
 import PluginCatalogPane from '@/components/plugins/PluginCatalogPane.vue'
 import {
     generateUserId,
@@ -586,6 +595,7 @@ const settingsData = reactive({
 
 // 验证错误
 const userIdError = ref('')
+const showRegenerateUserIdConfirm = ref(false)
 const installedPlugins = ref([])
 const pluginBusy = ref(false)
 const pluginError = ref('')
@@ -649,6 +659,7 @@ const windowSizePresets = computed(() => {
     return Array.from(map.values()).sort((left, right) => (left.width * left.height) - (right.width * right.height))
 })
 const selectedWindowSizeKey = computed(() => `${settingsData.windowSize.width}x${settingsData.windowSize.height}`)
+const userIdHelpTitle = computed(() => `${t('settings.account.userIdHint')}\n${t('settings.account.userIdRules')}`)
 const settingsCopy = computed(() => ({
     uiScaleTitle: locale.value === 'zh-CN' ? '界面缩放' : 'Interface Scale',
     uiScaleHint: locale.value === 'zh-CN'
@@ -1034,6 +1045,10 @@ const resetShortcuts = () => {
 
 // 重新生成用户 ID
 const regenerateUserId = () => {
+    showRegenerateUserIdConfirm.value = true
+}
+
+const confirmRegenerateUserId = () => {
     settingsData.userId = generateUserId()
     settingsData.avatar = generateAvatar(settingsData.userId)
     userIdError.value = ''
