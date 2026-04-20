@@ -64,11 +64,6 @@
 - WebSocket URL is derived automatically from your backend URL
 - You can override it in `.env.development` with `VITE_WS_URL=localhost:3000`
 
-## 👀 Demo
-
-- Recorded demo: `IMG/demo.gif`
-- Local preview: run `npm run dev` and open the URL shown in terminal
-
 ## 🎉 Features
 
 - 🧭 Infinite canvas: nodes, edges, free dragging, zooming

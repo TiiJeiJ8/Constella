@@ -64,11 +64,6 @@
 - 默认根据首页输入的后端地址自动推导 WebSocket 地址
 - 如需手动指定，可在 `.env.development` 中配置：`VITE_WS_URL=localhost:3000`
 
-## 👀 Demo
-
-- 录屏演示：见上方 `IMG/demo.gif`
-- 本地体验：运行 `npm run dev` 后访问终端输出地址
-
 ## 🎉 功能
 
 - 🧭 无限画布：节点、连线、拖拽、缩放
