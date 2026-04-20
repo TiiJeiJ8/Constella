@@ -1,7 +1,7 @@
 {
   "name": "web",
   "private": true,
-  "version": "v1.2.97",
+  "version": "v1.2.5",
   "description": "Constella - A visual workflow and node-based editing application",
   "author": "Constella Team",
   "type": "module",

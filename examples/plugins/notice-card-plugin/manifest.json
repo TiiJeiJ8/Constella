@@ -5,7 +5,7 @@
   "description": "A simple installable example plugin that renders a notice card with title and message.",
   "author": "Constella Example",
   "engine": {
-    "constella": "^1.2.97"
+    "constella": "^1.2.5"
   },
   "nodes": [
     {
