@@ -501,9 +501,10 @@ function applyRoomPayload(payload: any) {
     }
 
     const nextSecurity = {
-        is_private: room.is_private === true,
+        // SQLite may return 1/0 for booleans; normalize to a strict boolean.
+        is_private: Boolean(room.is_private),
         defaultRole: permissions.defaultRole === 'viewer' ? 'viewer' : 'editor',
-        showPrivateInList: permissions.showPrivateInList === true
+        showPrivateInList: Boolean(permissions.showPrivateInList)
     }
 
     assign(initialGeneral, nextGeneral)

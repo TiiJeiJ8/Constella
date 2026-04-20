@@ -101,6 +101,15 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
             return
         }
 
+        if (event.type === 'room_deleted') {
+            toast.error(t('canvas.toast.removedFromRoom'))
+            yjs.disconnect()
+            setTimeout(() => {
+                emitNavigate('rooms')
+            }, 200)
+            return
+        }
+
         notifyRoomMembersUpdated(event)
         if (event.type === 'room_settings_updated') {
             notifyRoomSettingsUpdated(event)

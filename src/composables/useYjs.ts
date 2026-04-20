@@ -7,12 +7,12 @@ import { apiService } from '../services/api'
 const messageRoomEvent = 4
 
 export interface RoomRealtimeEvent {
-    type: 'room_permissions_updated' | 'room_members_updated' | 'room_ownership_transferred' | 'room_settings_updated'
+    type: 'room_permissions_updated' | 'room_members_updated' | 'room_ownership_transferred' | 'room_settings_updated' | 'room_deleted'
     roomId: string
-    targetUserId: string
-    memberId: string
+    targetUserId?: string
+    memberId?: string
     role?: string
-    actorUserId: string
+    actorUserId?: string
 }
 
 interface UseYjsOptions {
