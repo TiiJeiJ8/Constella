@@ -32,7 +32,7 @@ example-notice-plugin/
   "description": "A simple notice-style card node",
   "author": "Example Studio",
   "engine": {
-    "constella": "^1.2.99"
+    "constella": "^1.2.97"
   },
   "nodes": [
     {
