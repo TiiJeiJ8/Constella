@@ -10,9 +10,9 @@ on:
         description: 'Release tag, e.g. v1.2.5'
         required: true
       backend_ref:
-        description: 'Backend branch/tag/commit (default: main)'
+        description: 'Backend branch/tag/commit (optional; empty means backend default branch)'
         required: false
-        default: 'main'
+        default: ''
       prerelease:
         description: 'Publish as prerelease'
         required: false
@@ -30,7 +30,7 @@ jobs:
     env:
       NODE_VERSION: 22.12.0
       BACKEND_REPOSITORY: TiiJeiJ8/Constella_CORE
-      BACKEND_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.backend_ref || 'main' }}
+      BACKEND_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.backend_ref || 'default-branch' }}
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag || github.ref_name }}
       IS_PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.prerelease || 'false' }}
       CONSTELLA_SERVER_ROOT: ./server-src
@@ -41,11 +41,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Checkout backend repository
+      - name: Checkout backend repository (explicit ref)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.backend_ref != ''
         uses: actions/checkout@v4
         with:
           repository: ${{ env.BACKEND_REPOSITORY }}
-          ref: ${{ env.BACKEND_REF }}
+          ref: ${{ github.event.inputs.backend_ref }}
+          path: server-src
+          fetch-depth: 1
+
+      - name: Checkout backend repository (default branch)
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.backend_ref == ''
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.BACKEND_REPOSITORY }}
           path: server-src
           fetch-depth: 1
 
