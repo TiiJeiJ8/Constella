@@ -16,7 +16,9 @@ if (!/^\d+\.\d+\.\d+$/.test(normalizedVersion)) {
 }
 
 const projectRoot = path.resolve(__dirname, '..')
-const serverRoot = path.resolve(projectRoot, '..', 'server')
+const serverRoot = process.env.CONSTELLA_SERVER_ROOT
+  ? path.resolve(projectRoot, process.env.CONSTELLA_SERVER_ROOT)
+  : path.resolve(projectRoot, '..', 'server')
 const packageVersion = `v${normalizedVersion}`
 
 function readText(relativePath) {

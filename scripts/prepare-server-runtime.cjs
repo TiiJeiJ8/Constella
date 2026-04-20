@@ -3,7 +3,9 @@ const path = require('path')
 const { spawnSync } = require('child_process')
 
 const webRoot = path.resolve(__dirname, '..')
-const serverRoot = path.resolve(webRoot, '..', 'server')
+const serverRoot = process.env.CONSTELLA_SERVER_ROOT
+    ? path.resolve(webRoot, process.env.CONSTELLA_SERVER_ROOT)
+    : path.resolve(webRoot, '..', 'server')
 const runtimeRoot = path.join(webRoot, '.electron-server-runtime')
 const runtimeNextRoot = path.join(webRoot, '.electron-server-runtime-next')
 const runtimePrevRoot = path.join(webRoot, '.electron-server-runtime-prev')
@@ -47,6 +49,10 @@ function removeDirWithRetry(target, retries = 6, delayMs = 300) {
 removeDirWithRetry(runtimeNextRoot)
 removeDirWithRetry(runtimePrevRoot)
 fs.mkdirSync(runtimeNextRoot, { recursive: true })
+
+if (!fs.existsSync(serverRoot) || !fs.statSync(serverRoot).isDirectory()) {
+    throw new Error(`[prepare-server-runtime] Backend root does not exist: ${serverRoot}`)
+}
 
 copyFile(path.join(serverRoot, 'package.json'), path.join(runtimeNextRoot, 'package.json'))
 copyFile(path.join(serverRoot, 'package-lock.json'), path.join(runtimeNextRoot, 'package-lock.json'))
