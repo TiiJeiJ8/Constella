@@ -15,6 +15,7 @@
 
 [![Stars](https://img.shields.io/github/stars/TiiJeiJ8/constella?style=flat)](https://github.com/TiiJeiJ8/constella/stargazers)
 [![Issues](https://img.shields.io/github/issues/TiiJeiJ8/constella)](https://github.com/TiiJeiJ8/constella/issues)
+[![Release](https://img.shields.io/github/v/release/TiiJeiJ8/constella)](https://github.com/TiiJeiJ8/constella/releases)
 [![License](https://img.shields.io/github/license/TiiJeiJ8/constella)](./LICENSE)
 [![Last Commit](https://img.shields.io/github/last-commit/TiiJeiJ8/constella)](https://github.com/TiiJeiJ8/constella/commits)
 
@@ -66,6 +67,11 @@
 
 - 默认根据首页输入的后端地址自动推导 WebSocket 地址
 - 如需手动指定，可在 `.env.development` 中配置：`VITE_WS_URL=localhost:3000`
+
+### 后端 JWT 密钥配置
+
+- **打包分发版（Electron 应用）**：用户无需手动配置，首次启动时后端会自动生成随机密钥并保存到本地配置目录
+- **自建部署场景**：可通过 `JWT_SECRET` 环境变量或配置文件指定密钥；详见 [后端文档](https://github.com/TiiJeiJ8/Constella_CORE/blob/master/README.md)
 
 ## 🎉 功能
 

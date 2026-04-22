@@ -15,6 +15,7 @@
 
 [![Stars](https://img.shields.io/github/stars/TiiJeiJ8/constella?style=flat)](https://github.com/TiiJeiJ8/constella/stargazers)
 [![Issues](https://img.shields.io/github/issues/TiiJeiJ8/constella)](https://github.com/TiiJeiJ8/constella/issues)
+[![Release](https://img.shields.io/github/v/release/TiiJeiJ8/constella)](https://github.com/TiiJeiJ8/constella/releases)
 [![License](https://img.shields.io/github/license/TiiJeiJ8/constella)](./LICENSE)
 [![Last Commit](https://img.shields.io/github/last-commit/TiiJeiJ8/constella)](https://github.com/TiiJeiJ8/constella/commits)
 
@@ -65,6 +66,11 @@
 
 - WebSocket URL is derived automatically from your backend URL
 - You can override it in `.env.development` with `VITE_WS_URL=localhost:3000`
+
+### Backend JWT Secret Configuration
+
+- **Packaged Desktop Release (Electron app)**: Users don't need to configure JWT secret manually. On first startup, the backend automatically generates a random secret and saves it to the local config directory.
+- **Self-Hosted Deployment**: Set JWT secret via `JWT_SECRET` environment variable or config file; see [backend docs](https://github.com/TiiJeiJ8/Constella_CORE/blob/master/README-en.md) for details.
 
 ## 🎉 Features
 
