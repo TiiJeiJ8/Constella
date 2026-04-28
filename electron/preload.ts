@@ -47,6 +47,10 @@ contextBridge.exposeInMainWorld('electron', {
         display: {
             width: number
             height: number
+            workAreaWidth: number
+            workAreaHeight: number
+            nativeWidth: number
+            nativeHeight: number
             scaleFactor: number
         }
     }> => ipcRenderer.invoke('window-get-state'),
@@ -102,6 +106,10 @@ declare global {
                 display: {
                     width: number
                     height: number
+                    workAreaWidth: number
+                    workAreaHeight: number
+                    nativeWidth: number
+                    nativeHeight: number
                     scaleFactor: number
                 }
             }>

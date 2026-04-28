@@ -176,7 +176,7 @@
                                     <span class="setting-subtext">
                                         {{ locale === 'zh-CN'
                                             ? `会根据当前屏幕可用区域生成更多推荐尺寸。当前屏幕可用区域：${displayState.width} x ${displayState.height}。`
-                                            : `Recommended sizes are generated from your current display work area. Current work area: ${displayState.width} x ${displayState.height}.` }}
+                                            : `Recommended window sizes are generated from your current display work area. Current resolution: ${displayState.nativeWidth} x ${displayState.nativeHeight}; work area: ${displayState.workAreaWidth} x ${displayState.workAreaHeight}.` }}
                                     </span>
                                 </label>
                                 <select
@@ -527,6 +527,44 @@ const COMMON_WINDOW_PRESETS = [
     [3840, 2160]
 ]
 
+function resolveFixedWindowSize(width, height) {
+    const numericWidth = Number(width)
+    const numericHeight = Number(height)
+
+    if (Number.isFinite(numericWidth) && Number.isFinite(numericHeight)) {
+        const exactMatch = COMMON_WINDOW_PRESETS.find(([presetWidth, presetHeight]) =>
+            presetWidth === numericWidth && presetHeight === numericHeight
+        )
+
+        if (exactMatch) {
+            return {
+                width: exactMatch[0],
+                height: exactMatch[1]
+            }
+        }
+    }
+
+    const fallback = [DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT]
+    let bestPreset = fallback
+    let bestScore = Number.POSITIVE_INFINITY
+
+    for (const [presetWidth, presetHeight] of COMMON_WINDOW_PRESETS) {
+        const score = Number.isFinite(numericWidth) && Number.isFinite(numericHeight)
+            ? Math.abs(presetWidth - numericWidth) + Math.abs(presetHeight - numericHeight)
+            : Math.abs(presetWidth - fallback[0]) + Math.abs(presetHeight - fallback[1])
+
+        if (score < bestScore) {
+            bestScore = score
+            bestPreset = [presetWidth, presetHeight]
+        }
+    }
+
+    return {
+        width: bestPreset[0],
+        height: bestPreset[1]
+    }
+}
+
 function normalizeMarkdownLodScaleThreshold(value) {
     const n = Number(value)
     if (!Number.isFinite(n)) return defaultPerformanceSettings.markdownLodScaleThreshold
@@ -542,12 +580,13 @@ function normalizeUiScale(value) {
 function normalizeWindowDimension(value, min, max, fallback) {
     const n = Number(value)
     if (!Number.isFinite(n)) return fallback
-    return Math.max(min, Math.min(max, Math.round(n)))
+    if (!Number.isFinite(max) || max <= 0) return fallback
+    const effectiveMin = Math.min(min, max)
+    return Math.max(effectiveMin, Math.min(max, Math.round(n)))
 }
 
 function buildNormalizedSettingsSnapshot(source = settingsData) {
-    const fallbackWidth = Math.min(displayState.width, Math.max(MIN_WINDOW_WIDTH, Number(source.windowSize?.width) || DEFAULT_WINDOW_WIDTH))
-    const fallbackHeight = Math.min(displayState.height, Math.max(MIN_WINDOW_HEIGHT, Number(source.windowSize?.height) || DEFAULT_WINDOW_HEIGHT))
+    const fixedWindowSize = resolveFixedWindowSize(source.windowSize?.width, source.windowSize?.height)
 
     return {
         ...source,
@@ -562,10 +601,7 @@ function buildNormalizedSettingsSnapshot(source = settingsData) {
             markdownLodScaleThreshold: normalizeMarkdownLodScaleThreshold(source.performance?.markdownLodScaleThreshold),
             showCanvasPerformancePanel: source.performance?.showCanvasPerformancePanel !== false
         },
-        windowSize: {
-            width: normalizeWindowDimension(source.windowSize?.width, MIN_WINDOW_WIDTH, displayState.width, fallbackWidth),
-            height: normalizeWindowDimension(source.windowSize?.height, MIN_WINDOW_HEIGHT, displayState.height, fallbackHeight)
-        }
+        windowSize: fixedWindowSize
     }
 }
 
@@ -608,8 +644,18 @@ const supportsNativeWindowControls = computed(() => Boolean(
 const displayState = reactive({
     width: DEFAULT_WINDOW_WIDTH,
     height: DEFAULT_WINDOW_HEIGHT,
+    workAreaWidth: DEFAULT_WINDOW_WIDTH,
+    workAreaHeight: DEFAULT_WINDOW_HEIGHT,
+    nativeWidth: DEFAULT_WINDOW_WIDTH,
+    nativeHeight: DEFAULT_WINDOW_HEIGHT,
     scaleFactor: 1
 })
+const windowConstraintState = computed(() => ({
+    minWidth: Math.min(MIN_WINDOW_WIDTH, displayState.workAreaWidth),
+    minHeight: Math.min(MIN_WINDOW_HEIGHT, displayState.workAreaHeight),
+    maxWidth: displayState.workAreaWidth,
+    maxHeight: displayState.workAreaHeight
+}))
 const uiScalePresets = computed(() => locale.value === 'zh-CN'
     ? [
         { value: 90, label: '紧凑 90%' },
@@ -623,40 +669,16 @@ const uiScalePresets = computed(() => locale.value === 'zh-CN'
     ]
 )
 const windowSizePresets = computed(() => {
-    const map = new Map()
+    return COMMON_WINDOW_PRESETS.map(([width, height]) => {
+        const isDefaultPreset = width === DEFAULT_WINDOW_WIDTH && height === DEFAULT_WINDOW_HEIGHT
 
-    const appendPreset = (width, height, labelSuffix = '') => {
-        if (width > displayState.width || height > displayState.height) return
-        if (width < MIN_WINDOW_WIDTH || height < MIN_WINDOW_HEIGHT) return
-
-        const key = `${width}x${height}`
-        if (map.has(key)) return
-
-        const labelBase = `${width} x ${height}`
-        map.set(key, {
-            key,
+        return {
+            key: `${width}x${height}`,
             width,
             height,
-            label: labelSuffix ? `${labelBase} ${labelSuffix}` : labelBase
-        })
-    }
-
-    appendPreset(
-        settingsData.windowSize.width,
-        settingsData.windowSize.height,
-        locale.value === 'zh-CN' ? '(当前)' : '(Current)'
-    )
-    appendPreset(
-        displayState.width,
-        displayState.height,
-        locale.value === 'zh-CN' ? '(屏幕可用区)' : '(Display)'
-    )
-
-    for (const [width, height] of COMMON_WINDOW_PRESETS) {
-        appendPreset(width, height)
-    }
-
-    return Array.from(map.values()).sort((left, right) => (left.width * left.height) - (right.width * right.height))
+            label: isDefaultPreset ? `${width} x ${height}（默认）` : `${width} x ${height}`
+        }
+    })
 })
 const selectedWindowSizeKey = computed(() => `${settingsData.windowSize.width}x${settingsData.windowSize.height}`)
 const userIdHelpTitle = computed(() => `${t('settings.account.userIdHint')}\n${t('settings.account.userIdRules')}`)
@@ -765,20 +787,10 @@ const loadSettings = () => {
         settingsData.performance.markdownLodScaleThreshold
     )
     settingsData.uiScale = normalizeUiScale(parsed.uiScale ?? settingsData.uiScale)
-    settingsData.windowSize = {
-        width: normalizeWindowDimension(
-                parsed.windowSize?.width ?? settingsData.windowSize.width,
-                MIN_WINDOW_WIDTH,
-                displayState.width,
-                Math.min(displayState.width, Math.max(MIN_WINDOW_WIDTH, settingsData.windowSize.width))
-        ),
-        height: normalizeWindowDimension(
-                parsed.windowSize?.height ?? settingsData.windowSize.height,
-                MIN_WINDOW_HEIGHT,
-                displayState.height,
-                Math.min(displayState.height, Math.max(MIN_WINDOW_HEIGHT, settingsData.windowSize.height))
-        )
-    }
+    settingsData.windowSize = resolveFixedWindowSize(
+        parsed.windowSize?.width ?? settingsData.windowSize.width,
+        parsed.windowSize?.height ?? settingsData.windowSize.height
+    )
 
     // 优先使用 localStorage 中的 theme 和 locale 值
     const savedTheme = getStoredTheme()
@@ -909,31 +921,25 @@ async function syncWindowState() {
         const state = await window.electron.getWindowState()
         displayState.width = state.display.width
         displayState.height = state.display.height
+        displayState.workAreaWidth = state.display.workAreaWidth
+        displayState.workAreaHeight = state.display.workAreaHeight
+        displayState.nativeWidth = state.display.nativeWidth
+        displayState.nativeHeight = state.display.nativeHeight
         displayState.scaleFactor = state.display.scaleFactor
 
         if (!localStorage.getItem('settings')) {
-            settingsData.windowSize = {
-                width: state.width || Math.min(displayState.width, DEFAULT_WINDOW_WIDTH),
-                height: state.height || Math.min(displayState.height, DEFAULT_WINDOW_HEIGHT)
-            }
+            settingsData.windowSize = resolveFixedWindowSize(
+                state.width || DEFAULT_WINDOW_WIDTH,
+                state.height || DEFAULT_WINDOW_HEIGHT
+            )
             settingsData.uiScale = normalizeUiScale((state.zoomFactor || 1) * 100)
             return
         }
 
-        settingsData.windowSize = {
-            width: normalizeWindowDimension(
-                settingsData.windowSize.width || state.width,
-                MIN_WINDOW_WIDTH,
-                displayState.width,
-                Math.min(displayState.width, state.width || DEFAULT_WINDOW_WIDTH)
-            ),
-            height: normalizeWindowDimension(
-                settingsData.windowSize.height || state.height,
-                MIN_WINDOW_HEIGHT,
-                displayState.height,
-                Math.min(displayState.height, state.height || DEFAULT_WINDOW_HEIGHT)
-            )
-        }
+        settingsData.windowSize = resolveFixedWindowSize(
+            settingsData.windowSize.width || state.width,
+            settingsData.windowSize.height || state.height
+        )
     } catch (error) {
         console.warn('Failed to query native window state', error)
     }

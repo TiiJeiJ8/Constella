@@ -32,6 +32,10 @@ interface ElectronBridgeApi {
         display: {
             width: number
             height: number
+            workAreaWidth: number
+            workAreaHeight: number
+            nativeWidth: number
+            nativeHeight: number
             scaleFactor: number
         }
     }>

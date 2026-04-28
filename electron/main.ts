@@ -88,6 +88,42 @@ const MAX_DEFAULT_WINDOW_HEIGHT = 1280
 const DEFAULT_WINDOW_WIDTH = 1280
 const DEFAULT_WINDOW_HEIGHT = 800
 
+function getDisplayMetrics(targetDisplay: Electron.Display) {
+    const scaleFactor = Number.isFinite(targetDisplay.scaleFactor) && targetDisplay.scaleFactor > 0
+        ? targetDisplay.scaleFactor
+        : 1
+
+    return {
+        width: targetDisplay.size.width,
+        height: targetDisplay.size.height,
+        workAreaWidth: targetDisplay.workAreaSize.width,
+        workAreaHeight: targetDisplay.workAreaSize.height,
+        scaleFactor,
+        nativeWidth: Math.round(targetDisplay.size.width * scaleFactor),
+        nativeHeight: Math.round(targetDisplay.size.height * scaleFactor)
+    }
+}
+
+function getWindowSizeConstraints(targetDisplay: Electron.Display) {
+    const metrics = getDisplayMetrics(targetDisplay)
+    const minWidth = Math.min(MIN_WINDOW_WIDTH, metrics.workAreaWidth)
+    const minHeight = Math.min(MIN_WINDOW_HEIGHT, metrics.workAreaHeight)
+
+    return {
+        ...metrics,
+        minWidth,
+        minHeight,
+        defaultWidth: Math.max(
+            minWidth,
+            Math.min(MAX_DEFAULT_WINDOW_WIDTH, metrics.workAreaWidth, DEFAULT_WINDOW_WIDTH)
+        ),
+        defaultHeight: Math.max(
+            minHeight,
+            Math.min(MAX_DEFAULT_WINDOW_HEIGHT, metrics.workAreaHeight, DEFAULT_WINDOW_HEIGHT)
+        )
+    }
+}
+
 function resolveBundledNodePath(): string | null {
     if (process.platform !== 'win32') {
         return null
@@ -761,21 +797,13 @@ async function removeDevelopmentPluginInternal(pluginId: string): Promise<void> 
 
 function createWindow() {
     const primaryDisplay = screen.getPrimaryDisplay()
-    const workArea = primaryDisplay.workAreaSize
-    const defaultWidth = Math.max(
-        MIN_WINDOW_WIDTH,
-        Math.min(MAX_DEFAULT_WINDOW_WIDTH, workArea.width, DEFAULT_WINDOW_WIDTH)
-    )
-    const defaultHeight = Math.max(
-        MIN_WINDOW_HEIGHT,
-        Math.min(MAX_DEFAULT_WINDOW_HEIGHT, workArea.height, DEFAULT_WINDOW_HEIGHT)
-    )
+    const constraints = getWindowSizeConstraints(primaryDisplay)
 
     mainWindow = new BrowserWindow({
-        width: defaultWidth,
-        height: defaultHeight,
-        minWidth: MIN_WINDOW_WIDTH,
-        minHeight: MIN_WINDOW_HEIGHT,
+        width: constraints.defaultWidth,
+        height: constraints.defaultHeight,
+        minWidth: constraints.minWidth,
+        minHeight: constraints.minHeight,
         frame: false,
         transparent: false,
         backgroundColor: '#ffffff',
@@ -1186,8 +1214,13 @@ ipcMain.handle('window-get-state', (event) => {
     const currentDisplay = activeWindow
         ? screen.getDisplayMatching(activeWindow.getBounds())
         : screen.getPrimaryDisplay()
+    const constraints = getWindowSizeConstraints(currentDisplay)
     const [contentWidth, contentHeight] = activeWindow?.getContentSize() ?? [0, 0]
     const zoomFactor = activeWindow?.webContents.getZoomFactor() ?? 1
+
+    if (activeWindow) {
+        activeWindow.setMinimumSize(constraints.minWidth, constraints.minHeight)
+    }
 
     return {
         width: contentWidth,
@@ -1195,9 +1228,13 @@ ipcMain.handle('window-get-state', (event) => {
         zoomFactor,
         isMaximized: activeWindow?.isMaximized() ?? false,
         display: {
-            width: currentDisplay.workAreaSize.width,
-            height: currentDisplay.workAreaSize.height,
-            scaleFactor: currentDisplay.scaleFactor
+            width: constraints.width,
+            height: constraints.height,
+            workAreaWidth: constraints.workAreaWidth,
+            workAreaHeight: constraints.workAreaHeight,
+            nativeWidth: constraints.nativeWidth,
+            nativeHeight: constraints.nativeHeight,
+            scaleFactor: constraints.scaleFactor
         }
     }
 })
@@ -1224,16 +1261,19 @@ ipcMain.handle('window-set-size', (event, payload: { width?: number; height?: nu
     }
 
     const currentDisplay = screen.getDisplayMatching(targetWindow.getBounds())
-    const maxWidth = currentDisplay.workAreaSize.width
-    const maxHeight = currentDisplay.workAreaSize.height
+    const constraints = getWindowSizeConstraints(currentDisplay)
+    const maxWidth = constraints.workAreaWidth
+    const maxHeight = constraints.workAreaHeight
     const nextWidth = Math.max(
-        MIN_WINDOW_WIDTH,
+        constraints.minWidth,
         Math.min(maxWidth, Math.round(Number(payload?.width) || MIN_WINDOW_WIDTH))
     )
     const nextHeight = Math.max(
-        MIN_WINDOW_HEIGHT,
+        constraints.minHeight,
         Math.min(maxHeight, Math.round(Number(payload?.height) || MIN_WINDOW_HEIGHT))
     )
+
+    targetWindow.setMinimumSize(constraints.minWidth, constraints.minHeight)
 
     if (targetWindow.isMaximized()) {
         targetWindow.unmaximize()
