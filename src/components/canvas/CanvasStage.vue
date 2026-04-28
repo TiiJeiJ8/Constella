@@ -140,12 +140,12 @@
                 
                 <!-- 框选矩形 -->
                 <v-rect
-                    v-if="selectionRect.visible"
+                    v-if="selectionRect.visible && !props.isReadOnly"
                     :config="selectionRect.config"
                 />
                 
                 <!-- Transformer 选中效果 -->
-                <v-transformer ref="transformerRef" />
+                <v-transformer v-if="!props.isReadOnly" ref="transformerRef" />
             </v-layer>
             
             <!-- 远程光标层 -->
@@ -697,7 +697,7 @@ function handleWheel(e) {
 
 // 鼠标按下
 function handleMouseDown(e) {
-    if (props.isReadOnly && props.activeTool === 'node') {
+    if (props.isReadOnly && (props.activeTool === 'node' || props.activeTool === 'select')) {
         return
     }
     const stage = stageRef.value.getNode()
@@ -877,7 +877,7 @@ function handleMouseLeave() {
 
 // 节点点击
 function handleNodeClick(node, e) {
-    if (props.isReadOnly && props.activeTool === 'edge') {
+    if (props.isReadOnly) {
         return
     }
     // 阻止事件冒泡（避免触发 stage 点击）
@@ -1200,6 +1200,10 @@ function updateTransformer() {
     if (!transformerRef.value || !mainLayerRef.value) return
     
     const transformer = transformerRef.value.getNode()
+    if (props.isReadOnly) {
+        transformer.nodes([])
+        return
+    }
     const layer = mainLayerRef.value.getNode()
     
     if (selectedNodeIds.value.size === 0) {
@@ -1240,6 +1244,14 @@ watch(() => props.activeTool, (newTool) => {
         const stage = stageRef.value.getNode()
         stage.container().style.cursor = getCursor()
     }
+})
+
+watch(() => props.isReadOnly, (isReadOnly) => {
+    if (!isReadOnly) return
+    clearSelection()
+    selectionRect.value.visible = false
+    isSelecting.value = false
+    cancelEdgeCreation()
 })
 
 watch(
