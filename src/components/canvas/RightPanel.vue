@@ -233,7 +233,17 @@
 
                             <div class="property-group">
                                 <label class="property-label">{{ t('canvas.edge.label') }}</label>
-                                <input class="text-input" type="text" :value="selectedEdges[0].label || ''" :readonly="!canEditCanvas" :placeholder="t('canvas.edge.labelPlaceholder')" @change="$emit('edge-property-change', selectedEdges[0].id, 'label', $event.target.value)" />
+                                <input
+                                    class="text-input"
+                                    type="text"
+                                    :value="edgeLabelDraft"
+                                    :readonly="!canEditCanvas"
+                                    :placeholder="t('canvas.edge.labelPlaceholder')"
+                                    @focus="handleEdgeLabelFocus"
+                                    @input="handleEdgeLabelInput"
+                                    @blur="handleEdgeLabelBlur"
+                                    @keydown.enter.prevent="commitEdgeLabelDraft"
+                                />
                             </div>
 
                             <div class="property-group">
@@ -326,7 +336,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getPluginsMeta, pluginCatalogVersion } from '@/plugins'
 import AssetsPanel from './AssetsPanel.vue'
@@ -349,7 +359,7 @@ const props = defineProps({
     snapshots: { type: Array, default: () => [] }
 })
 
-defineEmits(['panel-change', 'toggle-collapse', 'node-kind-change', 'node-property-change', 'node-display-mode-change', 'node-content-metadata-change', 'node-select', 'node-zindex-change', 'edge-property-change', 'edge-select', 'edge-delete', 'asset-upload', 'asset-delete', 'asset-insert', 'asset-select', 'snapshot-create', 'snapshot-restore', 'snapshot-delete', 'snapshot-preview'])
+const emit = defineEmits(['panel-change', 'toggle-collapse', 'node-kind-change', 'node-property-change', 'node-display-mode-change', 'node-content-metadata-change', 'node-select', 'node-zindex-change', 'edge-property-change', 'edge-select', 'edge-delete', 'asset-upload', 'asset-delete', 'asset-insert', 'asset-select', 'snapshot-create', 'snapshot-restore', 'snapshot-delete', 'snapshot-preview'])
 
 const collapseTitle = computed(() => (locale.value === 'zh-CN' ? '切换右侧面板' : 'Toggle right panel'))
 const propertiesReadOnlyHint = computed(() => (locale.value === 'zh-CN' ? '当前为只读模式，可以查看属性，但不能修改画布内容。' : 'Read-only mode: you can inspect properties, but cannot edit the canvas.'))
@@ -380,6 +390,50 @@ const currentNodeMeta = computed(() => {
 })
 
 const sortedNodes = computed(() => [...props.allNodes].sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0)))
+const selectedEdge = computed(() => props.selectedEdges?.length === 1 ? props.selectedEdges[0] : null)
+const edgeLabelDraft = ref('')
+const focusedEdgeLabelId = ref(null)
+
+watch(
+    () => ({
+        id: selectedEdge.value?.id || null,
+        label: selectedEdge.value?.label || ''
+    }),
+    (next, previous) => {
+        const isEditingSameEdge = focusedEdgeLabelId.value &&
+            next.id === focusedEdgeLabelId.value &&
+            previous?.id === next.id
+
+        if (!isEditingSameEdge) {
+            edgeLabelDraft.value = next.label
+        }
+    },
+    { immediate: true }
+)
+
+function handleEdgeLabelFocus() {
+    focusedEdgeLabelId.value = selectedEdge.value?.id || null
+    edgeLabelDraft.value = selectedEdge.value?.label || ''
+}
+
+function handleEdgeLabelInput(event) {
+    edgeLabelDraft.value = event.target?.value || ''
+}
+
+function commitEdgeLabelDraft() {
+    const edge = selectedEdge.value
+    if (!edge || !props.canEditCanvas) return
+
+    const nextLabel = edgeLabelDraft.value
+    if ((edge.label || '') !== nextLabel) {
+        emit('edge-property-change', edge.id, 'label', nextLabel)
+    }
+}
+
+function handleEdgeLabelBlur() {
+    commitEdgeLabelDraft()
+    focusedEdgeLabelId.value = null
+}
 
 function isNodeSelected(nodeId) {
     return props.selectedNodes.some(node => node.id === nodeId)
