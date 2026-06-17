@@ -14,8 +14,8 @@
             <button
                 type="button"
                 class="plugin-action-card"
-                :class="{ 'is-busy': busy }"
-                :disabled="busy"
+                :class="{ 'is-busy': packageBusy }"
+                :disabled="packageBusy || developmentBusy"
                 @click="openPackagePicker"
             >
                 <span class="plugin-action-icon" aria-hidden="true">
@@ -26,7 +26,7 @@
                 </span>
                 <div class="plugin-action-copy">
                     <div class="plugin-import-title-row">
-                        <div class="plugin-action-title">{{ busy ? text.packageTitleBusy : text.packageTitle }}</div>
+                        <div class="plugin-action-title">{{ packageBusy ? text.packageTitleBusy : text.packageTitle }}</div>
                     </div>
                     <div class="plugin-action-desc">{{ text.packageHint }}</div>
                 </div>
@@ -37,8 +37,8 @@
                 v-if="developerMode"
                 type="button"
                 class="plugin-action-card plugin-action-card-dev"
-                :class="{ 'is-busy': busy }"
-                :disabled="busy"
+                :class="{ 'is-busy': developmentBusy }"
+                :disabled="packageBusy || developmentBusy"
                 @click="openDevelopmentPicker"
             >
                 <span class="plugin-action-icon plugin-action-icon-dev" aria-hidden="true">
@@ -49,175 +49,193 @@
                 </span>
                 <div class="plugin-action-copy">
                     <div class="plugin-import-title-row">
-                        <div class="plugin-action-title">{{ busy ? text.developmentTitleBusy : text.developmentTitle }}</div>
+                        <div class="plugin-action-title">{{ developmentBusy ? text.developmentTitleBusy : text.developmentTitle }}</div>
                     </div>
                     <div class="plugin-action-desc">{{ text.developmentHint }}</div>
                 </div>
                 <div class="plugin-action-badge plugin-action-badge-dev">{{ text.developmentBadge }}</div>
             </button>
-        </div>
-
-        <div v-if="errorMessage" class="plugin-callout plugin-callout-error">{{ errorMessage }}</div>
-        <div v-else-if="!supportsPluginManagement" class="plugin-callout">{{ text.desktopOnly }}</div>
-
-        <div class="plugin-market-shelf">
-            <div class="plugin-market-copy">
-                <div class="plugin-market-eyebrow">{{ text.marketEyebrow }}</div>
-                <div class="plugin-market-title">{{ text.marketTitle }}</div>
-                <div class="plugin-market-desc">{{ text.marketDescription }}</div>
-            </div>
-            <div class="plugin-market-chip">{{ text.marketSoon }}</div>
-        </div>
-
-        <div class="plugin-tabs" role="tablist">
-            <button
-                v-for="tab in visiblePluginTabs"
-                :key="tab.id"
-                type="button"
-                class="plugin-tab"
-                :class="{ active: activePluginTab === tab.id }"
-                role="tab"
-                :aria-selected="activePluginTab === tab.id"
-                @click="activePluginTab = tab.id"
-            >
-                <span>{{ tab.label }}</span>
-                <span class="plugin-tab-count">{{ tab.count }}</span>
-            </button>
-        </div>
-
-        <div v-show="activePluginTab === 'installed'" class="plugin-section">
-            <div v-if="installedPlugins.length > 0" class="plugin-list">
-                <article v-for="plugin in installedPlugins" :key="`${plugin.id}:${plugin.version}`" class="plugin-card">
-                    <div class="plugin-card-row plugin-card-row-top">
-                        <div>
-                            <div class="plugin-name">{{ plugin.name }}</div>
-                            <div class="plugin-kind">{{ plugin.id }}</div>
-                        </div>
-                        <label class="plugin-toggle">
-                            <input
-                                type="checkbox"
-                                :checked="plugin.enabled"
-                                :disabled="busy"
-                                @change="toggleInstalledPlugin(plugin.id, ($event.target as HTMLInputElement).checked)"
-                            />
-                            <span class="plugin-toggle-track"></span>
-                        </label>
+            <div v-else class="plugin-action-card plugin-action-card-ghost" aria-hidden="true">
+                <span class="plugin-action-icon plugin-action-icon-ghost" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M9 4.75h6M10 4.75v5.1l-4.2 7.2A2 2 0 0 0 7.52 20h8.96a2 2 0 0 0 1.72-2.95L14 9.85v-5.1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" />
+                        <path d="M8.2 15.5h7.6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.7" />
+                    </svg>
+                </span>
+                <div class="plugin-action-copy">
+                    <div class="plugin-import-title-row">
+                        <div class="plugin-action-title">{{ text.developmentTeaserTitle }}</div>
                     </div>
-
-                    <div class="plugin-meta-line">
-                        <span>v{{ plugin.version }}</span>
-                        <span>{{ text.source }}: {{ plugin.source === 'archive' ? text.packageSource : text.directorySource }}</span>
-                    </div>
-
-                    <p v-if="plugin.description" class="plugin-description">{{ plugin.description }}</p>
-
-                    <div class="plugin-meta-stack">
-                        <div>{{ text.author }}: {{ plugin.author || '-' }}</div>
-                        <div>{{ text.installedAt }}: {{ formatInstalledTime(plugin.installedAt) }}</div>
-                        <div>{{ text.nodeKinds }}: {{ plugin.manifest.nodes.map(node => node.kind).join(', ') }}</div>
-                    </div>
-
-                    <div class="plugin-card-actions">
-                        <button class="plugin-btn plugin-btn-danger" :disabled="busy" @click="removeInstalled(plugin.id, plugin.name)">
-                            {{ text.remove }}
-                        </button>
-                    </div>
-                </article>
-            </div>
-            <div v-else class="plugin-empty-state">{{ text.emptyInstalled }}</div>
-        </div>
-
-        <div v-show="activePluginTab === 'builtin'" class="plugin-section">
-            <div class="plugin-compact-list">
-                <article v-for="plugin in builtinPlugins" :key="plugin.kind" class="plugin-compact-item">
-                    <div class="plugin-compact-main">
-                        <div class="plugin-node-mark" :class="getKindClass(plugin.kind)">{{ getPluginInitial(plugin) }}</div>
-                        <div class="plugin-compact-copy">
-                            <div class="plugin-name">{{ localizedPluginName(plugin) }}</div>
-                            <div class="plugin-kind">{{ plugin.kind }}</div>
-                        </div>
-                    </div>
-                    <p class="plugin-description plugin-compact-description">{{ localizedPluginDescription(plugin) }}</p>
-                    <div class="plugin-tags plugin-compact-tags">
-                        <span class="plugin-tag">{{ text.builtinTag }}</span>
-                        <span v-if="plugin.editable" class="plugin-tag">{{ text.editableTag }}</span>
-                        <span v-if="plugin.supportsCardMode" class="plugin-tag">{{ text.cardTag }}</span>
-                    </div>
-                </article>
+                    <div class="plugin-action-desc">{{ text.developmentTeaserHint }}</div>
+                </div>
+                <div class="plugin-action-badge plugin-action-badge-ghost">{{ text.developmentTeaserBadge }}</div>
             </div>
         </div>
 
-        <div v-if="developerMode && developmentDiagnostics.length > 0 && activePluginTab === 'diagnostics'" class="plugin-section">
-            <div class="plugin-diagnostics">
-                <article
-                    v-for="diagnostic in developmentDiagnostics"
-                    :key="diagnostic.id"
-                    class="plugin-diagnostic-card"
-                    :class="`plugin-diagnostic-${diagnostic.severity}`"
+        <div class="plugin-scroll-shell">
+            <div v-if="errorMessage" class="plugin-callout plugin-callout-error">{{ errorMessage }}</div>
+            <div v-else-if="!supportsPluginManagement" class="plugin-callout">{{ text.desktopOnly }}</div>
+
+            <div class="plugin-market-shelf">
+                <div class="plugin-market-copy">
+                    <div class="plugin-market-eyebrow">{{ text.marketEyebrow }}</div>
+                    <div class="plugin-market-title">{{ text.marketTitle }}</div>
+                    <div class="plugin-market-desc">{{ text.marketDescription }}</div>
+                </div>
+                <div class="plugin-market-chip">{{ text.marketSoon }}</div>
+            </div>
+
+            <div class="plugin-tabs" role="tablist">
+                <button
+                    v-for="tab in visiblePluginTabs"
+                    :key="tab.id"
+                    type="button"
+                    class="plugin-tab"
+                    :class="{ active: activePluginTab === tab.id }"
+                    role="tab"
+                    :aria-selected="activePluginTab === tab.id"
+                    @click="activePluginTab = tab.id"
                 >
-                    <div class="plugin-card-row plugin-card-row-top">
-                        <div>
-                            <div class="plugin-name">{{ diagnostic.pluginName || diagnostic.pluginId || text.unknownPlugin }}</div>
-                            <div class="plugin-kind">{{ formatDiagnosticStage(diagnostic) }}</div>
-                        </div>
-                        <span class="plugin-tag" :class="`plugin-tag-${diagnostic.severity}`">{{ diagnostic.severity }}</span>
-                    </div>
-                    <p class="plugin-description">{{ diagnostic.message }}</p>
-                    <div class="plugin-meta-stack">
-                        <div v-if="diagnostic.nodeKind">{{ text.nodeKinds }}: {{ diagnostic.nodeKind }}</div>
-                        <div v-if="diagnostic.sourcePath">{{ text.path }}: {{ diagnostic.sourcePath }}</div>
-                        <div v-if="diagnostic.filePath">{{ text.file }}: {{ diagnostic.filePath }}</div>
-                        <div>{{ text.updatedAt }}: {{ formatInstalledTime(diagnostic.timestamp) }}</div>
-                    </div>
-                    <details v-if="diagnostic.detail" class="plugin-diagnostic-detail">
-                        <summary>{{ text.details }}</summary>
-                        <pre>{{ diagnostic.detail }}</pre>
-                    </details>
-                </article>
+                    <span>{{ tab.label }}</span>
+                    <span class="plugin-tab-count">{{ tab.count }}</span>
+                </button>
             </div>
-        </div>
 
-        <div v-if="developerMode && activePluginTab === 'development'" class="plugin-section">
-            <div v-if="developmentPlugins.length > 0" class="plugin-list">
-                <article v-for="plugin in developmentPlugins" :key="`${plugin.id}:${plugin.sourcePath}`" class="plugin-card plugin-card-dev">
-                    <div class="plugin-card-row plugin-card-row-top">
-                        <div>
-                            <div class="plugin-name">{{ plugin.name }}</div>
-                            <div class="plugin-kind">{{ plugin.id }}</div>
+            <div v-show="activePluginTab === 'installed'" class="plugin-section">
+                <div v-if="installedPlugins.length > 0" class="plugin-list">
+                    <article v-for="plugin in installedPlugins" :key="`${plugin.id}:${plugin.version}`" class="plugin-card">
+                        <div class="plugin-card-row plugin-card-row-top">
+                            <div>
+                                <div class="plugin-name">{{ plugin.name }}</div>
+                                <div class="plugin-kind">{{ plugin.id }}</div>
+                            </div>
+                            <label class="plugin-toggle">
+                                <input
+                                    type="checkbox"
+                                    :checked="plugin.enabled"
+                                    :disabled="busy"
+                                    @change="toggleInstalledPlugin(plugin.id, ($event.target as HTMLInputElement).checked)"
+                                />
+                                <span class="plugin-toggle-track"></span>
+                            </label>
                         </div>
-                        <label class="plugin-toggle">
-                            <input
-                                type="checkbox"
-                                :checked="plugin.enabled"
-                                :disabled="busy"
-                                @change="toggleDevelopmentPlugin(plugin.id, ($event.target as HTMLInputElement).checked)"
-                            />
-                            <span class="plugin-toggle-track"></span>
-                        </label>
-                    </div>
 
-                    <div class="plugin-meta-line">
-                        <span>v{{ plugin.version }}</span>
-                        <span>{{ text.source }}: {{ text.developmentSource }}</span>
-                    </div>
+                        <div class="plugin-meta-line">
+                            <span>v{{ plugin.version }}</span>
+                            <span>{{ text.source }}: {{ plugin.source === 'archive' ? text.packageSource : text.directorySource }}</span>
+                        </div>
 
-                    <p v-if="plugin.description" class="plugin-description">{{ plugin.description }}</p>
+                        <p v-if="plugin.description" class="plugin-description">{{ plugin.description }}</p>
 
-                    <div class="plugin-meta-stack">
-                        <div>{{ text.author }}: {{ plugin.author || '-' }}</div>
-                        <div>{{ text.addedAt }}: {{ formatInstalledTime(plugin.addedAt) }}</div>
-                        <div>{{ text.path }}: {{ plugin.sourcePath }}</div>
-                        <div>{{ text.nodeKinds }}: {{ plugin.manifest.nodes.map(node => node.kind).join(', ') }}</div>
-                    </div>
+                        <div class="plugin-meta-stack">
+                            <div>{{ text.author }}: {{ plugin.author || '-' }}</div>
+                            <div>{{ text.installedAt }}: {{ formatInstalledTime(plugin.installedAt) }}</div>
+                            <div>{{ text.nodeKinds }}: {{ plugin.manifest.nodes.map(node => node.kind).join(', ') }}</div>
+                        </div>
 
-                    <div class="plugin-card-actions">
-                        <button class="plugin-btn plugin-btn-danger" :disabled="busy" @click="removeDevelopment(plugin.id, plugin.name)">
-                            {{ text.remove }}
-                        </button>
-                    </div>
-                </article>
+                        <div class="plugin-card-actions">
+                            <button class="plugin-btn plugin-btn-danger" :disabled="busy" @click="removeInstalled(plugin.id, plugin.name)">
+                                {{ text.remove }}
+                            </button>
+                        </div>
+                    </article>
+                </div>
+                <div v-else class="plugin-empty-state">{{ text.emptyInstalled }}</div>
             </div>
-            <div v-else class="plugin-empty-state">{{ text.emptyDevelopment }}</div>
+
+            <div v-show="activePluginTab === 'builtin'" class="plugin-section">
+                <div class="plugin-compact-list">
+                    <article v-for="plugin in builtinPlugins" :key="plugin.kind" class="plugin-compact-item">
+                        <div class="plugin-compact-main">
+                            <div class="plugin-node-mark" :class="getKindClass(plugin.kind)">{{ getPluginInitial(plugin) }}</div>
+                            <div class="plugin-compact-copy">
+                                <div class="plugin-name">{{ localizedPluginName(plugin) }}</div>
+                                <div class="plugin-kind">{{ plugin.kind }}</div>
+                            </div>
+                        </div>
+                        <div class="plugin-compact-body">
+                            <p class="plugin-description plugin-compact-description">{{ localizedPluginDescription(plugin) }}</p>
+                        </div>
+                    </article>
+                </div>
+            </div>
+
+            <div v-if="developerMode && developmentDiagnostics.length > 0 && activePluginTab === 'diagnostics'" class="plugin-section">
+                <div class="plugin-diagnostics">
+                    <article
+                        v-for="diagnostic in developmentDiagnostics"
+                        :key="diagnostic.id"
+                        class="plugin-diagnostic-card"
+                        :class="`plugin-diagnostic-${diagnostic.severity}`"
+                    >
+                        <div class="plugin-card-row plugin-card-row-top">
+                            <div>
+                                <div class="plugin-name">{{ diagnostic.pluginName || diagnostic.pluginId || text.unknownPlugin }}</div>
+                                <div class="plugin-kind">{{ formatDiagnosticStage(diagnostic) }}</div>
+                            </div>
+                            <span class="plugin-tag" :class="`plugin-tag-${diagnostic.severity}`">{{ diagnostic.severity }}</span>
+                        </div>
+                        <p class="plugin-description">{{ diagnostic.message }}</p>
+                        <div class="plugin-meta-stack">
+                            <div v-if="diagnostic.nodeKind">{{ text.nodeKinds }}: {{ diagnostic.nodeKind }}</div>
+                            <div v-if="diagnostic.sourcePath">{{ text.path }}: {{ diagnostic.sourcePath }}</div>
+                            <div v-if="diagnostic.filePath">{{ text.file }}: {{ diagnostic.filePath }}</div>
+                            <div>{{ text.updatedAt }}: {{ formatInstalledTime(diagnostic.timestamp) }}</div>
+                        </div>
+                        <details v-if="diagnostic.detail" class="plugin-diagnostic-detail">
+                            <summary>{{ text.details }}</summary>
+                            <pre>{{ diagnostic.detail }}</pre>
+                        </details>
+                    </article>
+                </div>
+            </div>
+
+            <div v-if="developerMode && activePluginTab === 'development'" class="plugin-section">
+                <div v-if="developmentPlugins.length > 0" class="plugin-list plugin-development-list">
+                    <article v-for="plugin in developmentPlugins" :key="`${plugin.id}:${plugin.sourcePath}`" class="plugin-development-card">
+                        <div class="plugin-development-top">
+                            <div class="plugin-development-main">
+                                <div class="plugin-node-mark plugin-node-mark-dev" :class="getKindClass(getDevelopmentPluginKind(plugin))">
+                                    {{ getDevelopmentPluginInitial(plugin) }}
+                                </div>
+                                <div class="plugin-development-copy">
+                                    <div class="plugin-name">{{ plugin.name }}</div>
+                                    <div class="plugin-kind">{{ plugin.id }}</div>
+                                </div>
+                            </div>
+                            <label class="plugin-toggle">
+                                <input
+                                    type="checkbox"
+                                    :checked="plugin.enabled"
+                                    :disabled="busy"
+                                    @change="toggleDevelopmentPlugin(plugin.id, ($event.target as HTMLInputElement).checked)"
+                                />
+                                <span class="plugin-toggle-track"></span>
+                            </label>
+                        </div>
+
+                        <p v-if="plugin.description" class="plugin-development-description">{{ plugin.description }}</p>
+
+                        <div class="plugin-development-meta">
+                            <span>v{{ plugin.version }}</span>
+                            <span>{{ plugin.author || '-' }}</span>
+                            <span>{{ formatInstalledTime(plugin.addedAt) }}</span>
+                        </div>
+
+                        <div class="plugin-development-path">{{ plugin.sourcePath }}</div>
+
+                        <div class="plugin-development-footer">
+                            <div class="plugin-development-kinds">
+                                {{ text.nodeKinds }}: {{ plugin.manifest.nodes.map(node => node.kind).join(', ') }}
+                            </div>
+                            <button class="plugin-btn plugin-btn-danger" :disabled="busy" @click="removeDevelopment(plugin.id, plugin.name)">
+                                {{ text.remove }}
+                            </button>
+                        </div>
+                    </article>
+                </div>
+                <div v-else class="plugin-empty-state">{{ text.emptyDevelopment }}</div>
+            </div>
         </div>
     </section>
 </template>
@@ -246,8 +264,10 @@ const installedPlugins = ref<InstalledPluginRecord[]>([])
 const developmentPlugins = ref<DevelopmentPluginRecord[]>([])
 const errorMessage = ref('')
 const busy = ref(false)
+const packageBusy = ref(false)
+const developmentBusy = ref(false)
 const developerMode = ref(false)
-const activePluginTab = ref('installed')
+const activePluginTab = ref('builtin')
 
 const supportsPluginManagement = computed(() =>
     Boolean(window.electron?.listInstalledPlugins && window.electron?.listDevelopmentPlugins)
@@ -265,8 +285,8 @@ const developmentDiagnostics = computed<PluginDiagnosticRecord[]>(() => {
 
 const visiblePluginTabs = computed(() => {
     const tabs = [
-        { id: 'installed', label: text.value.installedTitle, count: installedPlugins.value.length },
-        { id: 'builtin', label: text.value.builtinTitle, count: builtinPlugins.value.length }
+        { id: 'builtin', label: text.value.builtinTitle, count: builtinPlugins.value.length },
+        { id: 'installed', label: text.value.installedTitle, count: installedPlugins.value.length }
     ]
 
     if (developerMode.value && developmentDiagnostics.value.length > 0) {
@@ -309,6 +329,9 @@ const text = computed(() => locale.value === 'zh-CN'
         developmentDescription: '选择包含 `manifest.json` 的插件目录，用于本地调试与迭代。',
         developmentHint: '点击选择目录，源文件不会被复制。',
         developmentBadge: '开发',
+        developmentTeaserTitle: '开发者模式',
+        developmentTeaserHint: '开启后会显示本地开发插件目录的加载入口。',
+        developmentTeaserBadge: '需开启',
         packageSource: '安装包',
         directorySource: '目录',
         developmentSource: '开发目录',
@@ -352,6 +375,9 @@ const text = computed(() => locale.value === 'zh-CN'
         developmentDescription: 'Choose a plugin directory that contains `manifest.json` for local iteration.',
         developmentHint: 'Choose a folder. Source files stay in place.',
         developmentBadge: 'Development',
+        developmentTeaserTitle: 'Developer Mode',
+        developmentTeaserHint: 'Enable it to show the local development plugin directory loader.',
+        developmentTeaserBadge: 'Required',
         packageSource: 'Package',
         directorySource: 'Directory',
         developmentSource: 'Development Folder',
@@ -381,6 +407,15 @@ function localizedPluginDescription(plugin: PluginMeta) {
 function getPluginInitial(plugin: PluginMeta) {
     const label = localizedPluginName(plugin).trim()
     return (label[0] || plugin.kind[0] || 'N').toUpperCase()
+}
+
+function getDevelopmentPluginKind(plugin: DevelopmentPluginRecord) {
+    return plugin.manifest.nodes[0]?.kind || plugin.id
+}
+
+function getDevelopmentPluginInitial(plugin: DevelopmentPluginRecord) {
+    const label = (plugin.name || plugin.id || 'N').trim()
+    return (label[0] || 'N').toUpperCase()
 }
 
 function getKindClass(kind: string) {
@@ -453,19 +488,35 @@ async function runBusyAction(action: () => Promise<void>) {
 }
 
 async function openPackagePicker() {
-    if (busy.value) return
-    await runBusyAction(async () => {
+    if (busy.value || packageBusy.value || developmentBusy.value) return
+    packageBusy.value = true
+    try {
         await installPluginPackage()
         await syncPluginRuntime()
-    })
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        if (!/cancel/i.test(message)) {
+            errorMessage.value = message
+        }
+    } finally {
+        packageBusy.value = false
+    }
 }
 
 async function openDevelopmentPicker() {
-    if (busy.value) return
-    await runBusyAction(async () => {
+    if (busy.value || packageBusy.value || developmentBusy.value) return
+    developmentBusy.value = true
+    try {
         await addDevelopmentPlugin()
         await syncPluginRuntime()
-    })
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        if (!/cancel/i.test(message)) {
+            errorMessage.value = message
+        }
+    } finally {
+        developmentBusy.value = false
+    }
 }
 
 async function toggleInstalledPlugin(pluginId: string, enabled: boolean) {
@@ -530,11 +581,14 @@ onBeforeUnmount(() => {
 <style scoped>
 .plugin-pane {
     display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
     gap: 16px;
     min-width: 0;
     max-width: 100%;
+    height: 100%;
     overflow-x: hidden;
     container-type: inline-size;
+    min-height: 0;
 }
 
 .plugin-pane-header {
@@ -570,6 +624,7 @@ onBeforeUnmount(() => {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     min-width: 0;
+    align-items: stretch;
 }
 
 .plugin-refresh-btn {
@@ -579,6 +634,7 @@ onBeforeUnmount(() => {
 
 .plugin-action-card {
     width: 100%;
+    min-height: 92px;
     display: grid;
     grid-template-columns: 32px minmax(0, 1fr) auto;
     align-items: center;
@@ -631,6 +687,11 @@ onBeforeUnmount(() => {
     color: #059669;
 }
 
+.plugin-action-icon-ghost {
+    background: rgba(148, 163, 184, 0.14);
+    color: var(--text-secondary);
+}
+
 .plugin-action-copy {
     min-width: 0;
     display: grid;
@@ -676,6 +737,24 @@ onBeforeUnmount(() => {
 .plugin-action-badge-dev {
     background: rgba(16, 185, 129, 0.12);
     color: #059669;
+}
+
+.plugin-action-card-ghost {
+    cursor: default;
+    opacity: 1;
+    user-select: none;
+}
+
+.plugin-action-card.plugin-action-card-ghost:hover {
+    border-color: var(--border-color);
+    background: var(--bg-secondary);
+    box-shadow: none;
+    transform: none;
+}
+
+.plugin-action-badge-ghost {
+    background: rgba(148, 163, 184, 0.14);
+    color: var(--text-secondary);
 }
 
 .plugin-btn {
@@ -827,8 +906,24 @@ onBeforeUnmount(() => {
 .plugin-section {
     display: grid;
     gap: 10px;
-    min-height: 260px;
+    flex: 1 1 auto;
     min-width: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    align-content: start;
+    min-height: 0;
+    padding-right: 4px;
+}
+
+.plugin-scroll-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+    overflow-x: hidden;
 }
 
 .plugin-list,
@@ -908,8 +1003,8 @@ onBeforeUnmount(() => {
 
 .plugin-compact-item {
     display: grid;
-    grid-template-columns: minmax(140px, 1fr) minmax(0, 1.25fr) max-content;
-    align-items: center;
+    grid-template-columns: minmax(140px, 1fr) minmax(0, 1.35fr);
+    align-items: start;
     gap: 12px;
     padding: 10px 12px;
     border: 1px solid var(--border-color);
@@ -923,6 +1018,13 @@ onBeforeUnmount(() => {
     display: flex;
     align-items: center;
     gap: 10px;
+    align-self: start;
+}
+
+.plugin-compact-body {
+    min-width: 0;
+    align-self: start;
+    padding-top: 2px;
 }
 
 .plugin-compact-copy {
@@ -992,9 +1094,7 @@ onBeforeUnmount(() => {
     color: var(--text-secondary);
     font-size: 12px;
     line-height: 1.45;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
 }
 
 .plugin-meta-line,
@@ -1031,6 +1131,7 @@ onBeforeUnmount(() => {
     align-items: center;
     margin-top: 0;
     min-width: 0;
+    min-height: 22px;
 }
 
 .plugin-tag {
@@ -1090,6 +1191,81 @@ onBeforeUnmount(() => {
 .plugin-card-actions {
     display: flex;
     justify-content: flex-end;
+}
+
+.plugin-development-list {
+    gap: 10px;
+}
+
+.plugin-development-card {
+    display: grid;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    min-width: 0;
+}
+
+.plugin-development-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+
+.plugin-development-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.plugin-node-mark-dev {
+    flex-shrink: 0;
+}
+
+.plugin-development-copy {
+    min-width: 0;
+}
+
+.plugin-development-description {
+    margin: 0;
+    color: var(--text-primary);
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+
+.plugin-development-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.plugin-development-path {
+    color: var(--text-secondary);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.plugin-development-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+
+.plugin-development-kinds {
+    min-width: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .plugin-toggle {

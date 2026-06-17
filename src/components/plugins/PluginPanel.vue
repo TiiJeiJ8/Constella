@@ -64,7 +64,9 @@ const closeLabel = computed(() => locale.value === 'zh-CN' ? '关闭插件面板
     bottom: 24px;
     transform: translateX(-50%);
     width: min(1080px, calc(100vw - 32px));
-    max-height: calc(100vh - 48px);
+    height: min(760px, calc(100vh - 48px));
+    display: flex;
+    flex-direction: column;
     border-radius: 12px;
     background: var(--bg-primary);
     border: 1px solid var(--border-color);
@@ -113,8 +115,10 @@ const closeLabel = computed(() => locale.value === 'zh-CN' ? '关闭插件面板
 
 .plugin-panel-body {
     padding: 22px 24px 24px;
-    overflow: auto;
-    max-height: calc(100vh - 140px);
+    height: calc(100% - 71px);
+    overflow: hidden;
+    box-sizing: border-box;
+    min-height: 0;
 }
 
 .overlay-enter-active,
