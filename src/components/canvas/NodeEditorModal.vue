@@ -453,39 +453,6 @@
                         </div>
 
                         <div class="editor-body" :class="editorBodyClass" @pointerdown="handleWorkspacePointerDown">
-                            <div
-                                v-if="showPreviewPane && outlineItems.length > 0"
-                                ref="outlineShellRef"
-                                class="editor-outline-shell"
-                                :class="{ open: outlineOpen }"
-                                @pointerdown.stop
-                            >
-                                <button
-                                    type="button"
-                                    class="outline-toggle"
-                                    :class="{ open: outlineOpen, armed: outlineHintActive }"
-                                    @click="outlineOpen = !outlineOpen"
-                                >
-                                    <span class="outline-toggle-icon">{{ outlineOpen ? '‹' : '›' }}</span>
-                                </button>
-
-                                <Transition name="outline-float">
-                                    <aside v-if="outlineOpen" class="outline-pane">
-                                        <div class="outline-header">{{ outlineTitle }}</div>
-                                        <button
-                                            v-for="item in outlineItems"
-                                            :key="item.id"
-                                            type="button"
-                                            class="outline-item"
-                                            :class="[`level-${item.level}`, { active: activeOutlineId === item.id }]"
-                                            @click="scrollToOutlineItem(item)"
-                                        >
-                                            {{ item.text }}
-                                        </button>
-                                    </aside>
-                                </Transition>
-                            </div>
-
                             <div v-if="showEditorPane" class="edit-pane" :style="editPaneStyle">
                                 <div class="pane-header-row">
                                     <div class="pane-header">{{ t('canvas.editor.edit') }}</div>
@@ -530,12 +497,10 @@
                                         @input="handleInput"
                                         @keydown="handleKeyDown"
                                         @paste="handlePaste"
-                                        @wheel="markEditorIntent"
-                                        @pointerdown="markEditorIntent"
                                         @scroll="handleEditorScroll"
-                                        @select="handleSelection($event)"
-                                        @click="handleCursorChange($event)"
-                                        @keyup="handleCursorChange($event)"
+                                        @select="handleSelection"
+                                        @click="handleCursorChange"
+                                        @keyup="handleCursorChange"
                                     />
                                     <div
                                         v-for="cursor in remoteCursors"
@@ -596,7 +561,7 @@
                                 </div>
 
                                 <div class="preview-layout">
-                                    <div ref="previewRef" class="preview-content" :style="previewContentStyle" @click="handlePreviewClick" @wheel="markPreviewIntent" @pointerdown="markPreviewIntent" @scroll="handlePreviewScroll">
+                                    <div ref="previewRef" class="preview-content" :style="previewContentStyle" @click="handlePreviewClick" @scroll="handlePreviewScroll">
                                         <div v-if="previewBlocks.length === 0" class="preview-empty">
                                             {{ t('canvas.editor.previewArea') }}
                                         </div>
@@ -646,7 +611,7 @@
                         :aria-label="outlineTitle"
                         @click="outlineOpen = !outlineOpen"
                     >
-                        <span class="outline-toggle-icon">{{ outlineOpen ? '‹' : '›' }}</span>
+                        <span class="outline-toggle-icon">{{ outlineOpen ? '›' : '‹' }}</span>
                     </button>
 
                     <Transition name="outline-float">
@@ -1065,20 +1030,13 @@ let placeholderCounter = 0
 let mermaidCounter = 0
 let mermaidRenderSequence = 0
 let previewObserver: IntersectionObserver | null = null
-let previewSyncFrame: number | null = null
-let previewRealignFrame: number | null = null
 let previewMermaidReflowTimer: number | null = null
 let previewMermaidSettlingTimer: number | null = null
 let previewMermaidRenderRetryTimer: number | null = null
 let previewMermaidRecoveryAttempts = 0
-let previewIntentReleaseTimer: number | null = null
-let pendingEditorScrollTop = 0
-let syncingSource: 'editor' | 'preview' | null = null
 let editorLayoutResizeObserver: ResizeObserver | null = null
 let previewBlockResizeObserver: ResizeObserver | null = null
-let restoringPreviewSession = false
 let mermaidLayoutSettling = false
-let allowEditorDrivenPreviewSync = true
 let closeEmitTimer: number | null = null
 let pendingPreviewSessionRestore: StoredPreviewSessionState | null = null
 let hasRestoredPreviewSession = false
@@ -1088,7 +1046,6 @@ const PREVIEW_MERMAID_SETTINGS_STORAGE_KEY = 'constella.node-editor.preview-merm
 const EDITOR_SETTINGS_STORAGE_KEY = 'constella.node-editor.settings'
 const SINGLE_COLUMN_BREAKPOINT = 1180
 const SCROLL_TOP_VISIBILITY_THRESHOLD = 220
-const PREVIEW_TOP_SPACER_PX = 170
 const EDITOR_CLOSE_ANIMATION_MS = 220
 
 const md = new MarkdownIt({
@@ -2008,7 +1965,6 @@ function prependToCurrentLine(prefix: string) {
 function handleInput(event: Event) {
     if (isReadOnly.value) return
     const target = event.target as HTMLTextAreaElement
-    markEditorIntent()
     localContent.value = target.value
     emit('update', props.nodeId, target.value)
     checkSlashCommand(target)
@@ -2065,60 +2021,6 @@ async function handleImportFileChange(event: Event) {
     }
 }
 
-function syncPreviewFromEditor() {
-    if (restoringPreviewSession) return
-    if (!allowEditorDrivenPreviewSync) return
-    if (syncingSource === 'preview') return
-    const textarea = textareaRef.value
-    const preview = previewRef.value
-    if (!textarea || !preview) return
-    const metrics = editorBlockMetrics.value
-    if (metrics.length === 0) return
-    pendingEditorScrollTop = textarea.scrollTop
-    if (previewSyncFrame !== null) return
-    previewSyncFrame = requestAnimationFrame(() => {
-        const lineHeight = 27
-        const totalLines = Math.max(1, lineStartOffsets.value.length)
-        const anchorLine = Math.max(0, Math.min(
-            totalLines - 1,
-            Math.floor((pendingEditorScrollTop + (textarea.clientHeight * 0.24)) / lineHeight)
-        ))
-        let safeBlockIndex = metrics.findIndex(metric => anchorLine <= metric.lineEnd)
-        if (safeBlockIndex === -1) safeBlockIndex = metrics.length - 1
-        const currentMetric = metrics[safeBlockIndex]
-        if (!currentMetric) {
-            previewSyncFrame = null
-            return
-        }
-        const currentElement = preview.querySelector<HTMLElement>(`[data-preview-block-id="${currentMetric.id}"]`)
-        if (!currentElement) {
-            previewSyncFrame = null
-            return
-        }
-
-        const blockProgress = Math.min(1, Math.max(
-            0,
-            (anchorLine - currentMetric.lineStart) / Math.max(1, currentMetric.lineCount)
-        ))
-        const currentTop = currentElement.offsetTop
-        const currentHeight = currentElement.offsetHeight
-        const nextMetric = safeBlockIndex < metrics.length - 1 ? metrics[safeBlockIndex + 1] : undefined
-        const nextElement = safeBlockIndex < metrics.length - 1
-            ? preview.querySelector<HTMLElement>(`[data-preview-block-id="${nextMetric?.id ?? ''}"]`)
-            : null
-        const nextTop = nextElement?.offsetTop ?? (currentTop + currentHeight)
-        const interpolatedTop = currentTop + ((nextTop - currentTop) * blockProgress)
-        const targetScrollTop = Math.max(0, interpolatedTop - PREVIEW_TOP_SPACER_PX - (preview.clientHeight * 0.2))
-        syncingSource = 'editor'
-        preview.scrollTop = Math.round(targetScrollTop)
-        updateActiveOutline()
-        previewSyncFrame = null
-        window.setTimeout(() => {
-            if (syncingSource === 'editor') syncingSource = null
-        }, 24)
-    })
-}
-
 function updateActiveOutline() {
     const preview = previewRef.value
     if (!preview || outlineItems.value.length === 0) {
@@ -2152,7 +2054,6 @@ function updateActiveOutline() {
 }
 
 function handlePreviewScroll() {
-    markPreviewIntent()
     const preview = previewRef.value
     previewScrollTop.value = preview?.scrollTop ?? 0
     updateActiveOutline()
@@ -2171,16 +2072,7 @@ function handleWorkspacePointerDown(event: PointerEvent) {
 }
 
 function requestPreviewRealignment() {
-    if (restoringPreviewSession) return
-    if (!allowEditorDrivenPreviewSync) return
-    if (mermaidLayoutSettling) return
-    if (syncingSource === 'preview') return
-    if (!showEditorPane.value || !showPreviewPane.value) return
-    if (previewRealignFrame !== null) return
-    previewRealignFrame = requestAnimationFrame(() => {
-        previewRealignFrame = null
-        syncPreviewFromEditor()
-    })
+    updateActiveOutline()
 }
 
 function blockContainsMermaidContent(element: Element) {
@@ -2199,7 +2091,6 @@ function setupPreviewBlockResizeObserver() {
     previewBlockResizeObserver = new ResizeObserver((entries) => {
         if (entries.length === 0) return
         if (mermaidLayoutSettling) return
-        if (syncingSource === 'preview') return
         if (entries.some(entry => blockContainsMermaidContent(entry.target))) return
         requestPreviewRealignment()
     })
@@ -2212,32 +2103,7 @@ function setupPreviewBlockResizeObserver() {
 function handleEditorScroll() {
     const textarea = textareaRef.value
     editorScrollTop.value = textarea?.scrollTop ?? 0
-    if (!restoringPreviewSession) {
-        syncPreviewFromEditor()
-    }
     persistPreviewSessionState()
-}
-
-function markEditorIntent() {
-    allowEditorDrivenPreviewSync = true
-    if (previewIntentReleaseTimer !== null) {
-        window.clearTimeout(previewIntentReleaseTimer)
-        previewIntentReleaseTimer = null
-    }
-    if (syncingSource === 'preview') {
-        syncingSource = null
-    }
-}
-
-function markPreviewIntent() {
-    syncingSource = 'preview'
-    if (previewIntentReleaseTimer !== null) {
-        window.clearTimeout(previewIntentReleaseTimer)
-    }
-    previewIntentReleaseTimer = window.setTimeout(() => {
-        if (syncingSource === 'preview') syncingSource = null
-        previewIntentReleaseTimer = null
-    }, 1200)
 }
 
 function handleBackToTop() {
@@ -2601,32 +2467,6 @@ function animateScrollTop(element: HTMLElement, targetScrollTop: number, duratio
     requestAnimationFrame(step)
 }
 
-function focusEditorAtOffset(offset: number) {
-    const textarea = textareaRef.value
-    if (!textarea) return
-
-    markEditorIntent()
-    const safeOffset = Math.max(0, Math.min(localContent.value.length, offset))
-    const lineHeight = 27
-    const lineIndex = localContent.value.slice(0, safeOffset).split('\n').length - 1
-    const targetScrollTop = Math.max(0, (lineIndex * lineHeight) - (textarea.clientHeight * 0.28))
-
-    textarea.focus()
-    textarea.setSelectionRange(safeOffset, safeOffset)
-    animateScrollTop(textarea, targetScrollTop)
-    editorSelectionStart.value = safeOffset
-    awareness.updateTextCursor?.(props.nodeId, safeOffset, safeOffset)
-    window.setTimeout(() => {
-        syncPreviewFromEditor()
-    }, 40)
-}
-
-function focusEditorAtBlock(blockId: string) {
-    const metric = editorBlockMetrics.value.find(item => item.id === blockId)
-    if (!metric) return
-    focusEditorAtOffset(metric.start)
-}
-
 function handleOverlayPointerMove(event: MouseEvent) {
     outlineHintActive.value = event.clientX <= 120
 }
@@ -2660,17 +2500,12 @@ function handlePreviewClick(event: MouseEvent) {
         return
     }
 
-    const blockElement = target?.closest<HTMLElement>('[data-preview-block-id]')
-    const blockId = blockElement?.dataset.previewBlockId
-    if (!blockId) return
-
-    focusEditorAtBlock(blockId)
+    updateActiveOutline()
 }
 
 function handlePaste(event: ClipboardEvent) {
     if (isReadOnly.value) return
     if (!isMarkdown.value || !textareaRef.value) return
-    markEditorIntent()
     const clipboardText = event.clipboardData?.getData('text/plain')?.trim()
     if (!clipboardText) return
     const textarea = textareaRef.value
@@ -2692,19 +2527,15 @@ function handlePaste(event: ClipboardEvent) {
     }
 }
 
-function handleSelection(event?: Event) {
-    handleCursorChange(event)
+function handleSelection() {
+    handleCursorChange()
 }
 
-function handleCursorChange(event?: Event) {
+function handleCursorChange() {
     const textarea = textareaRef.value
     if (!textarea) return
-    if (event?.isTrusted) {
-        markEditorIntent()
-    }
     editorSelectionStart.value = textarea.selectionStart
     awareness.updateTextCursor?.(props.nodeId, textarea.selectionStart, textarea.selectionEnd)
-    syncPreviewFromEditor()
 }
 
 function checkSlashCommand(textarea: HTMLTextAreaElement) {
@@ -2918,10 +2749,6 @@ function handleKeyDown(event: KeyboardEvent) {
         return
     }
 
-    if (event.isTrusted) {
-        markEditorIntent()
-    }
-
     if (replaceBarOpen.value && event.key === 'Escape') {
         event.preventDefault()
         event.stopPropagation()
@@ -3036,7 +2863,6 @@ function setCurrentCodeFenceLanguage(language: string) {
 function scrollToOutlineItem(item: OutlineItem) {
     activeOutlineId.value = item.id
     previewRef.value?.querySelector<HTMLElement>(`#${item.anchorId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    focusEditorAtBlock(item.blockId)
 }
 
 function focusSearchInput() {
@@ -3224,7 +3050,6 @@ function restorePreviewSessionIfNeeded() {
     const preview = previewRef.value
     if (!textarea || !preview) return
 
-    restoringPreviewSession = true
     const session = pendingPreviewSessionRestore
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -3236,7 +3061,6 @@ function restorePreviewSessionIfNeeded() {
             persistPreviewSessionState()
             hasRestoredPreviewSession = true
             pendingPreviewSessionRestore = null
-            restoringPreviewSession = false
         })
     })
 }
@@ -3442,7 +3266,6 @@ onMounted(() => {
     readStoredEditorSettings()
     nextTick(() => {
         const storedSession = getStoredPreviewSessionState()
-        allowEditorDrivenPreviewSync = Boolean(storedSession)
         pendingPreviewSessionRestore = storedSession
         hasRestoredPreviewSession = false
         overlayRef.value?.focus()
@@ -3597,12 +3420,6 @@ onUnmounted(() => {
         window.clearTimeout(closeEmitTimer)
         closeEmitTimer = null
     }
-    if (previewSyncFrame !== null) {
-        cancelAnimationFrame(previewSyncFrame)
-    }
-    if (previewRealignFrame !== null) {
-        cancelAnimationFrame(previewRealignFrame)
-    }
     if (previewMermaidReflowTimer !== null) {
         window.clearTimeout(previewMermaidReflowTimer)
         previewMermaidReflowTimer = null
@@ -3614,10 +3431,6 @@ onUnmounted(() => {
     if (previewMermaidRenderRetryTimer !== null) {
         window.clearTimeout(previewMermaidRenderRetryTimer)
         previewMermaidRenderRetryTimer = null
-    }
-    if (previewIntentReleaseTimer !== null) {
-        window.clearTimeout(previewIntentReleaseTimer)
-        previewIntentReleaseTimer = null
     }
     previewObserver?.disconnect()
     editorLayoutResizeObserver?.disconnect()
@@ -3755,9 +3568,7 @@ onUnmounted(() => {
 .editor-textarea { resize: none; border: none; outline: none; background: transparent; color: rgba(255, 255, 255, 0.92); caret-color: #60a5fa; font-family: 'JetBrains Mono', 'Fira Code', monospace; }
 .editor-textarea::placeholder { color: rgba(255, 255, 255, 0.25); }
 .preview-layout { position: relative; flex: 1; min-height: 0; display: flex; }
-.editor-outline-shell { display: none; }
-.editor-outline-shell.open { display: none; }
-.outline-floating-shell { position: fixed; top: 50%; left: 18px; z-index: 18; display: flex; align-items: center; gap: 10px; transform: translateY(-50%); pointer-events: auto; }
+.outline-floating-shell { position: fixed; top: 50%; right: 18px; z-index: 18; display: flex; flex-direction: row-reverse; align-items: center; gap: 10px; transform: translateY(-50%); pointer-events: auto; }
 .outline-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; min-height: 120px; padding: 14px 0; border-radius: 999px; opacity: 0.72; background: rgba(20, 24, 31, 0.58); color: rgba(255, 255, 255, 0.68); backdrop-filter: blur(16px); box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16); }
 .outline-toggle.armed { background: rgba(20, 24, 31, 0.78); color: rgba(255, 255, 255, 0.9); box-shadow: 0 16px 32px rgba(0, 0, 0, 0.22); }
 .outline-toggle.open { opacity: 1; background: rgba(59, 130, 246, 0.2); color: #dbeafe; box-shadow: 0 14px 34px rgba(37, 99, 235, 0.18); }
@@ -3885,7 +3696,7 @@ onUnmounted(() => {
 @keyframes preview-block-enter { from { opacity: 0; transform: translateY(10px) scale(0.992); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes placeholder-sheen { from { transform: translateX(-120%); } to { transform: translateX(120%); } }
 .outline-float-enter-active, .outline-float-leave-active { transition: opacity 0.22s ease, transform 0.22s ease; }
-.outline-float-enter-from, .outline-float-leave-to { opacity: 0; transform: translateX(-10px) scale(0.98); }
+.outline-float-enter-from, .outline-float-leave-to { opacity: 0; transform: translateX(10px) scale(0.98); }
 .image-lightbox { position: fixed; inset: 0; z-index: 10040; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 32px; background: rgba(5, 8, 14, 0.82); backdrop-filter: blur(12px); }
 .image-lightbox-close { position: absolute; top: 20px; right: 24px; width: 40px; height: 40px; border: none; border-radius: 999px; background: rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.88); font-size: 28px; line-height: 1; cursor: pointer; }
 .image-lightbox-media { max-width: min(92vw, 1440px); max-height: calc(100vh - 120px); border-radius: 18px; box-shadow: 0 26px 60px rgba(0, 0, 0, 0.35); object-fit: contain; background: rgba(255, 255, 255, 0.04); }

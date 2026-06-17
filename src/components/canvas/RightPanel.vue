@@ -319,8 +319,8 @@
                             </button>
                         </div>
 
-                        <div v-if="sortedNodes.length > 0" class="layers-list">
-                            <div v-for="node in sortedNodes" :key="node.id" class="layer-item" :class="{ selected: isNodeSelected(node.id) }" @click="$emit('node-select', node.id)">
+                        <div v-if="orderedNodes.length > 0" class="layers-list">
+                            <div v-for="node in orderedNodes" :key="node.id" class="layer-item" :class="{ selected: isNodeSelected(node.id) }" @click="$emit('node-select', node.id)">
                                 <span class="layer-icon" :class="getKindClass(node.content?.kind || 'blank')">{{ getNodeInitial(node) }}</span>
                                 <span class="layer-name">{{ getNodeName(node) }}</span>
                                 <span class="layer-zindex">{{ node.zIndex || 0 }}</span>
@@ -400,7 +400,7 @@ const edgeTypes = computed(() => [
 
 const availableKinds = computed(() => {
     pluginCatalogVersion.value
-    return [...getPluginsMeta()].sort(compareKinds)
+    return getPluginsMeta()
 })
 
 const currentNodeMeta = computed(() => {
@@ -410,22 +410,13 @@ const currentNodeMeta = computed(() => {
     return kind ? getPluginsMeta().find(item => item.kind === kind) || null : null
 })
 
-const sortedNodes = computed(() => [...props.allNodes].sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0)))
+const orderedNodes = computed(() => props.allNodes)
 const selectedEdge = computed(() => props.selectedEdges?.length === 1 ? props.selectedEdges[0] : null)
 const edgeLabelDraft = ref('')
 const focusedEdgeLabelId = ref(null)
 const nodeKindQuery = ref('')
 const activeNodeKindTags = ref([])
 const coreKindPriority = ['text', 'markdown', 'image', 'hyperlink', 'quote-card', 'blank']
-
-const nodeKindUsage = computed(() => {
-    const usage = new Map()
-    for (const node of props.allNodes || []) {
-        const kind = node.content?.kind || 'blank'
-        usage.set(kind, (usage.get(kind) || 0) + 1)
-    }
-    return usage
-})
 
 const filteredAvailableKinds = computed(() => {
     const query = nodeKindQuery.value.trim().toLowerCase()
@@ -524,27 +515,6 @@ function getKindTags(kind) {
     if (kind.supportsFontSizeControl) tags.push('font-size')
     tags.push(kind.kind)
     return tags
-}
-
-function compareKinds(left, right) {
-    const leftUsage = nodeKindUsage.value.get(left.kind) || 0
-    const rightUsage = nodeKindUsage.value.get(right.kind) || 0
-    if (leftUsage !== rightUsage) return rightUsage - leftUsage
-
-    const leftPriority = getKindPriority(left)
-    const rightPriority = getKindPriority(right)
-    if (leftPriority !== rightPriority) return leftPriority - rightPriority
-
-    if (left.editable !== right.editable) return left.editable ? -1 : 1
-    if (left.supportsCardMode !== right.supportsCardMode) return left.supportsCardMode ? -1 : 1
-
-    return getKindLabel(left).localeCompare(getKindLabel(right), locale.value)
-}
-
-function getKindPriority(kind) {
-    const index = coreKindPriority.indexOf(kind.kind)
-    if (index >= 0) return index
-    return kind.editable ? 100 : 200
 }
 
 function getNodeName(node) {
