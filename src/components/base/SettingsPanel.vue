@@ -1223,11 +1223,15 @@ void syncWindowState().finally(() => {
     flex: 1;
     padding: clamp(18px, 2.4vw, 24px);
     overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
     min-width: 0;
 }
 
 .settings-section {
     animation: fadeIn 0.3s ease;
+    min-width: 0;
+    max-width: 100%;
 }
 
 @keyframes fadeIn {

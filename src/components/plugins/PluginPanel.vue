@@ -65,7 +65,7 @@ const closeLabel = computed(() => locale.value === 'zh-CN' ? '关闭插件面板
     transform: translateX(-50%);
     width: min(1080px, calc(100vw - 32px));
     max-height: calc(100vh - 48px);
-    border-radius: 28px;
+    border-radius: 12px;
     background: var(--bg-primary);
     border: 1px solid var(--border-color);
     box-shadow: 0 28px 80px rgba(15, 23, 42, 0.22);
@@ -97,7 +97,7 @@ const closeLabel = computed(() => locale.value === 'zh-CN' ? '关闭插件面板
 .plugin-panel-close {
     width: 40px;
     height: 40px;
-    border-radius: 50%;
+    border-radius: 8px;
     border: none;
     background: var(--bg-tertiary);
     color: var(--text-primary);

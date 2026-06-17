@@ -64,20 +64,41 @@
 
                         <template v-else-if="selectedNodes.length === 1">
                             <div class="property-group">
-                                <label class="property-label">{{ t('canvas.properties.nodeType') }}</label>
-                                <div class="type-selector">
+                                <div class="node-kind-toolbar">
+                                    <div class="node-kind-heading">
+                                        <span class="node-kind-title">{{ t('canvas.properties.nodeType') }}</span>
+                                        <span class="node-kind-count">{{ filteredAvailableKinds.length }}/{{ availableKinds.length }}</span>
+                                    </div>
+                                    <div class="node-kind-search">
+                                        <span class="node-kind-search-glyph" aria-hidden="true"></span>
+                                        <input
+                                            v-model="nodeKindQuery"
+                                            type="search"
+                                            class="node-kind-search-input"
+                                            :placeholder="locale === 'zh-CN' ? '搜索' : 'Search'"
+                                        />
+                                    </div>
+                                </div>
+                                <div class="node-kind-library">
                                     <button
-                                        v-for="kind in availableKinds"
+                                        v-for="kind in filteredAvailableKinds"
                                         :key="kind.kind"
-                                        class="type-btn"
+                                        class="node-kind-option"
                                         :class="{ active: selectedNodes[0].content?.kind === kind.kind }"
                                         :disabled="!canEditCanvas"
-                                        :title="te('canvas.nodeTypeDesc.' + kind.kind) ? t('canvas.nodeTypeDesc.' + kind.kind) : kind.description"
+                                        :title="getKindDescription(kind)"
                                         @click="$emit('node-kind-change', selectedNodes[0].id, kind.kind)"
                                     >
-                                        <span class="type-icon">{{ kind.icon }}</span>
-                                        <span class="type-name">{{ te('canvas.nodeTypes.' + kind.kind) ? t('canvas.nodeTypes.' + kind.kind) : kind.label }}</span>
+                                        <span class="node-kind-mark" :class="getKindClass(kind.kind)">{{ getKindInitial(kind) }}</span>
+                                        <span class="node-kind-copy">
+                                            <span class="node-kind-name">{{ getKindLabel(kind) }}</span>
+                                            <span class="node-kind-description">{{ getKindDescription(kind) }}</span>
+                                        </span>
+                                        <span class="node-kind-tag">{{ kind.editable ? (locale === 'zh-CN' ? '可编辑' : 'Edit') : (locale === 'zh-CN' ? '只读' : 'View') }}</span>
                                     </button>
+                                    <div v-if="filteredAvailableKinds.length === 0" class="node-kind-empty">
+                                        {{ locale === 'zh-CN' ? '没有匹配的节点类型' : 'No matching node types' }}
+                                    </div>
                                 </div>
                             </div>
 
@@ -300,7 +321,7 @@
 
                         <div v-if="sortedNodes.length > 0" class="layers-list">
                             <div v-for="node in sortedNodes" :key="node.id" class="layer-item" :class="{ selected: isNodeSelected(node.id) }" @click="$emit('node-select', node.id)">
-                                <span class="layer-icon">{{ getNodeIcon(node) }}</span>
+                                <span class="layer-icon" :class="getKindClass(node.content?.kind || 'blank')">{{ getNodeInitial(node) }}</span>
                                 <span class="layer-name">{{ getNodeName(node) }}</span>
                                 <span class="layer-zindex">{{ node.zIndex || 0 }}</span>
                             </div>
@@ -379,7 +400,7 @@ const edgeTypes = computed(() => [
 
 const availableKinds = computed(() => {
     pluginCatalogVersion.value
-    return getPluginsMeta()
+    return [...getPluginsMeta()].sort(compareKinds)
 })
 
 const currentNodeMeta = computed(() => {
@@ -393,6 +414,37 @@ const sortedNodes = computed(() => [...props.allNodes].sort((a, b) => (b.zIndex 
 const selectedEdge = computed(() => props.selectedEdges?.length === 1 ? props.selectedEdges[0] : null)
 const edgeLabelDraft = ref('')
 const focusedEdgeLabelId = ref(null)
+const nodeKindQuery = ref('')
+const activeNodeKindTags = ref([])
+const coreKindPriority = ['text', 'markdown', 'image', 'hyperlink', 'quote-card', 'blank']
+
+const nodeKindUsage = computed(() => {
+    const usage = new Map()
+    for (const node of props.allNodes || []) {
+        const kind = node.content?.kind || 'blank'
+        usage.set(kind, (usage.get(kind) || 0) + 1)
+    }
+    return usage
+})
+
+const filteredAvailableKinds = computed(() => {
+    const query = nodeKindQuery.value.trim().toLowerCase()
+    if (!query) return availableKinds.value
+
+    return availableKinds.value
+        .filter(kind => {
+            const haystack = [
+                kind.kind,
+                getKindLabel(kind),
+                getKindDescription(kind),
+                ...getKindTags(kind)
+            ].join(' ').toLowerCase()
+            const matchesQuery = haystack.includes(query)
+            const matchesTags = activeNodeKindTags.value.length === 0 ||
+                activeNodeKindTags.value.every(tag => getKindTags(kind).includes(tag))
+            return matchesQuery && matchesTags
+        })
+})
 
 watch(
     () => ({
@@ -439,11 +491,60 @@ function isNodeSelected(nodeId) {
     return props.selectedNodes.some(node => node.id === nodeId)
 }
 
-function getNodeIcon(node) {
+function getKindLabel(kind) {
+    return te('canvas.nodeTypes.' + kind.kind) ? t('canvas.nodeTypes.' + kind.kind) : kind.label
+}
+
+function getKindDescription(kind) {
+    return te('canvas.nodeTypeDesc.' + kind.kind) ? t('canvas.nodeTypeDesc.' + kind.kind) : kind.description
+}
+
+function getKindInitial(kind) {
+    const label = getKindLabel(kind).trim()
+    return (label[0] || kind.kind[0] || 'N').toUpperCase()
+}
+
+function getNodeInitial(node) {
     pluginCatalogVersion.value
     const kind = node.content?.kind || 'blank'
     const meta = getPluginsMeta().find(item => item.kind === kind)
-    return meta?.icon || 'N'
+    return meta ? getKindInitial(meta) : 'N'
+}
+
+function getKindClass(kind) {
+    const normalized = (kind || 'blank').replace(/[^a-z0-9]+/gi, '-').toLowerCase()
+    return `node-kind-${normalized}`
+}
+
+function getKindTags(kind) {
+    const tags = []
+    if (coreKindPriority.includes(kind.kind)) tags.push('builtin')
+    if (kind.editable) tags.push('editable')
+    if (kind.supportsCardMode) tags.push('card')
+    if (kind.supportsFontSizeControl) tags.push('font-size')
+    tags.push(kind.kind)
+    return tags
+}
+
+function compareKinds(left, right) {
+    const leftUsage = nodeKindUsage.value.get(left.kind) || 0
+    const rightUsage = nodeKindUsage.value.get(right.kind) || 0
+    if (leftUsage !== rightUsage) return rightUsage - leftUsage
+
+    const leftPriority = getKindPriority(left)
+    const rightPriority = getKindPriority(right)
+    if (leftPriority !== rightPriority) return leftPriority - rightPriority
+
+    if (left.editable !== right.editable) return left.editable ? -1 : 1
+    if (left.supportsCardMode !== right.supportsCardMode) return left.supportsCardMode ? -1 : 1
+
+    return getKindLabel(left).localeCompare(getKindLabel(right), locale.value)
+}
+
+function getKindPriority(kind) {
+    const index = coreKindPriority.indexOf(kind.kind)
+    if (index >= 0) return index
+    return kind.editable ? 100 : 200
 }
 
 function getNodeName(node) {
@@ -483,8 +584,36 @@ html[data-theme='dark'] .collapse-btn-inline:hover{background:rgba(255,255,255,.
 .type-selector{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .type-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;background:var(--bg-secondary);border:2px solid transparent;border-radius:8px;cursor:pointer;transition:all .2s ease}
 .type-btn:hover{background:var(--bg-tertiary);border-color:var(--border-color)}.type-btn.active{background:rgba(102,126,234,.1);border-color:var(--color-primary)}
-.type-btn:disabled,.mode-btn:disabled,.layer-btn:disabled,.danger-btn:disabled,.text-input:read-only,.arrow-select-group select:disabled,.color-input-group input[type="color"]:disabled,.size-input-group input[type="number"]:disabled,.position-input-row input[type="number"]:disabled,.checkbox-group input[type="checkbox"]:disabled{opacity:.6;cursor:not-allowed}
-.type-icon{font-size:20px}.type-svg{width:20px;height:20px;display:block}.type-name{font-size:11px;color:var(--text-primary);font-weight:500}
+.node-kind-option:disabled,.type-btn:disabled,.mode-btn:disabled,.layer-btn:disabled,.danger-btn:disabled,.text-input:read-only,.arrow-select-group select:disabled,.color-input-group input[type="color"]:disabled,.size-input-group input[type="number"]:disabled,.position-input-row input[type="number"]:disabled,.checkbox-group input[type="checkbox"]:disabled{opacity:.6;cursor:not-allowed}
+.type-svg{width:20px;height:20px;display:block}.type-name{font-size:11px;color:var(--text-primary);font-weight:500}
+.node-kind-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:32px}
+.node-kind-heading{min-width:0;display:flex;align-items:center;gap:7px}
+.node-kind-title{font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.node-kind-count{height:18px;min-width:28px;padding:0 6px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:var(--bg-tertiary);color:var(--text-tertiary);font-size:10px;font-weight:700}
+.node-kind-library{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;padding-right:0;scrollbar-width:none;-ms-overflow-style:none}
+.node-kind-library::-webkit-scrollbar{display:none}
+.node-kind-search{flex:0 1 112px;display:flex;align-items:center;gap:8px;height:30px;padding:0 10px;background:rgba(0,0,0,.05);border:1px solid transparent;border-radius:15px;color:var(--text-secondary);transition:flex-basis .28s cubic-bezier(.4,0,.2,1),background-color .2s ease,border-color .2s ease,box-shadow .2s ease}
+html[data-theme='dark'] .node-kind-search{background:rgba(255,255,255,.05)}
+.node-kind-search:hover{background:rgba(103,126,234,.08);border-color:rgba(103,126,234,.14)}
+.node-kind-search:focus-within{flex-basis:148px;background:var(--bg-primary);border-color:rgba(103,126,234,.24);box-shadow:0 4px 14px rgba(0,0,0,.06)}
+html[data-theme='dark'] .node-kind-search:focus-within{background:rgba(255,255,255,.07);box-shadow:0 4px 14px rgba(0,0,0,.22)}
+.node-kind-search-glyph{width:12px;height:12px;border:1.8px solid currentColor;border-radius:50%;position:relative;display:inline-block;color:var(--text-secondary);flex-shrink:0;transition:color .2s ease}
+.node-kind-search-glyph::after{content:'';position:absolute;width:6px;height:1.8px;border-radius:2px;background:currentColor;right:-4px;bottom:-2px;transform:rotate(45deg);transform-origin:center}
+.node-kind-search:focus-within .node-kind-search-glyph{color:var(--color-primary)}
+.node-kind-search-input{min-width:0;flex:1;height:100%;padding:0;background:transparent;border:none;color:var(--text-primary);font-size:12px}
+.node-kind-search-input:focus{outline:none}
+.node-kind-search-input::placeholder{color:var(--text-tertiary)}
+.node-kind-option{width:100%;display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg-secondary);border:1px solid transparent;border-radius:8px;color:var(--text-primary);cursor:pointer;text-align:left;transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease,transform .2s ease}
+.node-kind-option:hover{background:var(--bg-tertiary);border-color:var(--border-color);transform:translateY(-1px)}
+.node-kind-option.active{background:color-mix(in srgb,var(--bg-secondary) 82%,var(--color-primary) 18%);border-color:color-mix(in srgb,var(--color-primary) 58%,var(--border-color) 42%);box-shadow:0 6px 18px rgba(102,126,234,.14)}
+.node-kind-option.active .node-kind-mark{box-shadow:inset 0 0 0 1px currentColor}
+.node-kind-mark,.layer-icon{width:24px;height:24px;flex-shrink:0;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;background:var(--bg-tertiary);color:var(--text-secondary);font-size:11px;font-weight:800;line-height:1;transition:box-shadow .2s ease,transform .2s ease}
+.node-kind-copy{min-width:0;flex:1;display:grid;gap:2px}
+.node-kind-name{font-size:13px;font-weight:650;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.node-kind-description{font-size:11px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.node-kind-tag{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;min-height:18px;padding:2px 6px;border-radius:999px;background:var(--bg-primary);color:var(--text-tertiary);font-size:10px;font-weight:700;line-height:1;text-align:center}
+.node-kind-empty{padding:12px;border:1px dashed var(--border-color);border-radius:8px;color:var(--text-secondary);font-size:12px;text-align:center}
+.node-kind-text{background:rgba(37,99,235,.12);color:#2563eb}.node-kind-markdown{background:rgba(124,58,237,.12);color:#7c3aed}.node-kind-image{background:rgba(5,150,105,.12);color:#059669}.node-kind-hyperlink{background:rgba(14,165,233,.13);color:#0284c7}.node-kind-quote-card{background:rgba(217,119,6,.13);color:#b45309}.node-kind-blank{background:rgba(100,116,139,.14);color:#64748b}
 .color-row,.size-row,.arrows-row{display:flex;gap:16px}.color-input-group,.size-input-group,.arrow-select-group{flex:1}
 .color-input-group,.size-input-group{display:flex;align-items:center;gap:8px}.arrow-select-group{display:flex;flex-direction:column;gap:4px}
 .color-input-group label,.size-input-group label,.position-input-row label,.arrow-select-group label{font-size:12px;color:var(--text-secondary)}
@@ -501,7 +630,7 @@ html[data-theme='dark'] .collapse-btn-inline:hover{background:rgba(255,255,255,.
 .layer-btn:hover{background:var(--bg-tertiary);color:var(--text-primary);border-color:var(--color-primary)}.layer-action-icon{width:16px;height:16px;display:block}
 .layers-list{display:flex;flex-direction:column;gap:4px;flex:1;min-height:0;overflow-y:auto}.layer-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-secondary);border:1px solid transparent;border-radius:8px;cursor:pointer;transition:all .2s ease}
 .layer-item:hover{background:var(--bg-tertiary)}.layer-item.selected{background:var(--color-primary-alpha);border-color:var(--color-primary)}
-.layer-icon{font-size:16px}.layer-name{flex:1;font-size:13px;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.layer-zindex{font-size:11px;color:var(--text-tertiary);padding:2px 6px;background:var(--bg-primary);border-radius:4px}
+.layer-name{flex:1;font-size:13px;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.layer-zindex{font-size:11px;color:var(--text-tertiary);padding:2px 6px;background:var(--bg-primary);border-radius:4px}
 .checkbox-group{display:flex;align-items:center;gap:8px}.checkbox-group input[type="checkbox"]{width:16px;height:16px;cursor:pointer}.checkbox-group label{font-size:13px;color:var(--text-secondary);cursor:pointer}
 .danger-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px;color:#ef4444;font-size:13px;cursor:pointer;transition:all .2s}
 .danger-btn:hover{background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.5)}.danger-icon{width:16px;height:16px;display:block}

@@ -10,42 +10,50 @@
             </button>
         </div>
 
-        <div v-if="supportsPluginManagement" class="plugin-actions-grid">
+        <div v-if="supportsPluginManagement" class="plugin-actions-row">
             <button
                 type="button"
-                class="plugin-import-panel"
+                class="plugin-action-card"
                 :class="{ 'is-busy': busy }"
                 :disabled="busy"
                 @click="openPackagePicker"
             >
-                <span class="plugin-import-glyph" aria-hidden="true">📦</span>
-                <div class="plugin-import-main">
+                <span class="plugin-action-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M5 8.5 12 4l7 4.5v7L12 20l-7-4.5v-7Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7" />
+                        <path d="M5.4 8.7 12 13l6.6-4.3M12 13v6.6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" />
+                    </svg>
+                </span>
+                <div class="plugin-action-copy">
                     <div class="plugin-import-title-row">
-                        <div class="plugin-import-title">{{ busy ? text.packageTitleBusy : text.packageTitle }}</div>
-                        <div class="plugin-import-badge">{{ text.packageBadge }}</div>
+                        <div class="plugin-action-title">{{ busy ? text.packageTitleBusy : text.packageTitle }}</div>
                     </div>
-                    <div class="plugin-import-description">{{ text.packageDescription }}</div>
-                    <div class="plugin-import-hint">{{ text.packageHint }}</div>
+                    <div class="plugin-action-desc">{{ text.packageHint }}</div>
                 </div>
+                <div class="plugin-action-badge">{{ text.packageBadge }}</div>
             </button>
 
             <button
                 v-if="developerMode"
                 type="button"
-                class="plugin-import-panel plugin-import-panel-dev"
+                class="plugin-action-card plugin-action-card-dev"
                 :class="{ 'is-busy': busy }"
                 :disabled="busy"
                 @click="openDevelopmentPicker"
             >
-                <span class="plugin-import-glyph plugin-import-glyph-dev" aria-hidden="true">🧪</span>
-                <div class="plugin-import-main">
+                <span class="plugin-action-icon plugin-action-icon-dev" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M9 4.75h6M10 4.75v5.1l-4.2 7.2A2 2 0 0 0 7.52 20h8.96a2 2 0 0 0 1.72-2.95L14 9.85v-5.1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" />
+                        <path d="M8.2 15.5h7.6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.7" />
+                    </svg>
+                </span>
+                <div class="plugin-action-copy">
                     <div class="plugin-import-title-row">
-                        <div class="plugin-import-title">{{ busy ? text.developmentTitleBusy : text.developmentTitle }}</div>
-                        <div class="plugin-import-badge plugin-import-badge-dev">{{ text.developmentBadge }}</div>
+                        <div class="plugin-action-title">{{ busy ? text.developmentTitleBusy : text.developmentTitle }}</div>
                     </div>
-                    <div class="plugin-import-description">{{ text.developmentDescription }}</div>
-                    <div class="plugin-import-hint">{{ text.developmentHint }}</div>
+                    <div class="plugin-action-desc">{{ text.developmentHint }}</div>
                 </div>
+                <div class="plugin-action-badge plugin-action-badge-dev">{{ text.developmentBadge }}</div>
             </button>
         </div>
 
@@ -61,22 +69,76 @@
             <div class="plugin-market-chip">{{ text.marketSoon }}</div>
         </div>
 
-        <div class="plugin-section">
-            <div class="plugin-section-head">
-                <h4>{{ text.builtinTitle }}</h4>
-                <span class="plugin-count">{{ builtinPlugins.length }}</span>
-            </div>
-            <div class="plugin-grid">
-                <article v-for="plugin in builtinPlugins" :key="plugin.kind" class="plugin-card plugin-card-builtin">
-                    <div class="plugin-card-row">
-                        <div class="plugin-icon">{{ plugin.icon }}</div>
+        <div class="plugin-tabs" role="tablist">
+            <button
+                v-for="tab in visiblePluginTabs"
+                :key="tab.id"
+                type="button"
+                class="plugin-tab"
+                :class="{ active: activePluginTab === tab.id }"
+                role="tab"
+                :aria-selected="activePluginTab === tab.id"
+                @click="activePluginTab = tab.id"
+            >
+                <span>{{ tab.label }}</span>
+                <span class="plugin-tab-count">{{ tab.count }}</span>
+            </button>
+        </div>
+
+        <div v-show="activePluginTab === 'installed'" class="plugin-section">
+            <div v-if="installedPlugins.length > 0" class="plugin-list">
+                <article v-for="plugin in installedPlugins" :key="`${plugin.id}:${plugin.version}`" class="plugin-card">
+                    <div class="plugin-card-row plugin-card-row-top">
                         <div>
+                            <div class="plugin-name">{{ plugin.name }}</div>
+                            <div class="plugin-kind">{{ plugin.id }}</div>
+                        </div>
+                        <label class="plugin-toggle">
+                            <input
+                                type="checkbox"
+                                :checked="plugin.enabled"
+                                :disabled="busy"
+                                @change="toggleInstalledPlugin(plugin.id, ($event.target as HTMLInputElement).checked)"
+                            />
+                            <span class="plugin-toggle-track"></span>
+                        </label>
+                    </div>
+
+                    <div class="plugin-meta-line">
+                        <span>v{{ plugin.version }}</span>
+                        <span>{{ text.source }}: {{ plugin.source === 'archive' ? text.packageSource : text.directorySource }}</span>
+                    </div>
+
+                    <p v-if="plugin.description" class="plugin-description">{{ plugin.description }}</p>
+
+                    <div class="plugin-meta-stack">
+                        <div>{{ text.author }}: {{ plugin.author || '-' }}</div>
+                        <div>{{ text.installedAt }}: {{ formatInstalledTime(plugin.installedAt) }}</div>
+                        <div>{{ text.nodeKinds }}: {{ plugin.manifest.nodes.map(node => node.kind).join(', ') }}</div>
+                    </div>
+
+                    <div class="plugin-card-actions">
+                        <button class="plugin-btn plugin-btn-danger" :disabled="busy" @click="removeInstalled(plugin.id, plugin.name)">
+                            {{ text.remove }}
+                        </button>
+                    </div>
+                </article>
+            </div>
+            <div v-else class="plugin-empty-state">{{ text.emptyInstalled }}</div>
+        </div>
+
+        <div v-show="activePluginTab === 'builtin'" class="plugin-section">
+            <div class="plugin-compact-list">
+                <article v-for="plugin in builtinPlugins" :key="plugin.kind" class="plugin-compact-item">
+                    <div class="plugin-compact-main">
+                        <div class="plugin-node-mark" :class="getKindClass(plugin.kind)">{{ getPluginInitial(plugin) }}</div>
+                        <div class="plugin-compact-copy">
                             <div class="plugin-name">{{ localizedPluginName(plugin) }}</div>
                             <div class="plugin-kind">{{ plugin.kind }}</div>
                         </div>
                     </div>
-                    <p class="plugin-description">{{ localizedPluginDescription(plugin) }}</p>
-                    <div class="plugin-tags">
+                    <p class="plugin-description plugin-compact-description">{{ localizedPluginDescription(plugin) }}</p>
+                    <div class="plugin-tags plugin-compact-tags">
                         <span class="plugin-tag">{{ text.builtinTag }}</span>
                         <span v-if="plugin.editable" class="plugin-tag">{{ text.editableTag }}</span>
                         <span v-if="plugin.supportsCardMode" class="plugin-tag">{{ text.cardTag }}</span>
@@ -85,13 +147,38 @@
             </div>
         </div>
 
-        <div v-if="developerMode" class="plugin-section">
-            <div class="plugin-section-head">
-                <h4>{{ text.developmentListTitle }}</h4>
-                <span class="plugin-count">{{ developmentPlugins.length }}</span>
+        <div v-if="developerMode && developmentDiagnostics.length > 0 && activePluginTab === 'diagnostics'" class="plugin-section">
+            <div class="plugin-diagnostics">
+                <article
+                    v-for="diagnostic in developmentDiagnostics"
+                    :key="diagnostic.id"
+                    class="plugin-diagnostic-card"
+                    :class="`plugin-diagnostic-${diagnostic.severity}`"
+                >
+                    <div class="plugin-card-row plugin-card-row-top">
+                        <div>
+                            <div class="plugin-name">{{ diagnostic.pluginName || diagnostic.pluginId || text.unknownPlugin }}</div>
+                            <div class="plugin-kind">{{ formatDiagnosticStage(diagnostic) }}</div>
+                        </div>
+                        <span class="plugin-tag" :class="`plugin-tag-${diagnostic.severity}`">{{ diagnostic.severity }}</span>
+                    </div>
+                    <p class="plugin-description">{{ diagnostic.message }}</p>
+                    <div class="plugin-meta-stack">
+                        <div v-if="diagnostic.nodeKind">{{ text.nodeKinds }}: {{ diagnostic.nodeKind }}</div>
+                        <div v-if="diagnostic.sourcePath">{{ text.path }}: {{ diagnostic.sourcePath }}</div>
+                        <div v-if="diagnostic.filePath">{{ text.file }}: {{ diagnostic.filePath }}</div>
+                        <div>{{ text.updatedAt }}: {{ formatInstalledTime(diagnostic.timestamp) }}</div>
+                    </div>
+                    <details v-if="diagnostic.detail" class="plugin-diagnostic-detail">
+                        <summary>{{ text.details }}</summary>
+                        <pre>{{ diagnostic.detail }}</pre>
+                    </details>
+                </article>
             </div>
+        </div>
 
-            <div v-if="developmentPlugins.length > 0" class="plugin-grid">
+        <div v-if="developerMode && activePluginTab === 'development'" class="plugin-section">
+            <div v-if="developmentPlugins.length > 0" class="plugin-list">
                 <article v-for="plugin in developmentPlugins" :key="`${plugin.id}:${plugin.sourcePath}`" class="plugin-card plugin-card-dev">
                     <div class="plugin-card-row plugin-card-row-top">
                         <div>
@@ -130,86 +217,7 @@
                     </div>
                 </article>
             </div>
-        </div>
-
-        <div v-if="developerMode && developmentDiagnostics.length > 0" class="plugin-section">
-            <div class="plugin-section-head">
-                <h4>{{ text.diagnosticsTitle }}</h4>
-                <span class="plugin-count">{{ developmentDiagnostics.length }}</span>
-            </div>
-            <div class="plugin-diagnostics">
-                <article
-                    v-for="diagnostic in developmentDiagnostics"
-                    :key="diagnostic.id"
-                    class="plugin-diagnostic-card"
-                    :class="`plugin-diagnostic-${diagnostic.severity}`"
-                >
-                    <div class="plugin-card-row plugin-card-row-top">
-                        <div>
-                            <div class="plugin-name">{{ diagnostic.pluginName || diagnostic.pluginId || text.unknownPlugin }}</div>
-                            <div class="plugin-kind">{{ formatDiagnosticStage(diagnostic) }}</div>
-                        </div>
-                        <span class="plugin-tag" :class="`plugin-tag-${diagnostic.severity}`">{{ diagnostic.severity }}</span>
-                    </div>
-                    <p class="plugin-description">{{ diagnostic.message }}</p>
-                    <div class="plugin-meta-stack">
-                        <div v-if="diagnostic.nodeKind">{{ text.nodeKinds }}: {{ diagnostic.nodeKind }}</div>
-                        <div v-if="diagnostic.sourcePath">{{ text.path }}: {{ diagnostic.sourcePath }}</div>
-                        <div v-if="diagnostic.filePath">{{ text.file }}: {{ diagnostic.filePath }}</div>
-                        <div>{{ text.updatedAt }}: {{ formatInstalledTime(diagnostic.timestamp) }}</div>
-                    </div>
-                    <details v-if="diagnostic.detail" class="plugin-diagnostic-detail">
-                        <summary>{{ text.details }}</summary>
-                        <pre>{{ diagnostic.detail }}</pre>
-                    </details>
-                </article>
-            </div>
-        </div>
-
-        <div class="plugin-section">
-            <div class="plugin-section-head">
-                <h4>{{ text.installedTitle }}</h4>
-                <span class="plugin-count">{{ installedPlugins.length }}</span>
-            </div>
-
-            <div v-if="installedPlugins.length > 0" class="plugin-grid">
-                <article v-for="plugin in installedPlugins" :key="`${plugin.id}:${plugin.version}`" class="plugin-card">
-                    <div class="plugin-card-row plugin-card-row-top">
-                        <div>
-                            <div class="plugin-name">{{ plugin.name }}</div>
-                            <div class="plugin-kind">{{ plugin.id }}</div>
-                        </div>
-                        <label class="plugin-toggle">
-                            <input
-                                type="checkbox"
-                                :checked="plugin.enabled"
-                                :disabled="busy"
-                                @change="toggleInstalledPlugin(plugin.id, ($event.target as HTMLInputElement).checked)"
-                            />
-                            <span class="plugin-toggle-track"></span>
-                        </label>
-                    </div>
-
-                    <div class="plugin-meta-line">
-                        <span>v{{ plugin.version }}</span>
-                        <span>{{ text.source }}: {{ plugin.source === 'archive' ? text.packageSource : text.directorySource }}</span>
-                    </div>
-
-                    <p v-if="plugin.description" class="plugin-description">{{ plugin.description }}</p>
-
-                    <div class="plugin-meta-stack">
-                        <div>{{ text.author }}: {{ plugin.author || '-' }}</div>
-                        <div>{{ text.installedAt }}: {{ formatInstalledTime(plugin.installedAt) }}</div>
-                        <div>{{ text.nodeKinds }}: {{ plugin.manifest.nodes.map(node => node.kind).join(', ') }}</div>
-                    </div>
-
-                    <div class="plugin-card-actions">
-                        <button class="plugin-btn plugin-btn-danger" :disabled="busy" @click="removeInstalled(plugin.id, plugin.name)">
-                            {{ text.remove }}
-                        </button>
-                    </div>
-                </article>
-            </div>
+            <div v-else class="plugin-empty-state">{{ text.emptyDevelopment }}</div>
         </div>
     </section>
 </template>
@@ -239,6 +247,7 @@ const developmentPlugins = ref<DevelopmentPluginRecord[]>([])
 const errorMessage = ref('')
 const busy = ref(false)
 const developerMode = ref(false)
+const activePluginTab = ref('installed')
 
 const supportsPluginManagement = computed(() =>
     Boolean(window.electron?.listInstalledPlugins && window.electron?.listDevelopmentPlugins)
@@ -254,10 +263,27 @@ const developmentDiagnostics = computed<PluginDiagnosticRecord[]>(() => {
     return pluginRegistry.getPluginDiagnostics('development')
 })
 
+const visiblePluginTabs = computed(() => {
+    const tabs = [
+        { id: 'installed', label: text.value.installedTitle, count: installedPlugins.value.length },
+        { id: 'builtin', label: text.value.builtinTitle, count: builtinPlugins.value.length }
+    ]
+
+    if (developerMode.value && developmentDiagnostics.value.length > 0) {
+        tabs.push({ id: 'diagnostics', label: text.value.diagnosticsTitle, count: developmentDiagnostics.value.length })
+    }
+
+    if (developerMode.value) {
+        tabs.push({ id: 'development', label: text.value.developmentListTitle, count: developmentPlugins.value.length })
+    }
+
+    return tabs
+})
+
 const text = computed(() => locale.value === 'zh-CN'
     ? {
         title: '插件',
-        description: '这里展示内置节点、开发插件、已安装插件，以及后续预留的插件市场区域。',
+        description: '安装、启用、停用和检查节点插件。',
         refresh: '刷新',
         remove: '移除',
         desktopOnly: '插件安装与开发加载仅在 Electron 桌面版中可用。',
@@ -291,6 +317,8 @@ const text = computed(() => locale.value === 'zh-CN'
         marketDescription: '这里将用于后续承载市场入口、精选插件、分类、评分、更新与在线安装能力。',
         marketSoon: '即将推出',
         diagnosticsTitle: '插件诊断',
+        emptyInstalled: '尚未安装任何插件。',
+        emptyDevelopment: '尚未加载开发插件。',
         file: '文件',
         updatedAt: '更新',
         details: '详情',
@@ -298,7 +326,7 @@ const text = computed(() => locale.value === 'zh-CN'
     }
     : {
         title: 'Plugins',
-        description: 'This view shows built-in nodes, development plugins, installed plugins, and a reserved marketplace area.',
+        description: 'Install, enable, disable, and inspect node plugins.',
         refresh: 'Refresh',
         remove: 'Remove',
         desktopOnly: 'Plugin installation and development loading are only available in the Electron desktop app.',
@@ -332,6 +360,8 @@ const text = computed(() => locale.value === 'zh-CN'
         marketDescription: 'This area is reserved for future marketplace entry points, featured plugins, categories, ratings, updates, and online installs.',
         marketSoon: 'Coming Soon',
         diagnosticsTitle: 'Plugin Diagnostics',
+        emptyInstalled: 'No installed plugins yet.',
+        emptyDevelopment: 'No development plugins loaded.',
         file: 'File',
         updatedAt: 'Updated',
         details: 'Details',
@@ -346,6 +376,16 @@ function localizedPluginName(plugin: PluginMeta) {
 function localizedPluginDescription(plugin: PluginMeta) {
     const key = `canvas.nodeTypeDesc.${plugin.kind}`
     return te(key) ? t(key) : plugin.description
+}
+
+function getPluginInitial(plugin: PluginMeta) {
+    const label = localizedPluginName(plugin).trim()
+    return (label[0] || plugin.kind[0] || 'N').toUpperCase()
+}
+
+function getKindClass(kind: string) {
+    const normalized = (kind || 'blank').replace(/[^a-z0-9]+/gi, '-').toLowerCase()
+    return `plugin-kind-${normalized}`
 }
 
 function formatInstalledTime(value: string) {
@@ -471,6 +511,12 @@ watch(() => pluginCatalogVersion.value, () => {
     developmentPlugins.value = pluginRegistry.getDevelopmentPlugins()
 }, { immediate: true })
 
+watch(visiblePluginTabs, tabs => {
+    if (!tabs.some(tab => tab.id === activePluginTab.value)) {
+        activePluginTab.value = tabs[0]?.id || 'installed'
+    }
+}, { immediate: true })
+
 onMounted(() => {
     readDeveloperModeSetting()
     window.addEventListener('settings-updated', handleSettingsUpdated as EventListener)
@@ -484,7 +530,11 @@ onBeforeUnmount(() => {
 <style scoped>
 .plugin-pane {
     display: grid;
-    gap: 20px;
+    gap: 16px;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+    container-type: inline-size;
 }
 
 .plugin-pane-header {
@@ -497,6 +547,7 @@ onBeforeUnmount(() => {
 .plugin-pane-heading {
     display: grid;
     gap: 6px;
+    min-width: 0;
 }
 
 .plugin-pane-title {
@@ -508,14 +559,17 @@ onBeforeUnmount(() => {
 .plugin-pane-subtitle {
     margin: 0;
     color: var(--text-secondary);
-    line-height: 1.6;
+    line-height: 1.45;
     font-size: 0.92rem;
-    max-width: 760px;
+    max-width: 100%;
+    overflow-wrap: anywhere;
 }
 
-.plugin-actions-grid {
+.plugin-actions-row {
     display: grid;
-    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    min-width: 0;
 }
 
 .plugin-refresh-btn {
@@ -523,13 +577,14 @@ onBeforeUnmount(() => {
     margin-top: 2px;
 }
 
-.plugin-import-panel {
+.plugin-action-card {
     width: 100%;
-    display: flex;
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
     align-items: center;
-    gap: 14px;
-    padding: 14px 16px;
-    border-radius: 16px;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
     border: 1px solid var(--border-color);
     background: var(--bg-secondary);
     cursor: pointer;
@@ -537,80 +592,90 @@ onBeforeUnmount(() => {
     transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
-.plugin-import-panel:hover:not(:disabled) {
+.plugin-action-card:hover:not(:disabled) {
     border-color: rgba(59, 130, 246, 0.28);
     background: color-mix(in srgb, var(--bg-secondary) 88%, #3b82f6 12%);
 }
 
-.plugin-import-panel-dev:hover:not(:disabled) {
+.plugin-action-card-dev:hover:not(:disabled) {
     border-color: rgba(16, 185, 129, 0.28);
     background: color-mix(in srgb, var(--bg-secondary) 88%, #10b981 12%);
 }
 
-.plugin-import-panel.is-busy,
-.plugin-import-panel:disabled {
+.plugin-action-card.is-busy,
+.plugin-action-card:disabled {
     opacity: 0.8;
     cursor: progress;
 }
 
-.plugin-import-glyph {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
+.plugin-action-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     background: rgba(59, 130, 246, 0.12);
-    font-size: 1.15rem;
+    color: #2563eb;
     flex-shrink: 0;
 }
 
-.plugin-import-glyph-dev {
-    background: rgba(16, 185, 129, 0.12);
+.plugin-action-icon svg {
+    width: 18px;
+    height: 18px;
+    display: block;
 }
 
-.plugin-import-main {
+.plugin-action-icon-dev {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+}
+
+.plugin-action-copy {
     min-width: 0;
     display: grid;
-    gap: 6px;
+    gap: 3px;
 }
 
 .plugin-import-title-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
 }
 
-.plugin-import-title {
-    font-size: 0.98rem;
+.plugin-action-title {
+    font-size: 0.9rem;
     font-weight: 700;
     color: var(--text-primary);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.plugin-import-description {
+.plugin-action-desc {
     color: var(--text-secondary);
-    line-height: 1.5;
-    font-size: 0.9rem;
+    line-height: 1.35;
+    font-size: 0.78rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
-.plugin-import-badge {
+.plugin-action-badge {
+    justify-self: end;
+    align-self: start;
+    min-width: 54px;
+    text-align: center;
     padding: 4px 9px;
     border-radius: 999px;
     background: rgba(59, 130, 246, 0.12);
     color: #2563eb;
     font-size: 11px;
     font-weight: 700;
+    white-space: nowrap;
 }
 
-.plugin-import-badge-dev {
+.plugin-action-badge-dev {
     background: rgba(16, 185, 129, 0.12);
     color: #059669;
-}
-
-.plugin-import-hint {
-    font-size: 12px;
-    color: var(--text-tertiary, var(--text-secondary));
 }
 
 .plugin-btn {
@@ -649,7 +714,7 @@ onBeforeUnmount(() => {
 
 .plugin-callout {
     padding: 12px 14px;
-    border-radius: 14px;
+    border-radius: 8px;
     background: var(--bg-secondary);
     color: var(--text-secondary);
 }
@@ -662,78 +727,115 @@ onBeforeUnmount(() => {
 .plugin-market-shelf {
     display: flex;
     justify-content: space-between;
-    gap: 16px;
+    gap: 10px;
     align-items: center;
     border: 1px solid var(--border-color);
-    border-radius: 18px;
-    padding: 18px;
-    background: linear-gradient(135deg, rgba(17, 24, 39, 0.035), rgba(59, 130, 246, 0.07));
+    border-radius: 8px;
+    padding: 9px 10px;
+    background: var(--bg-secondary);
+    min-width: 0;
+}
+
+.plugin-market-copy {
+    min-width: 0;
 }
 
 .plugin-market-eyebrow {
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--text-secondary);
+    display: none;
 }
 
 .plugin-market-title {
-    margin-top: 6px;
-    font-size: 1rem;
+    margin-top: 0;
+    font-size: 0.84rem;
     font-weight: 700;
     color: var(--text-primary);
 }
 
 .plugin-market-desc {
-    margin-top: 6px;
-    color: var(--text-secondary);
-    line-height: 1.6;
+    display: none;
 }
 
 .plugin-market-chip {
     flex-shrink: 0;
-    padding: 8px 12px;
+    padding: 4px 8px;
     border-radius: 999px;
-    background: rgba(59, 130, 246, 0.12);
+    background: rgba(139, 185, 254, 0.12);
     color: #2563eb;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.plugin-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 4px;
+    border-radius: 10px;
+    background: var(--bg-secondary);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.plugin-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.plugin-tab {
+    min-width: 0;
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary);
     font-size: 12px;
     font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.plugin-section {
-    display: grid;
-    gap: 14px;
-}
-
-.plugin-section-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.plugin-section-head h4 {
-    margin: 0;
-    font-size: 0.98rem;
+.plugin-tab:hover {
     color: var(--text-primary);
+    background: var(--bg-tertiary);
 }
 
-.plugin-count {
-    min-width: 28px;
-    height: 28px;
+.plugin-tab.active {
+    color: var(--color-primary);
+    background: var(--bg-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.plugin-tab-count {
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     background: var(--bg-tertiary);
-    color: var(--text-secondary);
-    font-size: 12px;
-    font-weight: 700;
+    color: inherit;
+    font-size: 11px;
 }
 
-.plugin-grid {
+.plugin-section {
     display: grid;
-    gap: 14px;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 10px;
+    min-height: 260px;
+    min-width: 0;
+}
+
+.plugin-list,
+.plugin-compact-list {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
 }
 
 .plugin-diagnostics {
@@ -742,15 +844,20 @@ onBeforeUnmount(() => {
 }
 
 .plugin-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: start;
     border: 1px solid var(--border-color);
-    border-radius: 18px;
-    padding: 16px;
+    border-radius: 8px;
+    padding: 12px;
     background: var(--bg-secondary);
     transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+    min-width: 0;
 }
 
 .plugin-card:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     box-shadow: var(--shadow-sm);
     border-color: rgba(59, 130, 246, 0.28);
 }
@@ -763,9 +870,13 @@ onBeforeUnmount(() => {
     display: grid;
     gap: 12px;
     border: 1px solid var(--border-color);
-    border-radius: 18px;
+    border-radius: 8px;
     padding: 16px;
     background: var(--bg-secondary);
+}
+
+.plugin-card > .plugin-card-actions {
+    align-self: end;
 }
 
 .plugin-diagnostic-error {
@@ -792,23 +903,55 @@ onBeforeUnmount(() => {
 .plugin-card-row-top {
     justify-content: space-between;
     align-items: flex-start;
+    min-width: 0;
 }
 
-.plugin-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 14px;
+.plugin-compact-item {
+    display: grid;
+    grid-template-columns: minmax(140px, 1fr) minmax(0, 1.25fr) max-content;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    min-width: 0;
+}
+
+.plugin-compact-main {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.plugin-compact-copy {
+    min-width: 0;
+}
+
+.plugin-node-mark {
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     background: var(--bg-tertiary);
-    font-size: 20px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
 }
+
+.plugin-kind-text{background:rgba(37,99,235,.12);color:#2563eb}.plugin-kind-markdown{background:rgba(124,58,237,.12);color:#7c3aed}.plugin-kind-image{background:rgba(5,150,105,.12);color:#059669}.plugin-kind-hyperlink{background:rgba(14,165,233,.13);color:#0284c7}.plugin-kind-quote-card{background:rgba(217,119,6,.13);color:#b45309}.plugin-kind-blank{background:rgba(100,116,139,.14);color:#64748b}
 
 .plugin-name {
     font-size: 15px;
     font-weight: 700;
     color: var(--text-primary);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .plugin-kind,
@@ -824,9 +967,34 @@ onBeforeUnmount(() => {
 }
 
 .plugin-description {
-    margin: 12px 0 0;
+    margin: 10px 0 0;
     color: var(--text-primary);
     line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+.plugin-empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 160px;
+    padding: 18px 14px;
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 13px;
+    text-align: center;
+}
+
+.plugin-compact-description {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.45;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .plugin-meta-line,
@@ -846,6 +1014,7 @@ onBeforeUnmount(() => {
     display: grid;
     gap: 6px;
     word-break: break-word;
+    min-width: 0;
 }
 
 .plugin-tags {
@@ -854,13 +1023,29 @@ onBeforeUnmount(() => {
     gap: 8px;
 }
 
+.plugin-compact-tags {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: 0;
+    min-width: 0;
+}
+
 .plugin-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 22px;
     padding: 4px 8px;
     border-radius: 999px;
     background: var(--bg-tertiary);
     color: var(--text-secondary);
     font-size: 11px;
     font-weight: 700;
+    line-height: 1;
+    text-align: center;
 }
 
 .plugin-tag-error {
@@ -955,18 +1140,88 @@ onBeforeUnmount(() => {
         align-items: stretch;
     }
 
-    .plugin-import-panel {
-        align-items: flex-start;
+    .plugin-action-card {
+        grid-template-columns: 32px minmax(0, 1fr);
+        align-items: center;
     }
 
-    .plugin-import-title-row {
-        flex-direction: column;
-        align-items: flex-start;
+    .plugin-section {
+        min-height: 220px;
+    }
+
+    .plugin-action-badge {
+        grid-column: 2;
+        justify-self: start;
+    }
+
+    .plugin-compact-item {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
+    .plugin-compact-tags {
+        justify-content: flex-start;
     }
 
     .plugin-refresh-btn {
         width: 100%;
     }
 }
-</style>
 
+@container (max-width: 620px) {
+    .plugin-pane-header,
+    .plugin-market-shelf {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .plugin-actions-row {
+        grid-template-columns: 1fr;
+    }
+
+    .plugin-action-card {
+        grid-template-columns: 32px minmax(0, 1fr);
+        align-items: center;
+    }
+
+    .plugin-action-badge {
+        grid-column: 2;
+        justify-self: start;
+    }
+
+    .plugin-card {
+        grid-template-columns: 1fr;
+    }
+
+    .plugin-compact-item {
+        grid-template-columns: minmax(0, 1fr);
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .plugin-compact-description {
+        white-space: normal;
+    }
+
+    .plugin-compact-tags {
+        justify-content: flex-start;
+        grid-auto-flow: row;
+        grid-template-columns: repeat(auto-fit, minmax(72px, max-content));
+    }
+
+    .plugin-refresh-btn {
+        width: 100%;
+    }
+}
+
+@container (min-width: 621px) and (max-width: 760px) {
+    .plugin-compact-item {
+        grid-template-columns: minmax(150px, 1fr) minmax(0, 1.2fr);
+    }
+
+    .plugin-compact-tags {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+    }
+}
+</style>
