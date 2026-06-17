@@ -7,6 +7,7 @@
                         <div class="header-main">
                             <h3 class="members-title">{{ t('canvas.topBar.members') }}</h3>
                             <span class="members-count">{{ roomMembers.length }} {{ t('rooms.members') }}</span>
+                            <span class="header-presence">{{ presenceSummary }}</span>
                         </div>
                         <button class="close-btn" @click="$emit('update:modelValue', false)">
                             <svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -15,13 +16,7 @@
                         </button>
                     </div>
 
-                    <div class="permissions-strip">
-                        <span v-if="roomRoleLabel" class="role-chip" :class="roleChipClass">{{ roomRoleLabel }}</span>
-                        <span class="permission-summary">{{ permissionSummary }}</span>
-                        <span class="presence-summary">{{ presenceSummary }}</span>
-                    </div>
-
-                    <div class="search-panel">
+                    <div class="members-toolbar">
                         <input
                             v-model.trim="searchQuery"
                             type="text"
@@ -53,20 +48,26 @@
                                     class="member-item"
                                     :class="{ me: member.user_id === currentUserId, offline: !isMemberOnline(member) }"
                                 >
-                                    <div class="member-avatar" :style="{ background: getRandomColor(getMemberStableId(member)) }">
-                                        {{ getMemberDisplayName(member).charAt(0).toUpperCase() }}
+                                    <div class="member-avatar-wrap">
+                                        <div class="member-avatar" :style="{ background: getRandomColor(getMemberStableId(member)) }">
+                                            {{ getMemberDisplayName(member).charAt(0).toUpperCase() }}
+                                        </div>
+                                        <span
+                                            class="presence-dot"
+                                            :class="{ online: isMemberOnline(member) }"
+                                            :title="presenceLabel(member)"
+                                            :aria-label="presenceLabel(member)"
+                                        />
                                     </div>
 
                                     <div class="member-info">
                                         <div class="member-line">
-                                            <span
-                                                class="presence-dot"
-                                                :class="{ online: isMemberOnline(member) }"
-                                                :title="presenceLabel(member)"
-                                                :aria-label="presenceLabel(member)"
-                                            />
                                             <span class="member-name">{{ getMemberDisplayName(member) }}</span>
-                                            <span class="inline-role" :class="roleClassName(member.role)">{{ roleLabel(member.role) }}</span>
+                                            <span
+                                                class="inline-role"
+                                                :class="roleClassName(member.role)"
+                                                :title="rolePermissionTitle(member.role)"
+                                            >{{ roleLabel(member.role) }}</span>
                                         </div>
                                         <span class="member-status">{{ getMemberMeta(member) }}</span>
                                     </div>
@@ -294,16 +295,6 @@ const memberSections = computed(() => {
     return sections
 })
 
-const roomRoleLabel = computed(() => props.roomRole ? roleLabel(props.roomRole) : '')
-const roleChipClass = computed(() => roleClassName(props.roomRole || 'editor'))
-
-const permissionSummary = computed(() => {
-    if (!props.canEditCanvas) return copy.value.readonly
-    if (props.canManageMembers) return copy.value.manageMembers
-    if (props.canManageSnapshots) return copy.value.manageSnapshots
-    return copy.value.editable
-})
-
 const presenceSummary = computed(() => `${copy.value.online} ${onlineMembers.value.length} · ${copy.value.offline} ${offlineMembers.value.length}`)
 
 function resolveApiError(source: any, fallback: string): string {
@@ -337,6 +328,14 @@ function roleClassName(role: string) {
     if (normalized === 'admin') return 'role-admin'
     if (normalized === 'viewer') return 'role-viewer'
     return 'role-member'
+}
+
+function rolePermissionTitle(role: string) {
+    const normalized = normalizeRole(role)
+    if (normalized === 'owner' || normalized === 'admin') return copy.value.manageMembers
+    if (normalized === 'editor') return copy.value.editable
+    if (normalized === 'viewer') return copy.value.readonly
+    return roleLabel(role)
 }
 
 function getOnlineUser(member: RoomMemberItem) {
@@ -607,37 +606,39 @@ onUnmounted(() => {
 
 <style scoped>
 .members-overlay{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);backdrop-filter:blur(4px)}
-.members-modal{width:min(560px,calc(100vw - 24px));max-height:80vh;display:flex;flex-direction:column;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:16px;box-shadow:0 20px 40px rgba(0,0,0,.3)}
-.members-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px 12px;border-bottom:1px solid var(--border-color)}
-.header-main{display:flex;align-items:center;gap:10px}
-.members-title{margin:0;font-size:16px;font-weight:600;color:var(--text-primary)}
-.members-count{padding:4px 8px;border-radius:12px;background:var(--bg-secondary);color:var(--text-secondary);font-size:12px}
+.members-modal{width:min(560px,calc(100vw - 24px));max-height:80vh;display:flex;flex-direction:column;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:16px;box-shadow:0 20px 40px rgba(0,0,0,.3);overflow:hidden}
+.members-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px 14px;border-bottom:1px solid var(--border-color)}
+.header-main{display:flex;align-items:center;gap:10px;min-width:0}
+.members-title{margin:0;font-size:17px;font-weight:700;color:var(--text-primary)}
+.members-count{color:var(--text-secondary);font-size:13px}
+.header-presence{margin-left:6px;color:var(--text-secondary);font-size:12px;white-space:nowrap}
 .close-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;margin-left:auto;border:none;border-radius:8px;background:transparent;color:var(--text-secondary);cursor:pointer;transition:all .2s}
 .close-btn:hover{background:var(--bg-secondary);color:var(--text-primary)}
 .close-icon{width:16px;height:16px;display:block}
-.permissions-strip{display:flex;flex-wrap:wrap;gap:8px;padding:12px 20px;border-bottom:1px solid var(--border-color);background:var(--bg-secondary)}
-.search-panel{padding:12px 20px;border-bottom:1px solid var(--border-color);background:var(--bg-primary)}
-.search-input{width:100%;height:38px;padding:0 12px;border:1px solid var(--border-color);border-radius:10px;background:var(--bg-secondary);color:var(--text-primary)}
-.role-chip,.inline-role{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
-.permission-summary,.presence-summary{font-size:12px;color:var(--text-secondary)}
+.members-toolbar{padding:14px 20px 16px;border-bottom:1px solid var(--border-color);background:color-mix(in srgb,var(--bg-secondary) 35%,var(--bg-primary))}
+.search-input{width:100%;height:40px;padding:0 13px;border:1px solid var(--border-color);border-radius:10px;background:var(--bg-primary);color:var(--text-primary);outline:none;transition:border-color .2s,box-shadow .2s}
+.search-input:focus{border-color:rgba(102,126,234,.55);box-shadow:0 0 0 3px rgba(102,126,234,.12)}
+.inline-role{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;cursor:help}
 .role-owner{background:rgba(245,158,11,.16);color:#b45309}
 .role-admin{background:rgba(59,130,246,.14);color:#1d4ed8}
 .role-member{background:rgba(16,185,129,.14);color:#047857}
 .role-viewer{background:rgba(107,114,128,.16);color:#4b5563}
-.members-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:12px}
+.members-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding:14px 20px 16px}
 .member-section{display:grid;gap:8px}
-.member-section-title{display:flex;align-items:center;gap:8px;padding:0 4px;font-size:12px;font-weight:700;color:var(--text-secondary)}
+.member-section-title{display:flex;align-items:center;gap:8px;padding:0 2px;font-size:12px;font-weight:700;color:var(--text-secondary)}
 .section-dot{width:8px;height:8px;border-radius:50%;background:rgba(107,114,128,.55)}
 .section-dot.online{background:#22c55e}
 .section-count{margin-left:auto;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--bg-secondary)}
-.member-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:var(--bg-secondary);transition:background .2s}
-.member-item.me{border:1px solid rgba(102,126,234,.3);background:rgba(102,126,234,.1)}
+.member-item{position:relative;display:flex;align-items:center;gap:12px;padding:11px 12px;border:1px solid var(--border-color);border-radius:10px;background:var(--bg-primary);transition:background .2s,border-color .2s}
+.member-item:hover{background:color-mix(in srgb,var(--bg-secondary) 50%,var(--bg-primary))}
+.member-item.me{border-color:rgba(102,126,234,.38);box-shadow:inset 3px 0 0 rgba(102,126,234,.8)}
 .member-item.offline .member-avatar{filter:grayscale(.4);opacity:.74}
+.member-avatar-wrap{position:relative;flex-shrink:0}
 .member-avatar{width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-size:14px;font-weight:600}
 .member-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 .member-line{display:flex;align-items:center;gap:8px;min-width:0}
-.presence-dot{width:8px;height:8px;flex-shrink:0;border-radius:50%;background:rgba(107,114,128,.55);box-shadow:0 0 0 1px rgba(107,114,128,.14)}
-.presence-dot.online{background:#22c55e;box-shadow:0 0 0 1px rgba(34,197,94,.16)}
+.presence-dot{position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;flex-shrink:0;border:2px solid var(--bg-primary);border-radius:50%;background:#9ca3af;box-shadow:0 0 0 1px rgba(107,114,128,.14)}
+.presence-dot.online{background:#22c55e;box-shadow:0 0 0 1px rgba(34,197,94,.18)}
 .member-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-primary);font-size:14px;font-weight:500}
 .member-status{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--text-tertiary);font-family:monospace}
 .member-actions{display:flex;align-items:center;gap:8px}
@@ -646,8 +647,8 @@ onUnmounted(() => {
 .transfer-btn{border:1px solid rgba(59,130,246,.24);background:rgba(59,130,246,.1);color:#2563eb}
 .remove-btn{border:1px solid rgba(239,68,68,.24);background:rgba(239,68,68,.1);color:#dc2626}
 .transfer-btn:disabled,.remove-btn:disabled,.role-select:disabled{opacity:.5;cursor:not-allowed}
-.members-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;border-top:1px solid var(--border-color)}
-.room-id{font-size:11px;color:var(--text-tertiary);font-family:monospace}
+.members-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:42px;padding:9px 20px;border-top:1px solid var(--border-color);background:color-mix(in srgb,var(--bg-secondary) 35%,var(--bg-primary))}
+.room-id{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--text-tertiary);font-family:monospace}
 .action-message{font-size:12px;color:#16a34a}
 .action-message.error{color:#dc2626}
 .state-text{padding:16px 8px;text-align:center;color:var(--text-secondary);font-size:13px}
@@ -662,6 +663,9 @@ onUnmounted(() => {
 @keyframes modal-out{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(.9)}}
 @media (max-width:720px){
     .members-modal{width:calc(100vw - 16px)}
+    .members-toolbar,.members-list{padding-left:14px;padding-right:14px}
+    .header-main{align-items:flex-start;flex-direction:column;gap:4px}
+    .header-presence{margin-left:0}
     .member-item{align-items:flex-start;flex-wrap:wrap}
     .member-actions{width:100%;justify-content:flex-end}
     .members-footer{align-items:flex-start;flex-direction:column}
