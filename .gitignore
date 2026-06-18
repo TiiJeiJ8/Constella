@@ -15,6 +15,7 @@ dist-electron
 dist-ssr
 .electron-server-runtime
 .electron-server-runtime-prev
+.electron-server-runtime-next
 .electron-node-runtime
 .cache/
 *.local
