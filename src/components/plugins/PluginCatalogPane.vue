@@ -289,12 +289,12 @@ const visiblePluginTabs = computed(() => {
         { id: 'installed', label: text.value.installedTitle, count: installedPlugins.value.length }
     ]
 
-    if (developerMode.value && developmentDiagnostics.value.length > 0) {
-        tabs.push({ id: 'diagnostics', label: text.value.diagnosticsTitle, count: developmentDiagnostics.value.length })
-    }
-
     if (developerMode.value) {
         tabs.push({ id: 'development', label: text.value.developmentListTitle, count: developmentPlugins.value.length })
+    }
+
+    if (developerMode.value && developmentDiagnostics.value.length > 0) {
+        tabs.push({ id: 'diagnostics', label: text.value.diagnosticsTitle, count: developmentDiagnostics.value.length })
     }
 
     return tabs
@@ -353,9 +353,9 @@ const text = computed(() => locale.value === 'zh-CN'
         refresh: 'Refresh',
         remove: 'Remove',
         desktopOnly: 'Plugin installation and development loading are only available in the Electron desktop app.',
-        builtinTitle: 'Built-in Nodes',
-        developmentListTitle: 'Development Plugins',
-        installedTitle: 'Installed Plugins',
+        builtinTitle: 'Built-in',
+        developmentListTitle: 'Dev',
+        installedTitle: 'Installed',
         builtinTag: 'Built-in',
         editableTag: 'Editable',
         cardTag: 'Card Mode',
@@ -385,7 +385,7 @@ const text = computed(() => locale.value === 'zh-CN'
         marketTitle: 'Marketplace',
         marketDescription: 'This area is reserved for future marketplace entry points, featured plugins, categories, ratings, updates, and online installs.',
         marketSoon: 'Coming Soon',
-        diagnosticsTitle: 'Plugin Diagnostics',
+        diagnosticsTitle: 'Diagnostics',
         emptyInstalled: 'No installed plugins yet.',
         emptyDevelopment: 'No development plugins loaded.',
         file: 'File',

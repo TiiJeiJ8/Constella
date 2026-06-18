@@ -146,6 +146,18 @@ function showBundledRuntimeMissingError(nodePath: string, serverPath: string): v
     dialog.showErrorBox('Constella Runtime Missing', message)
 }
 
+function showOpenDialogForOwner(ownerWindow: BrowserWindow | null, options: Electron.OpenDialogOptions) {
+    return ownerWindow
+        ? dialog.showOpenDialog(ownerWindow, options)
+        : dialog.showOpenDialog(options)
+}
+
+function showSaveDialogForOwner(ownerWindow: BrowserWindow | null, options: Electron.SaveDialogOptions) {
+    return ownerWindow
+        ? dialog.showSaveDialog(ownerWindow, options)
+        : dialog.showSaveDialog(options)
+}
+
 function ensureDir(targetPath: string): string {
     if (!fs.existsSync(targetPath)) {
         fs.mkdirSync(targetPath, { recursive: true })
@@ -595,7 +607,7 @@ async function resolvePluginSourceSelection(ownerWindow: BrowserWindow | null): 
     sourcePath: string
     sourceType: 'directory' | 'archive' | 'manifest'
 }> {
-    const result = await dialog.showOpenDialog(ownerWindow ?? undefined, {
+    const result = await showOpenDialogForOwner(ownerWindow, {
         title: 'Install Constella Plugin',
         buttonLabel: 'Install',
         filters: [
@@ -622,7 +634,7 @@ async function resolvePluginSourceSelection(ownerWindow: BrowserWindow | null): 
 }
 
 async function resolveDevelopmentPluginSelection(ownerWindow: BrowserWindow | null): Promise<string> {
-    const result = await dialog.showOpenDialog(ownerWindow ?? undefined, {
+    const result = await showOpenDialogForOwner(ownerWindow, {
         title: 'Load Development Plugin',
         buttonLabel: 'Load',
         properties: ['openDirectory']
@@ -1310,7 +1322,7 @@ ipcMain.handle('export-document-pdf', async (_event, payload: ExportDocumentPdfP
         throw new Error('Invalid PDF export payload')
     }
 
-    const saveResult = await dialog.showSaveDialog(ownerWindow ?? undefined, {
+    const saveResult = await showSaveDialogForOwner(ownerWindow, {
         title: 'Export PDF',
         defaultPath: payload.fileName,
         filters: [{ name: 'PDF', extensions: ['pdf'] }]
