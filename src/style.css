@@ -37,6 +37,22 @@
     --canvas-panel-bg: rgba(255, 255, 255, 0.95);
     --canvas-toolbar-bg: rgba(255, 255, 255, 0.9);
     --canvas-statusbar-bg: rgba(255, 255, 255, 0.85);
+
+    --dialog-backdrop: rgba(15, 23, 42, 0.5);
+    --dialog-bg: #ffffff;
+    --dialog-section-bg: #ffffff;
+    --dialog-control-bg: #ffffff;
+    --dialog-control-hover: #f3f4f6;
+    --dialog-border: rgba(15, 23, 42, 0.12);
+    --dialog-control-border: rgba(15, 23, 42, 0.18);
+    --dialog-text: #111827;
+    --dialog-muted: #4b5563;
+    --dialog-placeholder: #9ca3af;
+    --dialog-primary: #667eea;
+    --dialog-primary-hover: #5568d3;
+    --dialog-focus: rgba(102, 126, 234, 0.16);
+    --dialog-danger: #ef4444;
+    --dialog-shadow: 0 30px 80px rgba(15, 23, 42, 0.2);
 }
 
 /* 深色主题 */
@@ -77,6 +93,22 @@ html[data-theme='dark'] {
     --canvas-panel-bg: rgba(30, 30, 30, 0.95);
     --canvas-toolbar-bg: rgba(30, 30, 30, 0.9);
     --canvas-statusbar-bg: rgba(30, 30, 30, 0.85);
+
+    --dialog-backdrop: rgba(10, 10, 10, 0.68);
+    --dialog-bg: #2d2d2d;
+    --dialog-section-bg: #2d2d2d;
+    --dialog-control-bg: #2d2d2d;
+    --dialog-control-hover: rgba(255, 255, 255, 0.08);
+    --dialog-border: rgba(255, 255, 255, 0.12);
+    --dialog-control-border: rgba(255, 255, 255, 0.16);
+    --dialog-text: #e4e7ed;
+    --dialog-muted: #c0c4cc;
+    --dialog-placeholder: #909399;
+    --dialog-primary: #409eff;
+    --dialog-primary-hover: #66b1ff;
+    --dialog-focus: rgba(64, 158, 255, 0.18);
+    --dialog-danger: #f87171;
+    --dialog-shadow: 0 30px 80px rgba(0, 0, 0, 0.48);
 }
 
 /* ==================== 全局样式重置 ==================== */

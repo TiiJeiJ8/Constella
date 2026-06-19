@@ -124,8 +124,30 @@
             />
         </div>
 
+        <MarkdownNodeEditorModalNext
+            v-if="isRoomReady && useMarkdownEditorNext && editingNode && editingNode.content?.kind === 'markdown'"
+            :node-id="editingNode.id"
+            :content="editingNode.content"
+            :all-nodes="canvasNodes"
+            :read-only="!canEditCanvas"
+            :can-upload-assets="canUploadAssets"
+            :upload-asset="uploadMarkdownAsset"
+            @update="handleContentUpdate"
+            @jump-to-node="handleJumpToNode"
+            @close="handleCloseEditor"
+        />
+
+        <TextNodeEditorModalNext
+            v-else-if="isRoomReady && editingNode && editingNode.content?.kind === 'text'"
+            :node-id="editingNode.id"
+            :content="editingNode.content"
+            :read-only="!canEditCanvas"
+            @update="handleContentUpdate"
+            @close="handleCloseEditor"
+        />
+
         <NodeEditorModal
-            v-if="isRoomReady && editingNode"
+            v-else-if="isRoomReady && editingNode"
             :node-id="editingNode.id"
             :content="editingNode.content"
             :all-nodes="canvasNodes"
@@ -231,7 +253,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { pluginCatalogVersion, pluginRegistry } from '@/plugins'
 import { useCanvasAssets } from '@/composables/useCanvasAssets'
@@ -250,11 +272,13 @@ import CanvasStage from '@/components/canvas/CanvasStage.vue'
 import NodeContentOverlay from '@/components/canvas/NodeContentOverlay.vue'
 import PerformancePanel from '@/components/canvas/PerformancePanel.vue'
 import NodeEditorModal from '@/components/canvas/NodeEditorModal.vue'
+import TextNodeEditorModalNext from '@/components/canvas/TextNodeEditorModalNext.vue'
 import MembersPanel from '@/components/canvas/MembersPanel.vue'
 import RoomSettingsPanel from '@/components/canvas/RoomSettingsPanel.vue'
 import InputDialog from '@/components/base/InputDialog.vue'
 import ChatPanel from '@/components/canvas/ChatPanel.vue'
 import ChatBubbleContainer from '@/components/canvas/ChatBubbleContainer.vue'
+import { loadMarkdownEditorNext, scheduleMarkdownEditorWarmup } from '@/utils/markdownEditorWarmup'
 
 const props = defineProps({
     roomId: {
@@ -266,6 +290,8 @@ const props = defineProps({
 const emit = defineEmits(['navigate'])
 const { t } = useI18n()
 const toast = useToast()
+const useMarkdownEditorNext = true
+const MarkdownNodeEditorModalNext = defineAsyncComponent(loadMarkdownEditorNext)
 
 const activePanel = ref('properties')
 const zoom = ref(100)
@@ -366,6 +392,7 @@ const {
 const {
     roomAssets,
     handleAssetUpload,
+    uploadRoomAsset,
     handleAssetDelete,
     handleAssetInsert,
     handleCanvasDragOver,
@@ -381,6 +408,11 @@ const {
     stagePosition,
     stageScale
 })
+
+async function uploadMarkdownAsset(file: File) {
+    const asset = await uploadRoomAsset(file)
+    return asset?.url || ''
+}
 
 const {
     roomSnapshots,
@@ -786,6 +818,10 @@ let canvasAreaResizeObserver: ResizeObserver | null = null
 let themeObserver: MutationObserver | null = null
 
 onMounted(() => {
+    if (useMarkdownEditorNext) {
+        scheduleMarkdownEditorWarmup({ delayMs: 250, timeoutMs: 1400 })
+    }
+
     updateTheme()
     updateCanvasAreaSize()
 

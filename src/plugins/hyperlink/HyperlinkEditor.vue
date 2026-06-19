@@ -6,7 +6,6 @@
         <div class="hyperlink-overlay" @click.self="$emit('close')" @keydown.esc.stop="$emit('close')" tabindex="-1" ref="overlayRef">
             <div class="hyperlink-dialog">
                 <div class="dialog-header">
-                    <span class="dialog-icon">🌍</span>
                     <span class="dialog-title">{{ t('plugins.hyperlink.editor.title') }}</span>
                     <button class="close-btn" @click="$emit('close')">✕</button>
                 </div>
@@ -113,20 +112,23 @@ function handleOpen() {
 .hyperlink-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--dialog-backdrop);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 9999;
+    padding: 24px;
+    backdrop-filter: blur(8px);
 }
 
 .hyperlink-dialog {
-    background: var(--bg-primary, #1e1e2e);
-    border: 1px solid var(--border-color, #3a3a5c);
-    border-radius: 12px;
-    width: 480px;
+    width: min(640px, calc(100vw - 48px));
+    background: var(--dialog-bg);
+    border: 1px solid var(--dialog-border);
+    border-radius: 8px;
+    color: var(--dialog-text);
     overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    box-shadow: var(--dialog-shadow);
 }
 
 .dialog-header {
@@ -134,34 +136,40 @@ function handleOpen() {
     align-items: center;
     gap: 8px;
     padding: 16px 20px;
-    border-bottom: 1px solid var(--border-color, #3a3a5c);
+    border-bottom: 1px solid var(--dialog-border);
+    background: var(--dialog-section-bg);
 }
-.dialog-icon { font-size: 18px; }
-.dialog-title { font-size: 15px; font-weight: 600; color: var(--text-primary, #fff); flex: 1; }
+.dialog-title { font-size: 16px; font-weight: 600; color: var(--dialog-text); flex: 1; }
 .close-btn {
-    background: none; border: none; color: var(--text-secondary, #aaa);
+    background: transparent; border: none; color: var(--dialog-muted);
     cursor: pointer; font-size: 14px; padding: 4px;
 }
-.close-btn:hover { color: var(--text-primary, #fff); }
+.close-btn:hover { color: var(--dialog-text); }
 
 .dialog-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
 
 .field-group { display: flex; flex-direction: column; gap: 6px; }
-.field-label { font-size: 13px; color: var(--text-secondary, #aaa); }
-.required { color: #f56565; }
+.field-label { font-size: 13px; color: var(--dialog-muted); font-weight: 600; }
+.required { color: var(--dialog-danger); }
 .field-input {
-    background: var(--bg-secondary, #2a2a3e);
-    border: 1px solid var(--border-color, #3a3a5c);
+    background: var(--dialog-control-bg);
+    border: 1px solid var(--dialog-control-border);
     border-radius: 8px;
-    color: var(--text-primary, #fff);
+    color: var(--dialog-text);
     font-size: 14px;
-    padding: 10px 12px;
+    padding: 12px 14px;
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
 }
-.field-input:focus { border-color: #667eea; }
+.field-input:focus {
+    border-color: var(--dialog-primary);
+    box-shadow: 0 0 0 3px var(--dialog-focus);
+}
+.field-input::placeholder {
+    color: var(--dialog-placeholder);
+}
 .field-input[readonly] { opacity: 0.82; cursor: default; }
-.field-error { font-size: 12px; color: #f56565; }
+.field-error { font-size: 12px; color: var(--dialog-danger); }
 
 .dialog-footer {
     display: flex;
@@ -169,33 +177,59 @@ function handleOpen() {
     align-items: center;
     gap: 8px;
     padding: 16px 20px;
-    border-top: 1px solid var(--border-color, #3a3a5c);
+    border-top: 1px solid var(--dialog-border);
+    background: var(--dialog-section-bg);
 }
 .footer-right {
     display: flex;
     gap: 8px;
 }
 .btn {
-    padding: 8px 20px; border-radius: 8px; font-size: 14px;
-    cursor: pointer; border: none; font-weight: 500;
+    padding: 10px 16px; border-radius: 8px; font-size: 14px;
+    cursor: pointer; border: none; font-weight: 600;
+    transition: transform 140ms ease, background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+.btn:hover:not(:disabled) {
+    transform: translateY(-1px);
 }
 .btn-cancel {
-    background: var(--bg-secondary, #2a2a3e);
-    color: var(--text-secondary, #aaa);
-    border: 1px solid var(--border-color, #3a3a5c);
+    background: var(--dialog-control-hover);
+    color: var(--dialog-text);
+    border: 1px solid transparent;
 }
-.btn-cancel:hover { color: var(--text-primary); }
+.btn-cancel:hover { color: var(--dialog-text); }
 .btn-save {
-    background: #667eea; color: #fff;
+    background: var(--dialog-primary);
+    color: #ffffff;
+    box-shadow: 0 8px 18px rgba(102, 126, 234, 0.18);
 }
-.btn-save:hover:not(:disabled) { background: #5568d3; }
+.btn-save:hover:not(:disabled) { background: var(--dialog-primary-hover); }
 .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-open {
     background: transparent;
-    color: #667eea;
-    border: 1px solid #667eea;
-    padding: 8px 14px;
+    color: var(--dialog-primary);
+    border: 1px solid var(--dialog-primary);
+    padding: 10px 14px;
 }
-.btn-open:hover:not(:disabled) { background: rgba(102,126,234,0.15); }
+.btn-open:hover:not(:disabled) { background: var(--dialog-focus); }
 .btn-open:disabled { opacity: 0.35; cursor: not-allowed; }
+
+@media (max-width: 720px) {
+    .hyperlink-overlay {
+        padding: 12px;
+    }
+
+    .hyperlink-dialog {
+        width: 100%;
+    }
+
+    .dialog-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .footer-right {
+        justify-content: flex-end;
+    }
+}
 </style>

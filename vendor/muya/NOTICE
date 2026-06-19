@@ -1,0 +1,19 @@
+Constella Muya Internal Fork Notice
+
+This directory contains an internal fork of Muya, originally developed as part
+of the MarkText Markdown editor project.
+
+Upstream project:
+- MarkText: https://github.com/marktext/marktext
+- Upstream package path: packages/muya
+
+License:
+- Muya is distributed under the MIT License.
+- The upstream license text is preserved in LICENSE.
+
+Constella integration:
+- Constella resolves @muyajs/core to this vendored source tree via
+  web/vite.config.ts.
+- No external MarkText checkout is required for Constella runtime or build.
+- Constella-specific patches are tracked in CONSTELLA_FORK.md.
+

@@ -34,10 +34,6 @@
             <v-text :config="labelTextConfig" />
         </v-group>
 
-        <v-line
-            v-if="isSelected && edge.type === 'straight'"
-            :config="{ ...straightLineConfig, stroke: '#60a5fa', strokeWidth: edge.strokeWidth + 4, opacity: 0.5 }"
-        />
     </v-group>
 </template>
 

@@ -29,6 +29,7 @@ import { setToastInstance } from './utils/useToast'
 import { apiService } from './services/api'
 import { clearAuthStorage, getAccessToken, getRefreshToken, setAuthTokens } from './utils/storage'
 import { applyStoredTheme } from './utils/theme'
+import { scheduleMarkdownEditorWarmup } from './utils/markdownEditorWarmup'
 
 const hasPlayedStartupIntro = ref(false)
 const currentView = ref('home')
@@ -143,6 +144,7 @@ onMounted(() => {
         setToastInstance(toastManagerRef.value)
     }
     startTokenRefresh()
+    scheduleMarkdownEditorWarmup({ delayMs: 1800, timeoutMs: 2200 })
 })
 
 onUnmounted(() => {

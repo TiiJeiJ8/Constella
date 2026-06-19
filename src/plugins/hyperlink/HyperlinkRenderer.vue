@@ -1,153 +1,348 @@
 <template>
-    <div class="hyperlink-renderer" :class="displayMode">
-        <!-- Card 模式：紧凑 -->
-        <div v-if="displayMode === 'card'" class="card-view">
-            <img
-                class="favicon"
-                :src="faviconUrl"
-                @error="onFaviconError"
-                alt=""
-            />
-            <div class="card-text">
-                <span class="card-title">{{ displayTitle }}</span>
-                <span class="card-domain">{{ domain }}</span>
-            </div>
-        </div>
-
-        <!-- Full 模式：完整卡片 -->
-        <div v-else class="full-view">
-            <div class="link-header">
-                <img
-                    class="favicon-large"
-                    :src="faviconUrl"
-                    @error="onFaviconError"
-                    alt=""
-                />
-                <div class="link-info">
-                    <span class="link-title">{{ displayTitle }}</span>
-                    <span class="link-domain">{{ domain }}</span>
+    <div
+        class="hyperlink-renderer"
+        :class="{
+            compact: isCompact,
+            empty: !hasUrl,
+            invalid: hasUrl && !parsedUrl,
+            secure: isSecure
+        }"
+    >
+        <div v-if="hasUrl" class="link-card">
+            <div class="link-main">
+                <div class="site-mark" aria-hidden="true">
+                    <img
+                        v-if="faviconUrl"
+                        class="favicon"
+                        :src="faviconUrl"
+                        alt=""
+                        @error="handleFaviconError"
+                    />
+                    <LinkIcon v-else />
                 </div>
-                <span class="link-icon">↗</span>
+
+                <div class="link-copy">
+                    <div class="title-row">
+                        <span class="link-title">{{ displayTitle }}</span>
+                        <span v-if="!isCompact" class="scheme-pill">{{ protocolLabel }}</span>
+                    </div>
+                    <div class="link-meta">
+                        <span class="link-domain">{{ domainLabel }}</span>
+                    </div>
+                </div>
+
+                <JumpIcon v-if="!isCompact" class="open-mark" aria-hidden="true" />
             </div>
-            <div class="link-url">{{ url }}</div>
+
+            <div v-if="!isCompact" class="link-url">{{ shortUrl }}</div>
         </div>
 
-        <!-- 无 URL 时的占位 -->
-        <div v-if="!url" class="empty-state">
-            <span class="empty-icon">🔗</span>
-            <span class="empty-hint">{{ t('plugins.hyperlink.renderer.emptyHint') }}</span>
+        <div v-else class="empty-state">
+            <div class="site-mark empty-mark" aria-hidden="true">
+                <LinkIcon />
+            </div>
+            <div class="empty-copy">
+                <span class="empty-title">{{ t('plugins.hyperlink.renderer.defaultTitle') }}</span>
+                <span class="empty-hint">{{ t('plugins.hyperlink.renderer.emptyHint') }}</span>
+            </div>
         </div>
     </div>
 </template>
 
-<script setup>
-import { computed, ref } from 'vue'
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { JumpIcon, LinkIcon } from 'tdesign-icons-vue-next'
+import type { DisplayMode, NodeContent } from '../index'
 
-const props = defineProps({
-    content: { type: Object, required: true },
-    width:   { type: Number, default: 200 },
-    height:  { type: Number, default: 120 },
-    displayMode: { type: String, default: 'full' }
+const props = withDefaults(defineProps<{
+    content: NodeContent
+    width?: number
+    height?: number
+    displayMode?: DisplayMode
+}>(), {
+    width: 200,
+    height: 120,
+    displayMode: 'full'
 })
 
 const { t } = useI18n()
 
-const url = computed(() => props.content?.data || '')
-const title = computed(() => props.content?.metadata?.title || '')
-
-// 提取域名
-const domain = computed(() => {
-    if (!url.value) return ''
-    try {
-        return new URL(url.value).hostname.replace(/^www\./, '')
-    } catch {
-        return url.value
-    }
+const faviconFailed = ref(false)
+const rawUrl = computed(() => (props.content?.data || '').trim())
+const customTitle = computed(() => {
+    const value = props.content?.metadata?.title
+    return typeof value === 'string' ? value.trim() : ''
 })
 
-// 显示标题：优先用户设置的，否则用域名
-const displayTitle = computed(() => title.value || domain.value || t('plugins.hyperlink.renderer.defaultTitle'))
-
-// Favicon：Google Favicon Service（需要网络）
-const faviconSrc = ref('')
-const FALLBACK = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><text y="20" font-size="20">🌐</text></svg>'
+const hasUrl = computed(() => rawUrl.value.length > 0)
+const parsedUrl = computed(() => parseUrl(rawUrl.value))
+const isCompact = computed(() => props.displayMode === 'card' || props.width < 220 || props.height < 105)
+const isSecure = computed(() => parsedUrl.value?.protocol === 'https:')
 
 const faviconUrl = computed(() => {
-    if (!url.value) return FALLBACK
-    try {
-        const { protocol, hostname } = new URL(url.value)
-        // 先用直接路径，@error 回退到 Google
-        return faviconSrc.value || `${protocol}//${hostname}/favicon.ico`
-    } catch {
-        return FALLBACK
-    }
+    const parsed = parsedUrl.value
+    if (faviconFailed.value || !parsed || !['http:', 'https:'].includes(parsed.protocol)) return ''
+    return `${parsed.origin}/favicon.ico`
 })
 
-// 图标加载失败 → 尝试 Google Favicon API → 最终回退 emoji
-let errorCount = 0
-function onFaviconError(e) {
-    errorCount++
-    if (errorCount === 1 && url.value) {
-        // 第一次失败：用 Google Favicon API
-        const encoded = encodeURIComponent(url.value)
-        e.target.src = `https://www.google.com/s2/favicons?domain_url=${encoded}&sz=64`
-    } else {
-        // 第二次失败：用内联 SVG emoji
-        e.target.src = FALLBACK
+const domainLabel = computed(() => {
+    const parsed = parsedUrl.value
+    if (!parsed) return rawUrl.value
+    return parsed.hostname.replace(/^www\./i, '')
+})
+
+const displayTitle = computed(() => {
+    return customTitle.value || domainLabel.value || t('plugins.hyperlink.renderer.defaultTitle')
+})
+
+const protocolLabel = computed(() => {
+    const protocol = parsedUrl.value?.protocol.replace(':', '')
+    return protocol || 'url'
+})
+
+const shortUrl = computed(() => {
+    const parsed = parsedUrl.value
+    if (!parsed) return rawUrl.value
+
+    const host = parsed.hostname.replace(/^www\./i, '')
+    const path = parsed.pathname === '/' ? '' : parsed.pathname
+    return `${host}${path}${parsed.search}${parsed.hash}`
+})
+
+watch(rawUrl, () => {
+    faviconFailed.value = false
+})
+
+function parseUrl(value: string) {
+    if (!value) return null
+
+    try {
+        return new URL(value)
+    } catch {
+        // Be tolerant for pasted domains while keeping the stored value unchanged.
+        if (/^[\w.-]+\.[a-z]{2,}([/:?#].*)?$/i.test(value)) {
+            try {
+                return new URL(`https://${value}`)
+            } catch {
+                return null
+            }
+        }
+        return null
     }
+}
+
+function handleFaviconError() {
+    faviconFailed.value = true
 }
 </script>
 
 <style scoped>
 .hyperlink-renderer {
-    width: 100%; height: 100%;
-    display: flex; flex-direction: column;
-    justify-content: center;
+    --link-surface-soft: color-mix(in srgb, var(--bg-primary, #ffffff) 72%, var(--color-primary, #667eea) 6%);
+    --link-border: color-mix(in srgb, var(--border-color, #dcdfe6) 78%, var(--color-primary, #667eea));
+    --link-text: var(--text-primary, #2c3e50);
+    --link-muted: var(--text-secondary, #606266);
+    --link-faint: var(--text-tertiary, #909399);
+    --link-accent: var(--accent-primary, #409eff);
+    --link-accent-soft: color-mix(in srgb, var(--accent-primary, #409eff) 14%, transparent);
+    --link-url-bg: color-mix(in srgb, var(--bg-tertiary, #ebeef5) 62%, transparent);
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
     padding: 10px 12px;
     box-sizing: border-box;
     overflow: hidden;
+    color: var(--link-text);
 }
 
-/* Card 模式 */
-.card-view {
-    display: flex; align-items: center; gap: 8px;
-}
-.favicon { width: 20px; height: 20px; border-radius: 4px; flex-shrink: 0; object-fit: contain; }
-.card-text { display: flex; flex-direction: column; overflow: hidden; }
-.card-title {
-    font-size: 13px; font-weight: 600; color: white;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.card-domain {
-    font-size: 11px; color: rgba(255,255,255,0.6);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-
-/* Full 模式 */
-.full-view { display: flex; flex-direction: column; gap: 6px; }
-.link-header { display: flex; align-items: center; gap: 10px; }
-.favicon-large { width: 32px; height: 32px; border-radius: 6px; object-fit: contain; flex-shrink: 0; }
-.link-info { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
-.link-title {
-    font-size: 14px; font-weight: 600; color: white;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.link-domain { font-size: 12px; color: rgba(255,255,255,0.6); }
-.link-icon { font-size: 16px; color: rgba(255,255,255,0.5); flex-shrink: 0; }
-.link-url {
-    font-size: 11px; color: rgba(255,255,255,0.4);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    padding: 4px 6px;
-    background: rgba(0,0,0,0.2);
-    border-radius: 4px;
-}
-
-/* 空状态 */
+.link-card,
 .empty-state {
-    display: flex; flex-direction: column; align-items: center;
-    gap: 6px; color: rgba(255,255,255,0.4);
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
 }
-.empty-icon { font-size: 28px; }
-.empty-hint { font-size: 12px; }
+
+.hyperlink-renderer:hover .link-card,
+.hyperlink-renderer:hover .empty-state {
+    color: var(--link-text);
+}
+
+.link-main {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.site-mark {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid color-mix(in srgb, var(--link-accent) 20%, var(--link-border));
+    border-radius: 8px;
+    background: var(--link-surface-soft);
+    color: var(--link-accent);
+    overflow: hidden;
+}
+
+.site-mark svg {
+    width: 18px;
+    height: 18px;
+}
+
+.favicon {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+}
+
+.link-copy,
+.empty-copy {
+    min-width: 0;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.title-row {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.link-title,
+.empty-title {
+    min-width: 0;
+    color: var(--link-text);
+    font-size: 14px;
+    font-weight: 760;
+    letter-spacing: 0;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.scheme-pill {
+    flex: 0 0 auto;
+    max-width: 58px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: var(--link-accent-soft);
+    color: var(--link-accent);
+    font-size: 10px;
+    font-weight: 760;
+    line-height: 1.2;
+    text-transform: uppercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.link-meta {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+}
+
+.link-domain,
+.empty-hint {
+    min-width: 0;
+    color: var(--link-muted);
+    font-size: 12px;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.open-mark {
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+    color: var(--link-faint);
+}
+
+.link-url {
+    min-width: 0;
+    padding: 5px 8px;
+    border: 1px solid color-mix(in srgb, var(--link-border) 72%, transparent);
+    border-radius: 6px;
+    background: var(--link-url-bg);
+    color: var(--link-faint);
+    font-family: "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, monospace;
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.empty-state {
+    flex-direction: row;
+    align-items: center;
+}
+
+.empty-mark {
+    background: var(--link-accent-soft);
+}
+
+.hyperlink-renderer.compact .link-card {
+    gap: 0;
+    padding: 0;
+}
+
+.hyperlink-renderer.compact .site-mark {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+    border-radius: 7px;
+}
+
+.hyperlink-renderer.compact .favicon {
+    width: 18px;
+    height: 18px;
+}
+
+.hyperlink-renderer.compact .link-title {
+    font-size: 13px;
+}
+
+.hyperlink-renderer.compact .link-domain {
+    font-size: 11px;
+}
+
+.hyperlink-renderer.invalid .site-mark {
+    color: var(--dialog-danger, #ef4444);
+    border-color: color-mix(in srgb, var(--dialog-danger, #ef4444) 32%, var(--link-border));
+}
+
+html[data-theme='dark'] .hyperlink-renderer {
+    --link-surface-soft: rgba(255, 255, 255, 0.05);
+    --link-border: rgba(255, 255, 255, 0.12);
+    --link-text: var(--text-primary, #e4e7ed);
+    --link-muted: var(--text-secondary, #c0c4cc);
+    --link-faint: var(--text-tertiary, #909399);
+    --link-accent: var(--accent-primary, #409eff);
+    --link-accent-soft: rgba(64, 158, 255, 0.14);
+    --link-url-bg: rgba(255, 255, 255, 0.05);
+}
 </style>

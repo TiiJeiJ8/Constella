@@ -1015,6 +1015,67 @@ function showInfo() {
     white-space: nowrap;
 }
 
+html[data-theme='dark'] .discovery-icon-btn {
+    background: rgba(45, 45, 45, 0.92);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: var(--text-primary);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+}
+
+html[data-theme='dark'] .discovery-icon-btn:hover:not(:disabled) {
+    background: rgba(64, 158, 255, 0.14);
+    border-color: rgba(64, 158, 255, 0.5);
+    color: var(--accent-hover);
+    box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.12);
+}
+
+html[data-theme='dark'] .discovery-pill {
+    background: rgba(45, 45, 45, 0.92);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: var(--text-primary);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+}
+
+html[data-theme='dark'] .discovery-pill:hover:not(:disabled),
+html[data-theme='dark'] .discovery-pill.active {
+    background: rgba(64, 158, 255, 0.16);
+    border-color: rgba(64, 158, 255, 0.5);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.12);
+}
+
+html[data-theme='dark'] .discovery-pill-version {
+    color: var(--text-secondary);
+}
+
+html[data-theme='dark'] .discovery-badge {
+    background: rgba(64, 158, 255, 0.18);
+    color: var(--accent-hover);
+}
+
+html[data-theme='dark'] .discovery-empty {
+    background: rgba(45, 45, 45, 0.72);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+html[data-theme='dark'] .selected-server-strip {
+    background: rgba(45, 45, 45, 0.96);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow:
+        0 16px 34px rgba(0, 0, 0, 0.36),
+        0 4px 12px rgba(0, 0, 0, 0.22);
+}
+
+html[data-theme='dark'] .selected-server-accent {
+    background: linear-gradient(180deg, var(--accent-primary), var(--color-primary));
+    box-shadow: 0 0 0 1px rgba(64, 158, 255, 0.18);
+}
+
+html[data-theme='dark'] .selected-server-url,
+html[data-theme='dark'] .selected-server-meta-label {
+    color: var(--text-secondary);
+}
+
 .loading-spinner {
     width: 16px;
     height: 16px;

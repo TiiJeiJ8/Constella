@@ -58,16 +58,23 @@ export function useCanvasAssets(options: UseCanvasAssetsOptions) {
         }
     }
 
+    function toAbsoluteAssetUrl(url: string) {
+        const baseUrl = apiService.getBaseUrl()
+        if (url.startsWith('http') || url.startsWith('blob:') || url.startsWith('data:')) return url
+        if (url.startsWith('constella://')) return `${baseUrl}/${url.replace(/^constella:\/\//, '')}`
+        if (url.startsWith('/')) return `${baseUrl}${url}`
+        return `${baseUrl}/${url}`
+    }
+
     async function loadRoomAssets() {
         try {
             console.log('[Canvas] Loading assets for room:', roomId)
             const response = await apiService.getAssets(roomId)
 
             if (response.success && Array.isArray(response.data)) {
-                const baseUrl = apiService.getBaseUrl()
                 roomAssets.value = response.data.map((asset: AssetLike) => ({
                     ...asset,
-                    url: asset.url.startsWith('http') ? asset.url : `${baseUrl}${asset.url}`,
+                    url: toAbsoluteAssetUrl(asset.url),
                     type: asset.type || getMimeTypeFromUrl(asset.url)
                 }))
                 console.log('[Canvas] Loaded', roomAssets.value.length, 'assets')
@@ -86,10 +93,7 @@ export function useCanvasAssets(options: UseCanvasAssetsOptions) {
 
         if (uploadData && uploadData.success === true && uploadData.asset) {
             const serverAsset = uploadData.asset
-            const baseUrl = apiService.getBaseUrl()
-            const fullUrl = serverAsset.url && serverAsset.url.startsWith('http')
-                ? serverAsset.url
-                : `${baseUrl}${String(serverAsset.url).replace(/^constella:\/\//, '/')}`
+            const fullUrl = toAbsoluteAssetUrl(String(serverAsset.url || ''))
 
             roomAssets.value.push({
                 id: serverAsset.id,
@@ -105,28 +109,49 @@ export function useCanvasAssets(options: UseCanvasAssetsOptions) {
             return
         }
 
-        const file = uploadData.file
-        const response = await apiService.uploadAsset(roomId, file)
+        const asset = await uploadRoomAsset(uploadData.file)
+        if (asset) {
+            toast.success(t('canvas.toast.uploadSuccess'))
+        }
+    }
 
+    async function uploadRoomAsset(file: File): Promise<AssetLike | null> {
+        if (canUploadAssets && !canUploadAssets.value) {
+            toast.error(t('canvas.permissionDenied'))
+            return null
+        }
+
+        const response = await apiService.uploadAsset(roomId, file)
         if (!response.success) {
             console.error('[Canvas] Asset upload failed:', response.message)
             toast.error(t('canvas.toast.uploadFailed'))
-            return
+            return null
         }
 
-        const serverAsset = response.data as AssetLike
-        const baseUrl = apiService.getBaseUrl()
-        roomAssets.value.push({
-            id: serverAsset.id,
-            name: serverAsset.name,
-            type: serverAsset.type,
-            size: serverAsset.size,
-            url: serverAsset.url.startsWith('http') ? serverAsset.url : `${baseUrl}${serverAsset.url}`,
-            uploadedAt: serverAsset.uploadedAt
-        })
+        const data = response.data
+        const serverAsset = typeof data === 'string'
+            ? {
+                id: `asset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                name: file.name,
+                type: file.type || getMimeTypeFromUrl(data),
+                size: file.size,
+                url: data
+            }
+            : data as AssetLike
 
+        const assetUrl = toAbsoluteAssetUrl(String(serverAsset.url || ''))
+
+        const asset = {
+            ...serverAsset,
+            name: serverAsset.name || file.name,
+            type: serverAsset.type || file.type || getMimeTypeFromUrl(assetUrl),
+            size: serverAsset.size || file.size,
+            url: assetUrl
+        }
+
+        roomAssets.value.push(asset)
         await loadRoomAssets()
-        toast.success(t('canvas.toast.uploadSuccess'))
+        return asset
     }
 
     async function handleAssetDelete(assetId: string) {
@@ -262,6 +287,7 @@ export function useCanvasAssets(options: UseCanvasAssetsOptions) {
         roomAssets,
         loadRoomAssets,
         handleAssetUpload,
+        uploadRoomAsset,
         handleAssetDelete,
         handleAssetInsert,
         handleCanvasDragOver,

@@ -238,6 +238,7 @@ const props = defineProps<{
     kind: ExportableDocumentKind
     defaultSettings: ExportPanelSettings
     supportsElectronPdf: boolean
+    allowedFormats?: DocumentExportFormat[]
 }>()
 
 const emit = defineEmits<{
@@ -249,17 +250,20 @@ const overlayRef = ref<HTMLDivElement | null>(null)
 const fileNameInputRef = ref<HTMLInputElement | null>(null)
 const contentRef = ref<HTMLElement | null>(null)
 const draft = ref<ExportPanelSettings>(cloneSettings(props.defaultSettings))
+type ExportFormatOption = { id: DocumentExportFormat; title: string; description: string }
 
 const availableFormats = computed(() => {
-    const formats: Array<{ id: DocumentExportFormat; title: string; description: string }> = [
+    const allowed = new Set(props.allowedFormats || ['pdf', 'md', 'txt'])
+    const baseFormats: ExportFormatOption[] = [
         {
             id: 'pdf',
             title: 'PDF',
             description: t('canvas.editor.exportPdfDescription')
         }
     ]
+    const formats = baseFormats.filter(format => allowed.has(format.id))
 
-    if (props.kind === 'markdown') {
+    if (props.kind === 'markdown' && allowed.has('md')) {
         formats.push({
             id: 'md',
             title: 'Markdown',
@@ -267,11 +271,13 @@ const availableFormats = computed(() => {
         })
     }
 
-    formats.push({
-        id: 'txt',
-        title: 'Text',
-        description: t('canvas.editor.exportTextDescription')
-    })
+    if (allowed.has('txt')) {
+        formats.push({
+            id: 'txt',
+            title: 'Text',
+            description: t('canvas.editor.exportTextDescription')
+        })
+    }
 
     return formats
 })
@@ -334,6 +340,7 @@ const exportActionLabel = computed(() => {
 watch(() => props.modelValue, visible => {
     if (!visible) return
     draft.value = cloneSettings(props.defaultSettings)
+    ensureAllowedFormat()
     nextTick(() => {
         overlayRef.value?.focus()
         fileNameInputRef.value?.focus()
@@ -344,14 +351,18 @@ watch(() => props.modelValue, visible => {
 watch(() => props.defaultSettings, value => {
     if (!props.modelValue) {
         draft.value = cloneSettings(value)
+        ensureAllowedFormat()
     }
 }, { deep: true })
+
+watch(availableFormats, () => ensureAllowedFormat())
 
 function handleCancel() {
     emit('update:modelValue', false)
 }
 
 function handleConfirm() {
+    ensureAllowedFormat()
     emit('confirm', cloneSettings(draft.value))
     emit('update:modelValue', false)
 }
@@ -387,6 +398,11 @@ function cloneSettings(settings: ExportPanelSettings): ExportPanelSettings {
         txtMode: settings.txtMode
     }
 }
+
+function ensureAllowedFormat() {
+    if (availableFormats.value.some(format => format.id === draft.value.format)) return
+    draft.value.format = availableFormats.value[0]?.id || 'pdf'
+}
 </script>
 
 <style scoped>
@@ -406,7 +422,8 @@ function cloneSettings(settings: ExportPanelSettings): ExportPanelSettings {
     display: flex;
     flex-direction: column;
     width: min(820px, 100%);
-    max-height: min(84vh, 720px);
+    height: min(84vh, 720px);
+    min-height: 560px;
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 24px;
@@ -782,7 +799,11 @@ html[data-theme='light'] .export-panel-footer {
 
 @media (max-width: 720px) {
     .export-panel-overlay { padding: 16px; }
-    .export-panel { width: 100%; max-height: 92vh; }
+    .export-panel {
+        width: 100%;
+        height: min(92vh, 720px);
+        min-height: 0;
+    }
     .export-panel-body { grid-template-columns: 1fr; min-height: 0; }
     .export-sidebar {
         border-right: none;
