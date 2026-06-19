@@ -26,6 +26,19 @@
         "footer": {
             "github": "GitHub",
             "info": "关于"
+        },
+        "discovery": {
+            "title": "LAN Discovery",
+            "subtitle": "Automatically find nearby Constella servers and connect in one click.",
+            "refresh": "Refresh",
+            "searching": "Searching nearby servers...",
+            "empty": "No Constella servers were found on this local network yet.",
+            "desktopOnly": "LAN auto-discovery is available in the desktop app. You can still connect manually here.",
+            "quickConnect": "Quick Connect",
+            "manualDivider": "Manual Address",
+            "errors": {
+                "failed": "Failed to scan the local network. Please try again."
+            }
         }
     },
     "theme": {
@@ -52,7 +65,8 @@
             "tokenInvalid": "登录信息无效，请重新登录",
             "unauthorized": "未授权，请先登录",
             "networkError": "网络错误，请稍后重试"
-        }
+        },
+        "unknown": "Unknown"
     },
     "window": {
         "minimize": "最小化",
@@ -83,7 +97,7 @@
         }
     },
     "topbar": {
-        "joinByInviteCode": "\u4ee5\u9080\u8bf7\u7801\u52a0\u5165",
+        "joinByInviteCode": "以邀请码加入",
         "search": "搜索",
         "searchPlaceholder": "搜索房间...",
         "createRoom": "创建房间",
@@ -126,7 +140,8 @@
         "roles": {
             "owner": "房主",
             "admin": "管理员",
-            "member": "成员"
+            "member": "成员",
+            "editor": "Editor"
         },
         "time": {
             "justNow": "刚刚",
@@ -149,7 +164,8 @@
             "deleting": "删除中...",
             "failed": "删除失败",
             "delete": "删除"
-        }
+        },
+        "untitled": "Untitled Room"
     },
     "createRoom": {
         "title": "创建房间",
@@ -657,16 +673,44 @@
             "restoreConfirmMessage": "确定要恢复到此快照吗？当前未保存的更改将丢失。",
             "deleteConfirmTitle": "删除快照",
             "deleteConfirmMessage": "确定要删除这个快照吗？此操作不可撤销。"
+        },
+        "todo": {
+            "title": "待办事项",
+            "open": "打开待办",
+            "collapse": "收起待办",
+            "placeholder": "添加待办事项...",
+            "empty": "暂无待办事项",
+            "markDone": "标记完成",
+            "markUndone": "标记未完成",
+            "delete": "删除",
+            "filterAll": "全部",
+            "filterMine": "我的",
+            "filterUnassigned": "未分配",
+            "filterOverdue": "已逾期",
+            "unassigned": "未分配",
+            "noDdl": "无截止时间",
+            "overdueToday": "今日逾期",
+            "overdueDays": "逾期{days}天",
+            "selectAssignee": "选择负责人",
+            "selectDdl": "截止时间",
+            "clearAssignee": "取消负责人",
+            "clearDdl": "移除截止时间",
+            "today": "今天",
+            "tomorrow": "明天",
+            "weekend": "本周末",
+            "apply": "应用",
+            "me": "我",
+            "completed": "已完成"
         }
     },
     "joinRoom": {
-        "requestTitle": "\u7533\u8bf7\u52a0\u5165",
-        "requestAccess": "\u63d0\u4ea4\u7533\u8bf7",
-        "directHint": "\u8f93\u5165\u5bc6\u7801\u9a8c\u8bc1\u6210\u529f\u540e\uff0c\u5373\u53ef\u76f4\u63a5\u52a0\u5165\u3002",
-        "approvalHint": "\u5148\u9a8c\u8bc1\u5bc6\u7801\uff0c\u518d\u7531\u623f\u4e3b\u6216\u7ba1\u7406\u5458\u5ba1\u6838\u901a\u8fc7\u540e\u52a0\u5165\u3002",
-        "requestSubmitted": "\u5165\u623f\u7533\u8bf7\u5df2\u63d0\u4ea4",
-        "directBadge": "\u5bc6\u7801\u76f4\u5165",
-        "approvalBadge": "\u9700\u5ba1\u6838",
+        "requestTitle": "申请加入",
+        "requestAccess": "提交申请",
+        "directHint": "输入密码验证成功后，即可直接加入。",
+        "approvalHint": "先验证密码，再由房主或管理员审核通过后加入。",
+        "requestSubmitted": "入房申请已提交",
+        "directBadge": "密码直入",
+        "approvalBadge": "需审核",
         "title": "加入房间",
         "password": "房间密码",
         "passwordPlaceholder": "输入房间密码",
@@ -772,7 +816,8 @@
             "collaboration": "协作",
             "advanced": "高级",
             "shortcuts": "快捷键设置",
-            "plugins": "插件"
+            "plugins": "插件",
+            "about": "About"
         },
         "account": {
             "title": "账户设置",
@@ -845,7 +890,20 @@
             "runtimeReloaded": "开发插件已重载：{target}",
             "runtimeReloadFailed": "开发插件重载失败：{message}",
             "runtimeDiagnosticError": "检测到插件 {plugin} 出错，请前往 设置 > 插件 > 插件诊断 查看。{suffix}",
-            "developmentPlugin": "开发插件"
+            "developmentPlugin": "开发插件",
+            "title": "Plugin Management",
+            "description": "Install, enable, disable, and remove runtime plugins. Changes reload the app to refresh the active node catalog.",
+            "install": "Install Plugin",
+            "refresh": "Refresh",
+            "reloadApp": "Reload App",
+            "desktopOnly": "Plugin management is only available in the Electron desktop app.",
+            "empty": "No plugins installed yet.",
+            "installedCount": "{count} plugin(s) installed",
+            "remove": "Remove",
+            "author": "Author",
+            "source": "Source",
+            "installedAt": "Installed",
+            "nodeKinds": "Node kinds"
         },
         "shortcuts": {
             "title": "快捷键",
@@ -855,7 +913,12 @@
             "edge": "创建连线",
             "reset": "重置为默认"
         },
-        "close": "关闭"
+        "close": "关闭",
+        "about": {
+            "title": "About",
+            "subtitle": "Quick product information for the current app window.",
+            "openRepository": "Open Repository"
+        }
     },
     "login": {
         "title": "登录",
@@ -894,7 +957,13 @@
             "easyDeploy": "易于部署",
             "cardDesign": "卡片设计",
             "mindMap": "思维导图",
-            "mediaSupport": "多媒体支持"
+            "mediaSupport": "多媒体支持",
+            "structuredCanvas": "Structured canvas editing",
+            "collaboration": "Real-time multi-user collaboration",
+            "roomPermissions": "Room and permission control",
+            "lanDiscovery": "LAN server discovery",
+            "assetsSnapshots": "Assets and snapshots workflow",
+            "pluginsExport": "Plugin extensibility and export support"
         },
         "tech": {
             "title": "技术栈",
@@ -923,7 +992,8 @@
         },
         "links": {
             "github": "GitHub 仓库",
-            "documentation": "文档"
+            "documentation": "文档",
+            "license": "License: MIT"
         },
         "backToHome": "返回主页"
     }

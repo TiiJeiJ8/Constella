@@ -668,6 +668,34 @@
             "restoreConfirmMessage": "Are you sure you want to restore to this snapshot? Unsaved changes will be lost.",
             "deleteConfirmTitle": "Delete Snapshot",
             "deleteConfirmMessage": "Are you sure you want to delete this snapshot? This action cannot be undone."
+        },
+        "todo": {
+            "title": "To-Do",
+            "open": "Open To-Do",
+            "collapse": "Collapse",
+            "placeholder": "Add todo...",
+            "empty": "No todos yet",
+            "markDone": "Mark as done",
+            "markUndone": "Mark as undone",
+            "delete": "Delete",
+            "filterAll": "All",
+            "filterMine": "Mine",
+            "filterUnassigned": "Unassigned",
+            "filterOverdue": "Overdue",
+            "unassigned": "Unassigned",
+            "noDdl": "No deadline",
+            "overdueToday": "Overdue today",
+            "overdueDays": "Overdue {days}d",
+            "selectAssignee": "Assignee",
+            "selectDdl": "Deadline",
+            "clearAssignee": "Remove assignee",
+            "clearDdl": "Remove deadline",
+            "today": "Today",
+            "tomorrow": "Tomorrow",
+            "weekend": "Weekend",
+            "apply": "Apply",
+            "me": "Me",
+            "completed": "Completed"
         }
     },
     "joinRoom": {
@@ -944,7 +972,8 @@
         },
         "links": {
             "github": "GitHub Repository",
-            "documentation": "Documentation"
+            "documentation": "Documentation",
+            "license": "License: MIT"
         },
         "backToHome": "Back to Home"
     }

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <div class="canvas-view" :data-room-id="roomId">
         <WindowControls />
 
@@ -29,6 +29,7 @@
             :room-role="roomRole"
             :is-syncing="isSyncing"
             :online-count="currentUsers.length"
+            :current-users="currentUsers"
             :can-edit-canvas="canEditCanvas"
             :can-manage-snapshots="canManageSnapshots"
             :can-manage-room="roomCapabilities.can_manage_room"

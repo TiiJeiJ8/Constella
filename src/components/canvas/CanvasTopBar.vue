@@ -28,6 +28,7 @@
                     </div>
                 </div>
             </div>
+                <TodoPanel :members="currentUsers" />
         </div>
 
         <div class="topbar-section topbar-right">
@@ -144,6 +145,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SettingsPanel from '@/components/base/SettingsPanel.vue'
+import TodoPanel from './TodoPanel.vue'
 import { getStoredTheme, setTheme } from '@/utils/theme'
 
 const ZH = 'zh-CN'
@@ -155,6 +157,7 @@ const props = defineProps({
     roomRole: { type: String, default: '' },
     isSyncing: { type: Boolean, default: false },
     onlineCount: { type: Number, default: 1 },
+    currentUsers: { type: Array, default: () => [] },
     canEditCanvas: { type: Boolean, default: true },
     canManageSnapshots: { type: Boolean, default: true },
     canManageRoom: { type: Boolean, default: false }
