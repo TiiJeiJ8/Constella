@@ -213,6 +213,10 @@ docs/               # 使用与开发文档
 
 本项目采用 [MIT License](./LICENSE)。
 
+### 第三方开源组件
+
+Constella 的 Markdown 节点编辑器使用了基于 MarkText / Muya 的内部 fork。相关源码位于 `web/vendor/muya`，其原始 MIT License、NOTICE 与上游说明已保留在该目录中。
+
 ## ⭐ Star History
 
 <a href="https://www.star-history.com/?repos=TiiJeiJ8%2Fconstella&type=timeline&legend=bottom-right">

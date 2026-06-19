@@ -215,6 +215,10 @@ This project is under active development. Some features and interfaces may chang
 
 This project is licensed under [MIT License](./LICENSE).
 
+### Third-party Open Source Components
+
+Constella's Markdown node editor uses an internal fork based on MarkText / Muya. The related source is located in `web/vendor/muya`, with the original MIT License, NOTICE, and upstream README preserved in that directory.
+
 ## ⭐ Star History
 
 <a href="https://www.star-history.com/?repos=TiiJeiJ8%2Fconstella&type=timeline&legend=bottom-right">
