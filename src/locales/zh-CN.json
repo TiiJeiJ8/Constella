@@ -28,16 +28,16 @@
             "info": "关于"
         },
         "discovery": {
-            "title": "LAN Discovery",
-            "subtitle": "Automatically find nearby Constella servers and connect in one click.",
-            "refresh": "Refresh",
-            "searching": "Searching nearby servers...",
-            "empty": "No Constella servers were found on this local network yet.",
-            "desktopOnly": "LAN auto-discovery is available in the desktop app. You can still connect manually here.",
-            "quickConnect": "Quick Connect",
-            "manualDivider": "Manual Address",
+            "title": "局域网发现",
+            "subtitle": "自动发现局域网内的Constella服务器，一键连接。",
+            "refresh": "刷新",
+            "searching": "正在搜索附近的服务器...",
+            "empty": "当前局域网内未找到Constella服务器。",
+            "desktopOnly": "局域网自动发现仅在桌面端应用可用。你仍可在此手动连接。",
+            "quickConnect": "快速连接",
+            "manualDivider": "手动输入地址",
             "errors": {
-                "failed": "Failed to scan the local network. Please try again."
+                "failed": "扫描局域网失败，请重试。"
             }
         }
     },
