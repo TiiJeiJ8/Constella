@@ -928,10 +928,23 @@
             "author1": "TiiJeiJ8",
             "author2": "577fkj"
         },
+        "licenses": {
+            "title": "Open Source Licenses",
+            "intro": "Constella respects and preserves license and attribution information for third-party open source projects. The key notices used by this app are listed below.",
+            "constella": {
+                "license": "MIT License",
+                "description": "The Constella frontend project is released under the MIT License.",
+                "meta": "License file: web/LICENSE"
+            },
+            "muya": {
+                "license": "MIT License / Internal fork",
+                "description": "The Markdown node editor uses an internal fork based on MarkText / Muya, with Constella-specific compatibility changes maintained in this repository.",
+                "meta": "Source and upstream notices: web/vendor/muya/LICENSE, NOTICE, UPSTREAM_README.md"
+            }
+        },
         "links": {
             "github": "GitHub Repository",
-            "documentation": "Documentation",
-            "license": "License: MIT"
+            "documentation": "Documentation"
         },
         "backToHome": "Back to Home"
     }

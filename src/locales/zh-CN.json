@@ -907,10 +907,23 @@
             "author1": "TiiJeiJ8",
             "author2": "577fkj"
         },
+        "licenses": {
+            "title": "开源许可",
+            "intro": "Constella 尊重并保留第三方开源项目的许可与署名信息。以下为应用内主要开源许可说明。",
+            "constella": {
+                "license": "MIT License",
+                "description": "Constella 前端项目采用 MIT License 发布。",
+                "meta": "许可文件：web/LICENSE"
+            },
+            "muya": {
+                "license": "MIT License / 内部 fork",
+                "description": "Markdown 节点编辑器使用基于 MarkText / Muya 的内部 fork，并在 Constella 中维护兼容性改动。",
+                "meta": "源码与上游说明：web/vendor/muya/LICENSE、NOTICE、UPSTREAM_README.md"
+            }
+        },
         "links": {
             "github": "GitHub 仓库",
-            "documentation": "文档",
-            "license": "开源协议：MIT"
+            "documentation": "文档"
         },
         "backToHome": "返回主页"
     }

@@ -68,12 +68,29 @@
                         </div>
                     </div>
 
+                    <div class="licenses-section">
+                        <h2 class="section-title"><span aria-hidden="true">📜</span>{{ t('about.licenses.title') }}</h2>
+                        <p class="licenses-intro">{{ t('about.licenses.intro') }}</p>
+                        <div class="license-list">
+                            <article v-for="item in licenseItems" :key="item.name" class="license-card">
+                                <div class="license-card-header">
+                                    <span class="license-mark" aria-hidden="true">{{ item.mark }}</span>
+                                    <div>
+                                        <h3 class="license-name">{{ item.name }}</h3>
+                                        <p class="license-type">{{ item.license }}</p>
+                                    </div>
+                                </div>
+                                <p class="license-desc">{{ item.description }}</p>
+                                <p class="license-meta">{{ item.meta }}</p>
+                            </article>
+                        </div>
+                    </div>
+
                     <div class="links-section">
                         <button class="link-btn" @click="openGithub">
                             <LogoGithubIcon />
                             <span>{{ t('about.links.github') }}</span>
                         </button>
-                        <div class="license-text">{{ t('about.links.license') }}</div>
                     </div>
                 </div>
             </Transition>
@@ -92,6 +109,14 @@ interface FeatureItem {
     emoji: string
     title: string
     desc: string
+}
+
+interface LicenseItem {
+    mark: string
+    name: string
+    license: string
+    description: string
+    meta: string
 }
 
 const { t, locale } = useI18n()
@@ -120,6 +145,23 @@ const featureItems = computed<FeatureItem[]>(() =>
               { iconKey: 'plugins', emoji: '🧩', title: 'Plugins and export', desc: 'Extend nodes and export in multiple formats.' }
           ]
 )
+
+const licenseItems = computed<LicenseItem[]>(() => [
+    {
+        mark: 'C',
+        name: 'Constella',
+        license: t('about.licenses.constella.license'),
+        description: t('about.licenses.constella.description'),
+        meta: t('about.licenses.constella.meta')
+    },
+    {
+        mark: 'M',
+        name: 'MarkText / Muya',
+        license: t('about.licenses.muya.license'),
+        description: t('about.licenses.muya.description'),
+        meta: t('about.licenses.muya.meta')
+    }
+])
 
 function goBack() {
     emit('navigate', 'home')
@@ -262,7 +304,8 @@ function openAuthorGithub(username: string) {
 .description-section,
 .features-section,
 .tech-section,
-.authors-section {
+.authors-section,
+.licenses-section {
     margin-bottom: 48px;
 }
 
@@ -419,6 +462,83 @@ function openAuthorGithub(username: string) {
     user-select: none;
 }
 
+.licenses-intro {
+    max-width: 680px;
+    margin: -8px auto 18px;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    text-align: center;
+}
+
+.license-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+.license-card {
+    padding: 18px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.license-card:hover {
+    background: var(--bg-tertiary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.license-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.license-mark {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 12px;
+    background: rgba(102, 126, 234, 0.14);
+    color: var(--accent-primary);
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.license-name {
+    margin: 0 0 4px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.license-type {
+    margin: 0;
+    color: var(--text-tertiary);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.license-desc,
+.license-meta {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+    line-height: 1.55;
+}
+
+.license-meta {
+    margin-top: 10px;
+    color: var(--text-tertiary);
+}
+
 .links-section {
     display: flex;
     flex-direction: column;
@@ -448,12 +568,6 @@ function openAuthorGithub(username: string) {
 .link-btn svg {
     width: 20px;
     height: 20px;
-}
-
-.license-text {
-    font-size: 0.85rem;
-    color: var(--text-tertiary);
-    font-weight: 500;
 }
 
 @media (max-width: 768px) {
