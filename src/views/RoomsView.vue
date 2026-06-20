@@ -64,7 +64,7 @@ import JoinRoomDialog from '@/components/rooms/JoinRoomDialog.vue'
 import DeleteRoomDialog from '@/components/rooms/DeleteRoomDialog.vue'
 import { apiService } from '@/services/api'
 import { useRoomsList } from '@/composables/useRoomsList'
-import { removeRoomFromLocalCollections } from '@/utils/storage'
+import { removeRoomFromLocalCollections, removeTodoCache } from '@/utils/storage'
 import { getErrorMessage } from '@/utils/errorHandler'
 const { t } = useI18n()
 const props = defineProps({
@@ -171,6 +171,7 @@ async function handleDeleteConfirm({ roomId, password, callback }) {
             callback(true)
             removeRoom(roomId)
             removeRoomFromLocalCollections(roomId)
+            removeTodoCache(apiService.getBaseUrl(), roomId)
             await loadRooms(true)
             return
         }
