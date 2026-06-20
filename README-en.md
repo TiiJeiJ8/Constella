@@ -200,7 +200,7 @@ Contributions are welcome:
 - Support long-term iteration via Stars and Forks
 
 <a href="https://github.com/TiiJeiJ8/constella/graphs/contributors" target="_blank" rel="noopener">
-  <img src="https://contrib.rocks/image?repo=TiiJeiJ8/constella&max=30&anon=1&v=1"
+  <img src="https://contrib.rocks/image?repo=TiiJeiJ8/constella&max=100&anon=1&v=2&columns=10"
     alt="Constella contributors"
     width="650"
     loading="lazy"
