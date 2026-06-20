@@ -103,13 +103,6 @@ See:
 ## 🖼️ Screenshots
 
 <details>
-<summary> Canvas Collaboration Demo </summary>
-
-![DEMO](IMG/demo.gif)
-
-</details>
-
-<details>
 <summary> Dark & Light Mode </summary>
 
 ![Dark&Light](IMG/dark_theme.jpg)

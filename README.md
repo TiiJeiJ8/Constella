@@ -101,13 +101,6 @@ Constella 现已同时支持内置节点插件与可安装运行时插件。
 ## 🖼️ 界面展示
 
 <details>
-<summary> 协作画布演示 </summary>
-
-![DEMO](IMG/demo.gif)
-
-</details>
-
-<details>
 <summary> 深浅色模式 </summary>
 
 ![Dark&Light](IMG/dark_theme.jpg)
