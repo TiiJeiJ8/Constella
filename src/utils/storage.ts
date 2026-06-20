@@ -10,6 +10,12 @@ const STORAGE_KEYS = {
     favoriteRooms: 'favoriteRooms'
 } as const
 
+const TODO_CACHE_VERSION = 1
+const TODO_CACHE_PREFIX = 'ctodo3'
+const TODO_LEGACY_GLOBAL_KEY = 'ctodo2'
+const TODO_LEGACY_ROOM_PREFIX = 'ctodo2:'
+const TODO_MISSING_PURGE_MS = 7 * 24 * 60 * 60 * 1000
+
 interface RecentVisitRecord {
     roomId: string
     lastVisit: number
@@ -18,6 +24,25 @@ interface RecentVisitRecord {
 interface FavoriteRoomRecord {
     roomId: string
     addedAt: number
+}
+
+export interface CachedTodoItem {
+    id: string
+    text: string
+    done: boolean
+    dueDate?: string
+    assigneeId?: string
+    assigneeName?: string
+    createdAt: number
+}
+
+interface TodoCacheEnvelope {
+    version: number
+    serverId: string
+    roomId: string
+    updatedAt: number
+    missingSince?: number
+    todos: CachedTodoItem[]
 }
 
 function readJson<T>(key: string, fallback: T): T {
@@ -32,6 +57,67 @@ function readJson<T>(key: string, fallback: T): T {
 
 function writeJson(key: string, value: unknown) {
     localStorage.setItem(key, JSON.stringify(value))
+}
+
+function normalizeServerId(serverUrl?: string) {
+    const raw = (serverUrl || localStorage.getItem('serverUrl') || '').trim().replace(/\/$/, '')
+    if (!raw) return 'local'
+
+    try {
+        const url = new URL(raw)
+        url.hash = ''
+        url.search = ''
+        url.pathname = url.pathname.replace(/\/$/, '')
+        return `${url.protocol}//${url.host}${url.pathname}`.toLowerCase()
+    } catch {
+        return raw.toLowerCase()
+    }
+}
+
+function encodeKeyPart(value: string) {
+    return encodeURIComponent(value)
+}
+
+export function getTodoCacheKey(serverUrl: string | undefined, roomId: string) {
+    return `${TODO_CACHE_PREFIX}:${encodeKeyPart(normalizeServerId(serverUrl))}:${encodeKeyPart(roomId || 'global')}`
+}
+
+function readTodoEnvelope(key: string): TodoCacheEnvelope | null {
+    return readJson<TodoCacheEnvelope | null>(key, null)
+}
+
+function writeTodoEnvelope(serverUrl: string | undefined, roomId: string, todos: CachedTodoItem[], missingSince?: number) {
+    const serverId = normalizeServerId(serverUrl)
+    writeJson(getTodoCacheKey(serverUrl, roomId), {
+        version: TODO_CACHE_VERSION,
+        serverId,
+        roomId,
+        updatedAt: Date.now(),
+        missingSince,
+        todos
+    } satisfies TodoCacheEnvelope)
+}
+
+function migrateLegacyTodos(serverUrl: string | undefined, roomId: string) {
+    const roomLegacyKey = `${TODO_LEGACY_ROOM_PREFIX}${roomId || 'global'}`
+    const roomLegacy = localStorage.getItem(roomLegacyKey)
+    if (roomLegacy) {
+        const todos = readJson<CachedTodoItem[]>(roomLegacyKey, [])
+        writeTodoEnvelope(serverUrl, roomId, todos)
+        localStorage.removeItem(roomLegacyKey)
+        return todos
+    }
+
+    const globalMigrationKey = `${TODO_LEGACY_ROOM_PREFIX}migrated:${normalizeServerId(serverUrl)}:${roomId || 'global'}`
+    const globalLegacy = localStorage.getItem(TODO_LEGACY_GLOBAL_KEY)
+    if (globalLegacy && !localStorage.getItem(globalMigrationKey)) {
+        const todos = readJson<CachedTodoItem[]>(TODO_LEGACY_GLOBAL_KEY, [])
+        writeTodoEnvelope(serverUrl, roomId, todos)
+        localStorage.setItem(globalMigrationKey, '1')
+        return todos
+    }
+
+    return []
 }
 
 function migrateLegacyToken(nextKey: string, legacyKey: string) {
@@ -166,4 +252,56 @@ export function toggleFavoriteRoom(roomId: string) {
 export function removeRoomFromLocalCollections(roomId: string) {
     saveFavoriteRooms(getFavoriteRooms().filter(item => item.roomId !== roomId))
     saveRecentVisits(getRecentVisits().filter(item => item.roomId !== roomId))
+}
+
+export function loadTodoCache(serverUrl: string | undefined, roomId: string) {
+    const key = getTodoCacheKey(serverUrl, roomId)
+    const cached = readTodoEnvelope(key)
+    if (cached) {
+        if (cached.missingSince) {
+            writeTodoEnvelope(serverUrl, roomId, cached.todos)
+        }
+        return cached.todos
+    }
+
+    return migrateLegacyTodos(serverUrl, roomId)
+}
+
+export function saveTodoCache(serverUrl: string | undefined, roomId: string, todos: CachedTodoItem[]) {
+    writeTodoEnvelope(serverUrl, roomId, todos)
+}
+
+export function removeTodoCache(serverUrl: string | undefined, roomId: string) {
+    localStorage.removeItem(getTodoCacheKey(serverUrl, roomId))
+}
+
+export function reconcileTodoCacheForRooms(serverUrl: string | undefined, activeRoomIds: string[]) {
+    const serverId = normalizeServerId(serverUrl)
+    const serverPrefix = `${TODO_CACHE_PREFIX}:${encodeKeyPart(serverId)}:`
+    const activeRooms = new Set(activeRoomIds)
+    const now = Date.now()
+
+    for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+        const key = localStorage.key(index)
+        if (!key || !key.startsWith(serverPrefix)) continue
+
+        const cached = readTodoEnvelope(key)
+        if (!cached) continue
+
+        if (activeRooms.has(cached.roomId)) {
+            if (cached.missingSince) {
+                writeTodoEnvelope(serverUrl, cached.roomId, cached.todos)
+            }
+            continue
+        }
+
+        if (cached.missingSince && now - cached.missingSince > TODO_MISSING_PURGE_MS) {
+            localStorage.removeItem(key)
+        } else if (!cached.missingSince) {
+            writeJson(key, {
+                ...cached,
+                missingSince: now
+            } satisfies TodoCacheEnvelope)
+        }
+    }
 }

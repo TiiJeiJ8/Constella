@@ -7,7 +7,7 @@ import { useAwareness } from '@/composables/useAwareness'
 import { apiService } from '@/services/api'
 import { registerPlugins } from '@/plugins/register'
 import { getErrorMessage } from '@/utils/errorHandler'
-import { getUserId, getUsername, recordRecentVisit } from '@/utils/storage'
+import { getUserId, getUsername, recordRecentVisit, removeTodoCache } from '@/utils/storage'
 
 interface UseCanvasRoomOptions {
     roomId: string
@@ -103,6 +103,7 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
 
         if (event.type === 'room_deleted') {
             toast.error(t('canvas.toast.roomDeleted'))
+            removeTodoCache(apiService.getBaseUrl(), roomId)
             yjs.disconnect()
             setTimeout(() => {
                 emitNavigate('rooms')
@@ -230,6 +231,9 @@ export function useCanvasRoom(options: UseCanvasRoomOptions) {
             const response = await apiService.getRoomById(roomId)
 
             if (!response.success) {
+                if (response.errorCode === 'ROOM_NOT_FOUND' || response.errorCode === 'ROOM_DELETED') {
+                    removeTodoCache(apiService.getBaseUrl(), roomId)
+                }
                 if (showLoading) {
                     roomName.value = fallbackName
                     roomLoadError.value = getErrorMessage(response.errorCode, t('canvas.loadError'))

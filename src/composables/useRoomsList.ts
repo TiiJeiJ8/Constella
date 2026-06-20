@@ -2,7 +2,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { apiService } from '@/services/api'
 import { mapRoomCollection, type RoomListItem } from '@/utils/roomMapper'
 import { getErrorMessage } from '@/utils/errorHandler'
-import { getUserId } from '@/utils/storage'
+import { getUserId, reconcileTodoCacheForRooms } from '@/utils/storage'
 
 interface UseRoomsListOptions {
     t: (key: string) => string
@@ -70,6 +70,10 @@ export function useRoomsList(options: UseRoomsListOptions) {
             rooms.value = activeTab.value === 'public'
                 ? mappedRooms.filter(room => !room.isPrivate)
                 : mappedRooms
+
+            if (activeTab.value === 'all') {
+                reconcileTodoCacheForRooms(apiService.getBaseUrl(), mappedRooms.map(room => room.id))
+            }
         } catch (err: any) {
             error.value = getErrorMessage(err?.errorCode, t('rooms.errors.loadFailed'))
             rooms.value = []

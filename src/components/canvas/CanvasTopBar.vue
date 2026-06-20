@@ -28,7 +28,7 @@
                     </div>
                 </div>
             </div>
-                <TodoPanel :members="currentUsers" />
+                <TodoPanel :members="currentUsers" :room-id="roomId" />
         </div>
 
         <div class="topbar-section topbar-right">
