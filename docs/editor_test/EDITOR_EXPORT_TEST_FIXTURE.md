@@ -2,7 +2,7 @@
 
 This document is a full regression fixture for the current Markdown/TXT editor and the `MD / TXT / PDF` export flow.
 
-It is designed to cover all current slash command content types in `NodeEditorModal`, including headings, lists, divider, quote, inline styles, links, images, tables, code blocks, math, and Mermaid diagram variants.
+It is designed to cover all current Markdown editor content types in `MarkdownNodeEditorModalNext` and `TextNodeEditorModalNext`, including headings, lists, divider, quote, inline styles, links, images, tables, code blocks, math, and Mermaid diagram variants.
 
 ## 1. Slash Command Coverage Matrix
 

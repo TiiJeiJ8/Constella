@@ -126,7 +126,7 @@
         </div>
 
         <MarkdownNodeEditorModalNext
-            v-if="isRoomReady && useMarkdownEditorNext && editingNode && editingNode.content?.kind === 'markdown'"
+            v-if="isRoomReady && editingNode && editingNode.content?.kind === 'markdown'"
             :node-id="editingNode.id"
             :content="editingNode.content"
             :all-nodes="canvasNodes"
@@ -144,17 +144,6 @@
             :content="editingNode.content"
             :read-only="!canEditCanvas"
             @update="handleContentUpdate"
-            @close="handleCloseEditor"
-        />
-
-        <NodeEditorModal
-            v-else-if="isRoomReady && editingNode"
-            :node-id="editingNode.id"
-            :content="editingNode.content"
-            :all-nodes="canvasNodes"
-            :read-only="!canEditCanvas"
-            @update="handleContentUpdate"
-            @jump-to-node="handleJumpToNode"
             @close="handleCloseEditor"
         />
 
@@ -272,7 +261,6 @@ import StatusBar from '@/components/canvas/StatusBar.vue'
 import CanvasStage from '@/components/canvas/CanvasStage.vue'
 import NodeContentOverlay from '@/components/canvas/NodeContentOverlay.vue'
 import PerformancePanel from '@/components/canvas/PerformancePanel.vue'
-import NodeEditorModal from '@/components/canvas/NodeEditorModal.vue'
 import TextNodeEditorModalNext from '@/components/canvas/TextNodeEditorModalNext.vue'
 import MembersPanel from '@/components/canvas/MembersPanel.vue'
 import RoomSettingsPanel from '@/components/canvas/RoomSettingsPanel.vue'
@@ -291,7 +279,6 @@ const props = defineProps({
 const emit = defineEmits(['navigate'])
 const { t } = useI18n()
 const toast = useToast()
-const useMarkdownEditorNext = true
 const MarkdownNodeEditorModalNext = defineAsyncComponent(loadMarkdownEditorNext)
 
 const activePanel = ref('properties')
@@ -679,8 +666,10 @@ function openNodeEditor(nodeId: string) {
 
     if (plugin.editor) {
         editingCustomNodeId.value = nodeId
-    } else {
+    } else if (kind === 'markdown' || kind === 'text') {
         editingNodeId.value = nodeId
+    } else {
+        return false
     }
 
     return true
@@ -819,9 +808,7 @@ let canvasAreaResizeObserver: ResizeObserver | null = null
 let themeObserver: MutationObserver | null = null
 
 onMounted(() => {
-    if (useMarkdownEditorNext) {
-        scheduleMarkdownEditorWarmup({ delayMs: 250, timeoutMs: 1400 })
-    }
+    scheduleMarkdownEditorWarmup({ delayMs: 250, timeoutMs: 1400 })
 
     updateTheme()
     updateCanvasAreaSize()
