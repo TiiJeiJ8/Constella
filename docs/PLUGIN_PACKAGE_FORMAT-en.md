@@ -73,7 +73,7 @@ my-plugin/
   "author": "Example Studio",
   "homepage": "https://example.com",
   "engine": {
-    "constella": "^1.2.7"
+    "constella": "^1.3.2"
   },
   "nodes": [
     {
