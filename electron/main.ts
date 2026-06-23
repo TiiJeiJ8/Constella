@@ -81,8 +81,10 @@ let serverProcess: ChildProcess | null = null
 const developmentPluginDiagnostics = new Map<string, PluginDiagnosticRecord>()
 const developmentPluginWatchers = new Map<string, fs.FSWatcher>()
 const developmentPluginWatchDebounceTimers = new Map<string, NodeJS.Timeout>()
-const MIN_WINDOW_WIDTH = 1100
-const MIN_WINDOW_HEIGHT = 700
+const TARGET_MIN_NATIVE_WINDOW_WIDTH = 1100
+const TARGET_MIN_NATIVE_WINDOW_HEIGHT = 700
+const MIN_LAYOUT_WINDOW_WIDTH = 900
+const MIN_LAYOUT_WINDOW_HEIGHT = 600
 const MAX_DEFAULT_WINDOW_WIDTH = 1920
 const MAX_DEFAULT_WINDOW_HEIGHT = 1280
 const DEFAULT_WINDOW_WIDTH = 1280
@@ -106,8 +108,14 @@ function getDisplayMetrics(targetDisplay: Electron.Display) {
 
 function getWindowSizeConstraints(targetDisplay: Electron.Display) {
     const metrics = getDisplayMetrics(targetDisplay)
-    const minWidth = Math.min(MIN_WINDOW_WIDTH, metrics.workAreaWidth)
-    const minHeight = Math.min(MIN_WINDOW_HEIGHT, metrics.workAreaHeight)
+    const minWidth = Math.min(
+        Math.max(MIN_LAYOUT_WINDOW_WIDTH, Math.round(TARGET_MIN_NATIVE_WINDOW_WIDTH / metrics.scaleFactor)),
+        metrics.workAreaWidth
+    )
+    const minHeight = Math.min(
+        Math.max(MIN_LAYOUT_WINDOW_HEIGHT, Math.round(TARGET_MIN_NATIVE_WINDOW_HEIGHT / metrics.scaleFactor)),
+        metrics.workAreaHeight
+    )
 
     return {
         ...metrics,
@@ -1278,11 +1286,11 @@ ipcMain.handle('window-set-size', (event, payload: { width?: number; height?: nu
     const maxHeight = constraints.workAreaHeight
     const nextWidth = Math.max(
         constraints.minWidth,
-        Math.min(maxWidth, Math.round(Number(payload?.width) || MIN_WINDOW_WIDTH))
+        Math.min(maxWidth, Math.round(Number(payload?.width) || constraints.minWidth))
     )
     const nextHeight = Math.max(
         constraints.minHeight,
-        Math.min(maxHeight, Math.round(Number(payload?.height) || MIN_WINDOW_HEIGHT))
+        Math.min(maxHeight, Math.round(Number(payload?.height) || constraints.minHeight))
     )
 
     targetWindow.setMinimumSize(constraints.minWidth, constraints.minHeight)

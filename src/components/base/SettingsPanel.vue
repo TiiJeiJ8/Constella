@@ -503,8 +503,10 @@ const defaultPerformanceSettings = {
     showCanvasPerformancePanel: true,
     markdownLodScaleThreshold: 0.6
 }
-const MIN_WINDOW_WIDTH = 1100
-const MIN_WINDOW_HEIGHT = 700
+const TARGET_MIN_NATIVE_WINDOW_WIDTH = 1100
+const TARGET_MIN_NATIVE_WINDOW_HEIGHT = 700
+const MIN_LAYOUT_WINDOW_WIDTH = 900
+const MIN_LAYOUT_WINDOW_HEIGHT = 600
 const DEFAULT_WINDOW_WIDTH = 1280
 const DEFAULT_WINDOW_HEIGHT = 800
 const COMMON_WINDOW_PRESETS = [
@@ -651,8 +653,14 @@ const displayState = reactive({
     scaleFactor: 1
 })
 const windowConstraintState = computed(() => ({
-    minWidth: Math.min(MIN_WINDOW_WIDTH, displayState.workAreaWidth),
-    minHeight: Math.min(MIN_WINDOW_HEIGHT, displayState.workAreaHeight),
+    minWidth: Math.min(
+        Math.max(MIN_LAYOUT_WINDOW_WIDTH, Math.round(TARGET_MIN_NATIVE_WINDOW_WIDTH / displayState.scaleFactor)),
+        displayState.workAreaWidth
+    ),
+    minHeight: Math.min(
+        Math.max(MIN_LAYOUT_WINDOW_HEIGHT, Math.round(TARGET_MIN_NATIVE_WINDOW_HEIGHT / displayState.scaleFactor)),
+        displayState.workAreaHeight
+    ),
     maxWidth: displayState.workAreaWidth,
     maxHeight: displayState.workAreaHeight
 }))
