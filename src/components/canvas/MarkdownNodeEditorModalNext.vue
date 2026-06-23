@@ -215,6 +215,7 @@ let applyingExternalText = false
 let historyCommandToken = 0
 let themeObserver: MutationObserver | null = null
 let currentMermaidTheme = getEditorMermaidTheme()
+let guardedEditorHost: HTMLElement | null = null
 
 const readOnlyMode = computed(() => Boolean(props.readOnly))
 const charCount = computed(() => localText.value.length)
@@ -248,6 +249,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
     window.removeEventListener('keydown', handleWindowKeydown, true)
+    detachReadonlyGuards()
     themeObserver?.disconnect()
     themeObserver = null
     clearScheduledSearch()
@@ -278,6 +280,10 @@ watch(findText, () => {
 
 watch([searchCaseSensitive, searchWholeWord, searchRegex], () => {
     if (searchOpen.value) runSearch()
+})
+
+watch(readOnlyMode, () => {
+    applyReadonly()
 })
 
 function createEditor() {
@@ -321,6 +327,7 @@ function createEditor() {
 
 function destroyEditor() {
     muya?.off?.('selection-change', handleSelectionChange)
+    detachReadonlyGuards()
     cancelScheduledOutlineRefresh()
     cancelScheduledOutlineScroll()
     muya?.destroy?.()
@@ -350,9 +357,13 @@ function syncMermaidTheme() {
 
 function handleEditorChange() {
     if (!muya || applyingExternalText) return
+    if (readOnlyMode.value) {
+        restoreReadonlyContent()
+        return
+    }
     localText.value = muya.getMarkdown()
     refreshOutline()
-    if (!readOnlyMode.value) scheduleSave()
+    scheduleSave()
     if (searchOpen.value && findText.value) refreshSearchCount()
 }
 
@@ -448,9 +459,79 @@ function formatEditorError(error: unknown) {
 function applyReadonly() {
     const host = getEditorHost()
     if (!host) return
+    attachReadonlyGuards(host)
+    host.classList.toggle('md-next-readonly-host', readOnlyMode.value)
     host.querySelectorAll('[contenteditable]').forEach(element => {
         element.setAttribute('contenteditable', readOnlyMode.value ? 'false' : 'true')
     })
+}
+
+function attachReadonlyGuards(host: HTMLElement) {
+    if (guardedEditorHost === host) return
+    detachReadonlyGuards()
+    guardedEditorHost = host
+    host.addEventListener('beforeinput', blockReadonlyMutation, true)
+    host.addEventListener('paste', blockReadonlyMutation, true)
+    host.addEventListener('cut', blockReadonlyMutation, true)
+    host.addEventListener('drop', blockReadonlyMutation, true)
+    host.addEventListener('keydown', blockReadonlyKeydown, true)
+}
+
+function detachReadonlyGuards() {
+    const host = guardedEditorHost
+    if (!host) return
+    host.removeEventListener('beforeinput', blockReadonlyMutation, true)
+    host.removeEventListener('paste', blockReadonlyMutation, true)
+    host.removeEventListener('cut', blockReadonlyMutation, true)
+    host.removeEventListener('drop', blockReadonlyMutation, true)
+    host.removeEventListener('keydown', blockReadonlyKeydown, true)
+    host.classList.remove('md-next-readonly-host')
+    guardedEditorHost = null
+}
+
+function blockReadonlyMutation(event: Event) {
+    if (!readOnlyMode.value) return
+    event.preventDefault()
+    event.stopPropagation()
+}
+
+function blockReadonlyKeydown(event: KeyboardEvent) {
+    if (!readOnlyMode.value) return
+    if (!isReadonlyMutationKey(event)) return
+    event.preventDefault()
+    event.stopPropagation()
+}
+
+function isReadonlyMutationKey(event: KeyboardEvent) {
+    const key = event.key.toLowerCase()
+    const mod = event.ctrlKey || event.metaKey
+    if (mod) {
+        return !['a', 'c', 'f'].includes(key)
+    }
+    if (event.altKey) return false
+    if (key.length === 1) return true
+    return [
+        'backspace',
+        'delete',
+        'enter',
+        'tab'
+    ].includes(key)
+}
+
+function restoreReadonlyContent() {
+    const nextText = committedText.value
+    if (localText.value !== nextText) {
+        localText.value = nextText
+    }
+    applyingExternalText = true
+    try {
+        writeEditorContent(nextText, { preserveUndo: false, autoFocus: false })
+    } finally {
+        applyingExternalText = false
+    }
+    applyReadonly()
+    refreshOutline()
+    if (searchOpen.value && findText.value) refreshSearchCount()
 }
 
 function closeEditor() {
