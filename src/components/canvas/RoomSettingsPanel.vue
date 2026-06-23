@@ -551,6 +551,31 @@ async function createInviteCode() {
     }
 }
 
+async function loadActiveInviteCode() {
+    if (!props.canManageSecurity) {
+        generatedInviteCode.value = ''
+        generatedInviteCodeExpiresAt.value = ''
+        inviteRole.value = 'editor'
+        return
+    }
+
+    try {
+        const response = await apiService.getActiveInviteCode(props.roomId)
+        if (!response.success) {
+            generatedInviteCode.value = ''
+            generatedInviteCodeExpiresAt.value = ''
+            return
+        }
+
+        generatedInviteCode.value = response.data?.invite_code || ''
+        generatedInviteCodeExpiresAt.value = response.data?.expires_at || ''
+        inviteRole.value = response.data?.role === 'viewer' ? 'viewer' : 'editor'
+    } catch {
+        generatedInviteCode.value = ''
+        generatedInviteCodeExpiresAt.value = ''
+    }
+}
+
 async function copyInviteCode() {
     if (!generatedInviteCode.value) {
         await createInviteCode()
@@ -598,8 +623,7 @@ async function loadRoomSettings() {
         }
 
         applyRoomPayload(response.data)
-        generatedInviteCode.value = ''
-        generatedInviteCodeExpiresAt.value = ''
+        await loadActiveInviteCode()
     } catch (error: any) {
         loadError.value = resolveApiError(error, copy.value.saveFailed)
     } finally {

@@ -684,6 +684,38 @@ class ApiService {
         }
     }
 
+    async getActiveInviteCode(roomId: string): Promise<ApiResponse> {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/v1/rooms/${roomId}/invite-codes/active`, {
+                method: 'GET',
+                headers: this.getAuthHeaders()
+            })
+
+            const result = await response.json()
+
+            if (response.ok) {
+                return {
+                    success: true,
+                    code: result.code,
+                    message: result.message,
+                    data: result.data
+                }
+            } else {
+                return {
+                    success: false,
+                    code: result.code || response.status,
+                    message: result.message || 'Failed to get active invite code',
+                    errorCode: result.data
+                }
+            }
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            }
+        }
+    }
+
     async getRoomMembers(roomId: string): Promise<ApiResponse> {
         try {
             const response = await fetch(`${this.baseUrl}/api/v1/rooms/${roomId}/members`, {
