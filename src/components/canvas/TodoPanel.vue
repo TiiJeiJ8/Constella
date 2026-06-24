@@ -119,6 +119,12 @@
                                     </div>
                                 </div>
                                 <div v-if="activeAssign === item.id" class="tp-dropdown" @click.stop>
+                                    <label class="tp-drop-check">
+                                        <input type="checkbox" :checked="item.isPublic" @change="setPublic(item.id, ($event.target as HTMLInputElement).checked)" />
+                                        <span>{{ t('canvas.todo.assignPublic') }}</span>
+                                    </label>
+                                    <div class="tp-drop-div"></div>
+                                    <div class="tp-drop-label">{{ t('canvas.todo.assignPerson') }}</div>
                                     <div v-if="members.length === 0" class="tp-drop-empty">{{ t('canvas.todo.noMembers') }}</div>
                                     <div v-for="u in members" :key="u.id" class="tp-drop-item" :class="{ sel: item.assigneeId === u.id }" @click="setAssign(item.id, u)">
                                         {{ u.name }}<span v-if="u.isMe"> ({{ t('canvas.todo.me') }})</span>
@@ -159,7 +165,8 @@ import ConfirmDialog from '@/components/base/ConfirmDialog.vue'
 import { apiService } from '@/services/api'
 import { loadTodoCache, removeTodoCache, saveTodoCache, type CachedTodoItem } from '@/utils/storage'
 
-type Todo = CachedTodoItem
+type TodoSource = 'local' | 'shared'
+type Todo = CachedTodoItem & { source: TodoSource }
 interface UserOpt { id: string; name: string; isMe: boolean }
 
 const props = defineProps<{ members: UserOpt[]; roomId: string }>()
@@ -167,7 +174,8 @@ const { t } = useI18n()
 
 const isOpen = ref(false)
 const txt = ref('')
-const todos = ref<Todo[]>([])
+const localTodos = ref<CachedTodoItem[]>([])
+const sharedTodos = ref<CachedTodoItem[]>([])
 const activeAssign = ref<string | null>(null)
 const filterMode = ref<'all' | 'active' | 'mine' | 'overdue' | 'unassigned'>('all')
 const editingId = ref<string | null>(null)
@@ -189,16 +197,24 @@ const ph = ref(SMALL_SIZE.h)
 const resizing = ref(false)
 const resOffX = ref(0)
 const resOffY = ref(0)
+let sharedSyncTimer: number | null = null
+let isSharedSyncing = false
 
 const panelStyle = computed<CSSProperties>(() => {
     return isDrag.value || panelX.value !== 0 || panelY.value !== 0
         ? { position: 'fixed', left: `${panelX.value}px`, top: `${panelY.value}px`, width: `${pw.value}px`, height: `${ph.value}px` }
         : { width: `${pw.value}px`, height: `${ph.value}px` }
 })
-const incCnt = computed(() => todos.value.filter(todo => !todo.done).length)
+const todos = computed<Todo[]>(() => [
+    ...localTodos.value.map(todo => ({ ...todo, source: 'local' as const })),
+    ...sharedTodos.value.map(todo => ({ ...todo, source: 'shared' as const }))
+])
+const visibleByPermission = computed(() => todos.value.filter(canViewTodo))
+const incCnt = computed(() => visibleByPermission.value.filter(todo => !todo.done).length)
 const isSmallSize = computed(() => pw.value <= SMALL_SIZE.w && ph.value <= SMALL_SIZE.h)
 const isLargeSize = computed(() => pw.value >= LARGE_SIZE.w && ph.value >= LARGE_SIZE.h)
 const currentUserId = computed(() => props.members.find(user => user.isMe)?.id || '')
+const currentUserName = computed(() => props.members.find(user => user.isMe)?.name || '')
 const filterOptions = computed(() => [
     { value: 'all' as const, label: t('canvas.todo.filterAll') },
     { value: 'active' as const, label: t('canvas.todo.filterActive') },
@@ -206,7 +222,7 @@ const filterOptions = computed(() => [
     { value: 'overdue' as const, label: t('canvas.todo.filterOverdue') },
     { value: 'unassigned' as const, label: t('canvas.todo.filterUnassigned') }
 ])
-const sorted = computed(() => [...todos.value].sort((a, b) => {
+const sorted = computed(() => [...visibleByPermission.value].sort((a, b) => {
     if (a.done !== b.done) return a.done ? 1 : -1
     const aD = Boolean(a.dueDate)
     const bD = Boolean(b.dueDate)
@@ -222,6 +238,19 @@ const visibleTodos = computed(() => sorted.value.filter(todo => {
     return true
 }))
 
+function startSharedSyncTimer() {
+    if (sharedSyncTimer != null) return
+    sharedSyncTimer = window.setInterval(() => {
+        void syncSharedTodos()
+    }, 3000)
+}
+
+function stopSharedSyncTimer() {
+    if (sharedSyncTimer == null) return
+    window.clearInterval(sharedSyncTimer)
+    sharedSyncTimer = null
+}
+
 function open() {
     const btn = document.querySelector('.todo-fab')
     if (btn) {
@@ -230,6 +259,8 @@ function open() {
         panelY.value = r.bottom + 4
     }
     isOpen.value = true
+    void syncSharedTodos()
+    startSharedSyncTimer()
     nextTick(() => inputRef.value?.focus())
 }
 
@@ -237,11 +268,110 @@ function genId() {
     return `t${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 }
 
+function toLocalTodo(todo: CachedTodoItem): CachedTodoItem {
+    const { id, text, done, dueDate, assigneeId, assigneeName, creatorId, creatorName, isPublic, createdAt } = todo
+    return { id, text, done, dueDate, assigneeId, assigneeName, creatorId, creatorName, isPublic, createdAt }
+}
+
+function fromServerTodo(raw: any): CachedTodoItem {
+    return {
+        id: String(raw.id),
+        text: String(raw.text || ''),
+        done: Boolean(raw.done),
+        dueDate: raw.due_date || undefined,
+        assigneeId: raw.assignee_id || undefined,
+        assigneeName: raw.assignee_name || undefined,
+        creatorId: raw.creator_id || undefined,
+        creatorName: raw.creator_name || undefined,
+        isPublic: Boolean(raw.is_public),
+        createdAt: new Date(raw.created_at || Date.now()).getTime()
+    }
+}
+
+function toServerPayload(todo: CachedTodoItem) {
+    return {
+        text: todo.text,
+        done: todo.done,
+        dueDate: todo.dueDate || null,
+        assigneeId: todo.assigneeId || null,
+        assigneeName: todo.assigneeName || null,
+        creatorName: todo.creatorName || currentUserName.value || null,
+        isPublic: Boolean(todo.isPublic)
+    }
+}
+
+async function syncSharedTodos() {
+    if (isSharedSyncing) return
+    isSharedSyncing = true
+    try {
+        const result = await apiService.getRoomTodos(props.roomId)
+        if (result.success) {
+            sharedTodos.value = Array.isArray(result.data) ? result.data.map(fromServerTodo) : []
+        }
+    } finally {
+        isSharedSyncing = false
+    }
+}
+
+function canViewTodo(item: Todo): boolean {
+    if (item.source === 'local') return true
+    if (item.isPublic) return true
+    if (!item.assigneeId) return true
+    return Boolean(currentUserId.value) && (item.creatorId === currentUserId.value || item.assigneeId === currentUserId.value)
+}
+
+function findTodo(id: string): Todo | null {
+    return todos.value.find(todo => todo.id === id) || null
+}
+
+function removeLocalTodo(id: string) {
+    localTodos.value = localTodos.value.filter(todo => todo.id !== id)
+    save()
+}
+
+async function writeTodo(todo: Todo | CachedTodoItem, targetSource?: TodoSource) {
+    const next = toLocalTodo(todo)
+    const source = targetSource || ('source' in todo ? todo.source : 'local')
+
+    if (source === 'shared') {
+        const result = 'source' in todo && todo.source === 'shared'
+            ? await apiService.updateRoomTodo(props.roomId, next.id, toServerPayload(next))
+            : await apiService.createRoomTodo(props.roomId, toServerPayload(next))
+        if (result.success && result.data) {
+            const saved = fromServerTodo(result.data)
+            sharedTodos.value = [saved, ...sharedTodos.value.filter(item => item.id !== saved.id)]
+            removeLocalTodo(next.id)
+            return
+        }
+        return
+    }
+
+    if ('source' in todo && todo.source === 'shared') {
+        await apiService.deleteRoomTodo(props.roomId, next.id)
+        sharedTodos.value = sharedTodos.value.filter(item => item.id !== next.id)
+    }
+    const index = localTodos.value.findIndex(item => item.id === next.id)
+    if (index >= 0) {
+        localTodos.value.splice(index, 1, next)
+    } else {
+        localTodos.value.unshift(next)
+    }
+    save()
+}
+
 function add() {
     const text = txt.value.trim()
     if (!text) return
 
-    todos.value.unshift({ id: genId(), text, done: false, createdAt: Date.now() })
+    localTodos.value.unshift({
+        id: genId(),
+        text,
+        done: false,
+        creatorId: currentUserId.value || undefined,
+        creatorName: currentUserName.value || undefined,
+        isPublic: false,
+        createdAt: Date.now()
+    })
     txt.value = ''
     save()
     nextTick(() => {
@@ -289,10 +419,9 @@ function dateClass(item: Todo): string {
 }
 
 function tog(id: string) {
-    const item = todos.value.find(todo => todo.id === id)
+    const item = findTodo(id)
     if (item) {
-        item.done = !item.done
-        save()
+        void writeTodo({ ...item, done: !item.done })
     }
 }
 
@@ -314,10 +443,9 @@ function commitEdit(id: string) {
         return
     }
 
-    const item = todos.value.find(todo => todo.id === id)
+    const item = findTodo(id)
     if (item && item.text !== text) {
-        item.text = text
-        save()
+        void writeTodo({ ...item, text })
     }
     cancelEdit()
 }
@@ -328,8 +456,18 @@ function cancelEdit() {
 }
 
 function del(id: string) {
-    todos.value = todos.value.filter(todo => todo.id !== id)
-    save()
+    const item = findTodo(id)
+    if (!item) return
+
+    if (item.source === 'shared') {
+        void apiService.deleteRoomTodo(props.roomId, id).then(result => {
+            if (result.success) {
+                sharedTodos.value = sharedTodos.value.filter(todo => todo.id !== id)
+            }
+        })
+    } else {
+        removeLocalTodo(id)
+    }
 }
 
 function toggleAssign(id: string) {
@@ -341,31 +479,50 @@ function assignName(item: Todo): string {
 }
 
 function setAssign(id: string, user: UserOpt) {
-    const item = todos.value.find(todo => todo.id === id)
+    const item = findTodo(id)
     if (item) {
-        item.assigneeId = user.id
-        item.assigneeName = user.name
+        void writeTodo({
+            ...item,
+            assigneeId: user.id,
+            assigneeName: user.name,
+            creatorId: item.creatorId || currentUserId.value || undefined,
+            creatorName: item.creatorName || currentUserName.value || undefined
+        }, 'shared')
         activeAssign.value = null
-        save()
     }
 }
 
 function clearAssign(id: string) {
-    const item = todos.value.find(todo => todo.id === id)
+    const item = findTodo(id)
     if (item) {
-        item.assigneeId = undefined
-        item.assigneeName = undefined
+        const next = {
+            ...item,
+            assigneeId: undefined,
+            assigneeName: undefined
+        }
+        void writeTodo(next, next.isPublic ? 'shared' : 'local')
         activeAssign.value = null
-        save()
     }
 }
 
-function setTodoDueDate(id: string, value: string) {
-    const item = todos.value.find(todo => todo.id === id)
+function setPublic(id: string, isPublic: boolean) {
+    const item = findTodo(id)
     if (!item) return
 
-    item.dueDate = inputDateToIso(value)
-    save()
+    const next = {
+        ...item,
+        isPublic,
+        creatorId: item.creatorId || currentUserId.value || undefined,
+        creatorName: item.creatorName || currentUserName.value || undefined
+    }
+    void writeTodo(next, isPublic || next.assigneeId ? 'shared' : 'local')
+}
+
+function setTodoDueDate(id: string, value: string) {
+    const item = findTodo(id)
+    if (!item) return
+
+    void writeTodo({ ...item, dueDate: inputDateToIso(value) })
 }
 
 function openDateInputPicker(event: PointerEvent) {
@@ -452,12 +609,12 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 function requestClearLocalTodos() {
-    if (todos.value.length === 0) return
+    if (localTodos.value.length === 0) return
     isClearLocalTodosDialogOpen.value = true
 }
 
 function confirmClearLocalTodos() {
-    todos.value = []
+    localTodos.value = []
     activeAssign.value = null
     cancelEdit()
     isClearLocalTodosDialogOpen.value = false
@@ -465,11 +622,12 @@ function confirmClearLocalTodos() {
 }
 
 function save() {
-    saveTodoCache(serverUrl.value, props.roomId, todos.value)
+    saveTodoCache(serverUrl.value, props.roomId, localTodos.value)
 }
 
 function load() {
-    todos.value = loadTodoCache(serverUrl.value, props.roomId)
+    localTodos.value = loadTodoCache(serverUrl.value, props.roomId)
+    void syncSharedTodos()
 }
 
 onMounted(() => {
@@ -484,7 +642,17 @@ watch(() => props.roomId, () => {
     load()
 })
 
+watch(isOpen, open => {
+    if (open) {
+        void syncSharedTodos()
+        startSharedSyncTimer()
+    } else {
+        stopSharedSyncTimer()
+    }
+})
+
 onUnmounted(() => {
+    stopSharedSyncTimer()
     document.removeEventListener('mousemove', onDrag)
     document.removeEventListener('mouseup', stopDrag)
     document.removeEventListener('mousemove', onResize)
@@ -560,6 +728,10 @@ onUnmounted(() => {
 .tp-item-date-clear svg{width:12px;height:12px}
 .tp-item-date-clear:hover{color:#ef4444;background:rgba(239,68,68,.08)}
 .tp-dropdown{margin-top:4px;background:var(--canvas-panel-bg);backdrop-filter:blur(20px);border:1px solid var(--border-color);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.12);padding:4px;position:relative;z-index:300}
+.tp-drop-check{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;font-size:12px;color:var(--text-primary);cursor:pointer}
+.tp-drop-check:hover{background:var(--bg-secondary)}
+.tp-drop-check input{width:13px;height:13px;margin:0;accent-color:var(--color-primary)}
+.tp-drop-label{padding:4px 10px 3px;color:var(--text-tertiary);font-size:11px;font-weight:600}
 .tp-drop-empty{padding:8px 10px;color:var(--text-tertiary);font-size:12px}
 .tp-drop-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;font-size:12px;color:var(--text-primary);cursor:pointer;transition:background .15s}
 .tp-drop-item:hover{background:var(--bg-secondary)}

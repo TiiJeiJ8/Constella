@@ -1066,6 +1066,68 @@ class ApiService {
             }
         }
     }
+
+    async getRoomTodos(roomId: string): Promise<ApiResponse> {
+        try {
+            const response = await this.fetchWithAuth(`${this.baseUrl}/api/v1/rooms/${roomId}/todos`, {
+                method: 'GET',
+                headers: this.getAuthHeaders()
+            })
+            const result = await response.json()
+            return response.ok
+                ? { success: true, code: result.code, message: result.message, data: result.data }
+                : { success: false, code: result.code || response.status, message: result.message || 'Failed to get todos', errorCode: result.data }
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Network error' }
+        }
+    }
+
+    async createRoomTodo(roomId: string, payload: Record<string, any>): Promise<ApiResponse> {
+        try {
+            const response = await this.fetchWithAuth(`${this.baseUrl}/api/v1/rooms/${roomId}/todos`, {
+                method: 'POST',
+                headers: this.getAuthHeaders(),
+                body: JSON.stringify(payload)
+            })
+            const result = await response.json()
+            return response.ok
+                ? { success: true, code: result.code, message: result.message, data: result.data }
+                : { success: false, code: result.code || response.status, message: result.message || 'Failed to create todo', errorCode: result.data }
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Network error' }
+        }
+    }
+
+    async updateRoomTodo(roomId: string, todoId: string, payload: Record<string, any>): Promise<ApiResponse> {
+        try {
+            const response = await this.fetchWithAuth(`${this.baseUrl}/api/v1/rooms/${roomId}/todos/${todoId}`, {
+                method: 'PATCH',
+                headers: this.getAuthHeaders(),
+                body: JSON.stringify(payload)
+            })
+            const result = await response.json()
+            return response.ok
+                ? { success: true, code: result.code, message: result.message, data: result.data }
+                : { success: false, code: result.code || response.status, message: result.message || 'Failed to update todo', errorCode: result.data }
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Network error' }
+        }
+    }
+
+    async deleteRoomTodo(roomId: string, todoId: string): Promise<ApiResponse> {
+        try {
+            const response = await this.fetchWithAuth(`${this.baseUrl}/api/v1/rooms/${roomId}/todos/${todoId}`, {
+                method: 'DELETE',
+                headers: this.getAuthHeaders()
+            })
+            const result = await response.json()
+            return response.ok
+                ? { success: true, code: result.code, message: result.message, data: result.data }
+                : { success: false, code: result.code || response.status, message: result.message || 'Failed to delete todo', errorCode: result.data }
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Network error' }
+        }
+    }
 }
 
 // 导出单例

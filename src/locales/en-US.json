@@ -512,6 +512,8 @@
       "filterOverdue": "Overdue",
       "unassigned": "Unassigned",
       "noMembers": "No members available",
+      "assignPublic": "Shared publicly",
+      "assignPerson": "Assign to person",
       "selectDdl": "Deadline",
       "clearAssignee": "Remove assignee",
       "clearDdl": "Remove deadline",

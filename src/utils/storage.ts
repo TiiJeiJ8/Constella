@@ -33,6 +33,9 @@ export interface CachedTodoItem {
     dueDate?: string
     assigneeId?: string
     assigneeName?: string
+    creatorId?: string
+    creatorName?: string
+    isPublic?: boolean
     createdAt: number
 }
 

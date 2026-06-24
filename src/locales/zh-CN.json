@@ -512,6 +512,8 @@
       "filterOverdue": "已逾期",
       "unassigned": "未分配",
       "noMembers": "暂无可选成员",
+      "assignPublic": "共享全局",
+      "assignPerson": "分配给个人",
       "selectDdl": "截止时间",
       "clearAssignee": "取消负责人",
       "clearDdl": "移除截止时间",
