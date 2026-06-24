@@ -13,11 +13,12 @@
 
 <br />
 
-[![Stars](https://img.shields.io/github/stars/TiiJeiJ8/constella?style=flat)](https://github.com/TiiJeiJ8/constella/stargazers)
-[![Issues](https://img.shields.io/github/issues/TiiJeiJ8/constella)](https://github.com/TiiJeiJ8/constella/issues)
-[![Release](https://img.shields.io/github/v/release/TiiJeiJ8/constella)](https://github.com/TiiJeiJ8/constella/releases)
 [![License](https://img.shields.io/github/license/TiiJeiJ8/constella)](./LICENSE)
-[![Last Commit](https://img.shields.io/github/last-commit/TiiJeiJ8/constella)](https://github.com/TiiJeiJ8/constella/commits)
+[![Stars](https://img.shields.io/github/stars/TiiJeiJ8/constella?style=flat)](https://github.com/TiiJeiJ8/constella/stargazers)
+[![Release](https://img.shields.io/github/v/release/TiiJeiJ8/constella)](https://github.com/TiiJeiJ8/constella/releases)
+[![Downloads](https://img.shields.io/github/downloads/TiiJeiJ8/constella/total.svg)](https://github.com/TiiJeiJ8/Constella/releases)
+[![Downloads Latest](https://img.shields.io/github/downloads/TiiJeiJ8/constella/latest/total.svg)](https://github.com/TiiJeiJ8/Constella/releases/latest)
+
 
 </div>
 
