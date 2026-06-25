@@ -403,6 +403,17 @@
       "searchReady": "Ready",
       "searchNoMatch": "No match",
       "untitledHeading": "Untitled",
+      "settings": {
+        "title": "Editor settings",
+        "subtitle": "These preferences are saved on this device only and do not change the document.",
+        "fontSize": "Font size",
+        "lineHeight": "Line height",
+        "showOutline": "Show outline",
+        "codeTheme": "Code block theme",
+        "codeThemeGithub": "GitHub",
+        "codeThemeSoft": "Soft",
+        "codeThemeContrast": "High contrast"
+      },
       "exportPanel": {
         "aria": "Markdown export settings",
         "title": "Export",

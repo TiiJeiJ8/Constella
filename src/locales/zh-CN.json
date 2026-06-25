@@ -403,6 +403,17 @@
       "searchReady": "就绪",
       "searchNoMatch": "无匹配",
       "untitledHeading": "未命名标题",
+      "settings": {
+        "title": "编辑器设置",
+        "subtitle": "这些偏好只保存在当前设备，不会写入文档。",
+        "fontSize": "字体大小",
+        "lineHeight": "行高",
+        "showOutline": "显示大纲",
+        "codeTheme": "代码块主题",
+        "codeThemeGithub": "GitHub",
+        "codeThemeSoft": "柔和",
+        "codeThemeContrast": "高对比"
+      },
       "exportPanel": {
         "aria": "Markdown 导出设置",
         "title": "导出",

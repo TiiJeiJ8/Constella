@@ -1,6 +1,12 @@
 <template>
     <Teleport to="body">
-        <div v-if="isOpen" class="md-next-layer" @click.self="closeEditor">
+        <div
+            v-if="isOpen"
+            class="md-next-layer"
+            :class="[`code-theme-${editorPreferences.codeTheme}`, { 'outline-hidden': !editorPreferences.showOutline }]"
+            :style="editorPreferenceStyle"
+            @click.self="closeEditor"
+        >
             <section class="md-next-dialog" aria-label="Markdown editor">
                 <header class="md-next-header">
                     <div>
@@ -27,6 +33,9 @@
                         <div class="md-next-action-group">
                             <button type="button" class="md-next-icon-btn" :title="t('canvas.markdownEditor.find')" :aria-label="t('canvas.markdownEditor.find')" @click="openSearch()">
                                 <SearchIcon />
+                            </button>
+                            <button type="button" class="md-next-icon-btn" :class="{ active: settingsOpen }" :title="t('canvas.markdownEditor.settings.title')" :aria-label="t('canvas.markdownEditor.settings.title')" @click="toggleSettings">
+                                <SettingIcon />
                             </button>
                             <button type="button" class="md-next-icon-btn md-next-close" :title="t('canvas.markdownEditor.close')" :aria-label="t('canvas.markdownEditor.close')" @click="closeEditor">
                                 <CloseIcon />
@@ -89,6 +98,44 @@
                     </div>
                 </div>
 
+                <div v-if="settingsOpen" class="md-next-settings" role="dialog" :aria-label="t('canvas.markdownEditor.settings.title')">
+                    <div class="md-next-settings-head">
+                        <div>
+                            <div class="md-next-settings-title">{{ t('canvas.markdownEditor.settings.title') }}</div>
+                            <div class="md-next-settings-subtitle">{{ t('canvas.markdownEditor.settings.subtitle') }}</div>
+                        </div>
+                        <button type="button" class="md-next-search-icon" :title="t('canvas.markdownEditor.close')" :aria-label="t('canvas.markdownEditor.close')" @click="settingsOpen = false">
+                            <CloseIcon />
+                        </button>
+                    </div>
+                    <label class="md-next-setting-row">
+                        <span>{{ t('canvas.markdownEditor.settings.fontSize') }}</span>
+                        <div class="md-next-setting-control">
+                            <input v-model.number="editorPreferences.fontSize" type="range" min="14" max="22" step="1" @input="persistEditorPreferences" />
+                            <output>{{ editorPreferences.fontSize }}px</output>
+                        </div>
+                    </label>
+                    <label class="md-next-setting-row">
+                        <span>{{ t('canvas.markdownEditor.settings.lineHeight') }}</span>
+                        <div class="md-next-setting-control">
+                            <input v-model.number="editorPreferences.lineHeight" type="range" min="1.4" max="2.1" step="0.05" @input="persistEditorPreferences" />
+                            <output>{{ editorPreferences.lineHeight.toFixed(2) }}</output>
+                        </div>
+                    </label>
+                    <label class="md-next-setting-row compact">
+                        <span>{{ t('canvas.markdownEditor.settings.showOutline') }}</span>
+                        <input v-model="editorPreferences.showOutline" type="checkbox" @change="persistEditorPreferences" />
+                    </label>
+                    <label class="md-next-setting-row">
+                        <span>{{ t('canvas.markdownEditor.settings.codeTheme') }}</span>
+                        <select v-model="editorPreferences.codeTheme" @change="persistEditorPreferences">
+                            <option value="github">{{ t('canvas.markdownEditor.settings.codeThemeGithub') }}</option>
+                            <option value="soft">{{ t('canvas.markdownEditor.settings.codeThemeSoft') }}</option>
+                            <option value="contrast">{{ t('canvas.markdownEditor.settings.codeThemeContrast') }}</option>
+                        </select>
+                    </label>
+                </div>
+
                 <div class="md-next-body">
                     <main class="md-next-editor-wrap">
                         <div ref="editorRef" class="md-next-editor" />
@@ -98,7 +145,7 @@
                         </div>
                         <div v-else-if="!editorReady" class="md-next-loading">{{ t('canvas.markdownEditor.preparing') }}</div>
                     </main>
-                    <aside ref="outlineRef" class="md-next-outline">
+                    <aside v-if="editorPreferences.showOutline" ref="outlineRef" class="md-next-outline">
                         <div class="md-next-outline-title">{{ t('canvas.markdownEditor.outline') }}</div>
                         <button
                             v-for="item in outlineItems"
@@ -149,6 +196,7 @@ import {
     DownloadIcon,
     RollbackIcon,
     SearchIcon,
+    SettingIcon,
     UploadIcon
 } from 'tdesign-icons-vue-next'
 import MarkdownExportPanel from '@/components/canvas/MarkdownExportPanel.vue'
@@ -180,7 +228,22 @@ const emit = defineEmits<{
 }>()
 
 type OutlineItem = { title: string; level: number; slug: string }
+type EditorCodeTheme = 'github' | 'soft' | 'contrast'
+type EditorPreferences = {
+    fontSize: number
+    lineHeight: number
+    showOutline: boolean
+    codeTheme: EditorCodeTheme
+}
+
 const SEARCH_DEBOUNCE_MS = 220
+const EDITOR_PREFERENCES_STORAGE_KEY = 'constella.markdownEditor.preferences.v1'
+const DEFAULT_EDITOR_PREFERENCES: EditorPreferences = {
+    fontSize: 16,
+    lineHeight: 1.72,
+    showOutline: true,
+    codeTheme: 'github'
+}
 
 const editorRef = ref<HTMLElement | null>(null)
 const outlineRef = ref<HTMLElement | null>(null)
@@ -193,6 +256,7 @@ const localText = ref(props.content.data || '')
 const committedText = ref(props.content.data || '')
 const searchOpen = ref(false)
 const replaceMode = ref(false)
+const settingsOpen = ref(false)
 const exportPanelOpen = ref(false)
 const findText = ref('')
 const replaceText = ref('')
@@ -203,6 +267,7 @@ const matchCount = ref(0)
 const activeMatch = ref(0)
 const outlineItems = ref<OutlineItem[]>([])
 const activeOutlineSlug = ref('')
+const editorPreferences = ref<EditorPreferences>(loadEditorPreferences())
 
 let muya: any = null
 let saveTimer: number | null = null
@@ -238,6 +303,10 @@ const supportsElectronPdf = computed(() => Boolean(window.electron?.exportDocume
 const exportPanelDefaults = computed<MarkdownExportSettings>(() => ({
     ...createDefaultMarkdownExportSettings(localText.value),
     fileName: getDefaultExportFileName()
+}))
+const editorPreferenceStyle = computed(() => ({
+    '--md-editor-user-font-size': `${editorPreferences.value.fontSize}px`,
+    '--md-editor-user-line-height': String(editorPreferences.value.lineHeight)
 }))
 
 onMounted(async () => {
@@ -282,9 +351,53 @@ watch([searchCaseSensitive, searchWholeWord, searchRegex], () => {
     if (searchOpen.value) runSearch()
 })
 
+watch(() => editorPreferences.value.showOutline, visible => {
+    if (visible) {
+        nextTick(() => scheduleActiveOutlineScroll())
+    } else {
+        cancelScheduledOutlineScroll()
+    }
+})
+
 watch(readOnlyMode, () => {
     applyReadonly()
 })
+
+function loadEditorPreferences(): EditorPreferences {
+    try {
+        const raw = window.localStorage.getItem(EDITOR_PREFERENCES_STORAGE_KEY)
+        if (!raw) return { ...DEFAULT_EDITOR_PREFERENCES }
+        const parsed = JSON.parse(raw) as Partial<EditorPreferences>
+        return normalizeEditorPreferences(parsed)
+    } catch {
+        return { ...DEFAULT_EDITOR_PREFERENCES }
+    }
+}
+
+function normalizeEditorPreferences(input: Partial<EditorPreferences>): EditorPreferences {
+    const fontSize = Number(input.fontSize)
+    const lineHeight = Number(input.lineHeight)
+    const codeTheme = input.codeTheme
+    return {
+        fontSize: Number.isFinite(fontSize) ? Math.min(22, Math.max(14, Math.round(fontSize))) : DEFAULT_EDITOR_PREFERENCES.fontSize,
+        lineHeight: Number.isFinite(lineHeight) ? Math.min(2.1, Math.max(1.4, Math.round(lineHeight * 100) / 100)) : DEFAULT_EDITOR_PREFERENCES.lineHeight,
+        showOutline: typeof input.showOutline === 'boolean' ? input.showOutline : DEFAULT_EDITOR_PREFERENCES.showOutline,
+        codeTheme: codeTheme === 'soft' || codeTheme === 'contrast' || codeTheme === 'github' ? codeTheme : DEFAULT_EDITOR_PREFERENCES.codeTheme
+    }
+}
+
+function persistEditorPreferences() {
+    editorPreferences.value = normalizeEditorPreferences(editorPreferences.value)
+    try {
+        window.localStorage.setItem(EDITOR_PREFERENCES_STORAGE_KEY, JSON.stringify(editorPreferences.value))
+    } catch {
+        // Local preference persistence is best-effort.
+    }
+}
+
+function toggleSettings() {
+    settingsOpen.value = !settingsOpen.value
+}
 
 function createEditor() {
     const host = editorRef.value
@@ -1200,6 +1313,8 @@ function installMuyaPlugins() {
     --md-editor-selection: var(--dialog-focus);
     --md-editor-focus: var(--dialog-focus);
     --md-editor-shadow: var(--dialog-shadow);
+    --md-editor-user-font-size: 16px;
+    --md-editor-user-line-height: 1.72;
     --themeColor: var(--md-editor-accent);
     --highlightColor: color-mix(in srgb, var(--md-editor-accent) 42%, transparent);
     --selectionColor: var(--md-editor-selection);
@@ -1396,6 +1511,12 @@ function installMuyaPlugins() {
     transform: scaleX(-1);
 }
 
+.md-next-icon-btn.active {
+    border-color: color-mix(in srgb, var(--md-editor-accent) 42%, transparent);
+    background: color-mix(in srgb, var(--md-editor-accent) 16%, transparent);
+    color: var(--md-editor-accent);
+}
+
 .md-next-icon-btn:disabled,
 .md-next-search button:disabled {
     opacity: 0.45;
@@ -1439,6 +1560,99 @@ function installMuyaPlugins() {
     box-shadow: 0 8px 22px rgba(15, 23, 42, 0.14);
     backdrop-filter: blur(10px);
     animation: md-next-search-in 120ms ease-out;
+}
+
+.md-next-settings {
+    position: absolute;
+    top: 58px;
+    right: 8px;
+    z-index: 13;
+    width: min(320px, calc(100% - 16px));
+    padding: 12px;
+    border: 1px solid var(--md-editor-border);
+    border-radius: 8px;
+    background: var(--floatBgColor);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
+    backdrop-filter: blur(10px);
+    animation: md-next-search-in 120ms ease-out;
+}
+
+.md-next-settings-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.md-next-settings-title {
+    color: var(--md-editor-text);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.md-next-settings-subtitle {
+    margin-top: 3px;
+    color: var(--md-editor-muted);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.md-next-setting-row {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 10px 0;
+    border-top: 1px solid color-mix(in srgb, var(--md-editor-border) 72%, transparent);
+    color: var(--md-editor-text);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.md-next-setting-row.compact {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.md-next-setting-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 48px;
+    align-items: center;
+    gap: 10px;
+}
+
+.md-next-setting-control output {
+    color: var(--md-editor-muted);
+    font-size: 12px;
+    text-align: right;
+}
+
+.md-next-setting-row input[type='range'] {
+    width: 100%;
+    accent-color: var(--md-editor-accent);
+}
+
+.md-next-setting-row input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--md-editor-accent);
+}
+
+.md-next-setting-row select {
+    height: 30px;
+    padding: 0 9px;
+    border: 1px solid var(--md-editor-control-border);
+    border-radius: 6px;
+    background: var(--md-editor-control-bg);
+    color: var(--md-editor-text);
+    font-size: 12px;
+    outline: none;
+}
+
+.md-next-setting-row select:focus {
+    border-color: color-mix(in srgb, var(--md-editor-accent) 56%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--md-editor-accent) 16%, transparent);
 }
 
 .md-next-search-row {
@@ -1612,6 +1826,10 @@ function installMuyaPlugins() {
     grid-template-columns: minmax(0, 1fr) 240px;
 }
 
+.md-next-layer.outline-hidden .md-next-body {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .md-next-editor-wrap {
     position: relative;
     min-width: 0;
@@ -1633,8 +1851,8 @@ function installMuyaPlugins() {
     margin: 0 auto;
     padding: 42px 52px 72px;
     color: var(--md-editor-text);
-    font-size: 16px;
-    line-height: 1.72;
+    font-size: var(--md-editor-user-font-size);
+    line-height: var(--md-editor-user-line-height);
     transition: max-width 160ms ease, padding 160ms ease;
 }
 
@@ -1833,6 +2051,81 @@ function installMuyaPlugins() {
 
 .md-next-editor :deep(.token.italic) {
     font-style: italic;
+}
+
+.md-next-layer.code-theme-soft {
+    --md-editor-code-bg: rgba(102, 126, 234, 0.08);
+}
+
+.md-next-layer.code-theme-contrast {
+    --md-editor-code-bg: #0f172a;
+}
+
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.comment),
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.prolog),
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.doctype),
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.cdata) {
+    color: #64748b;
+}
+
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.keyword),
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.atrule) {
+    color: #667eea;
+}
+
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.string),
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.char),
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.inserted) {
+    color: #0f766e;
+}
+
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.function),
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.class-name) {
+    color: #7c3aed;
+}
+
+.md-next-layer.code-theme-contrast .md-next-editor :deep(pre),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.mu-code-block),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.ag-code-block),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.ag-fence),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.mu-code),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.mu-codeblock-content),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(code[class*='language-']) {
+    color: #e2e8f0;
+}
+
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.comment),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.prolog),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.doctype),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.cdata) {
+    color: #94a3b8;
+}
+
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.punctuation) {
+    color: #cbd5e1;
+}
+
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.keyword),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.atrule) {
+    color: #c084fc;
+}
+
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.string),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.char),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.inserted) {
+    color: #86efac;
+}
+
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.function),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.class-name) {
+    color: #93c5fd;
+}
+
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.number),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.boolean),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.property),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.constant) {
+    color: #fdba74;
 }
 
 .md-next-editor :deep(.mu-diagram-preview) {
