@@ -3,30 +3,11 @@
 <h1>Constella</h1>
 <p>面向知识结构化与协作式思维外化的实时协作无限画布</p>
 
-[中文](./README.md) | [English](./README-en.md)
-
-[后端核心服务](https://github.com/TiiJeiJ8/Constella_CORE) | [用户指南](docs/USER_GUIDE.md) | [编辑器指南](docs/EDITOR_GUIDE.md) | [插件开发](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_4.0.md)
-
-<br />
-
-[Contributing](./CONTRIBUTING.md) | [Security](./SECURITY.md) | [Code of Conduct](./CODE_OF_CONDUCT.md)
-
-<br />
-
-[![License](https://img.shields.io/github/license/TiiJeiJ8/constella)](./LICENSE)
-[![Stars](https://img.shields.io/github/stars/TiiJeiJ8/constella?style=flat)](https://github.com/TiiJeiJ8/constella/stargazers)
-[![Release](https://img.shields.io/github/v/release/TiiJeiJ8/constella)](https://github.com/TiiJeiJ8/constella/releases)
-[![Downloads](https://img.shields.io/github/downloads/TiiJeiJ8/constella/total.svg)](https://github.com/TiiJeiJ8/Constella/releases)
-[![Downloads Latest](https://img.shields.io/github/downloads/TiiJeiJ8/constella/latest/total.svg)](https://github.com/TiiJeiJ8/Constella/releases/latest)
-
-</div>
-
 ![DEMO](IMG/canvas_demo.jpg)
 
 ## 说明
 
 > [!IMPORTANT]
->
 > ### 项目定位
 >
 > - 本仓库是 Constella 的前端工程（Web + Electron），后端请使用 [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE)
@@ -34,7 +15,6 @@
 > - 当前项目仍在持续迭代，欢迎通过 Issue 和 PR 参与改进
 
 > [!NOTE]
->
 > - **从源码开发/构建需要 Node.js 环境**
 > - **桌面发行版（installer / zip）已内置 Node.js 环境，终端用户无需额外安装**
 
@@ -43,7 +23,7 @@
 - 协作能力：基于 CRDT（Yjs + y-websocket）实现多人实时同步
 - 配置方式：首次启动后在首页输入后端地址，地址将持久化到本地
 
-## 🧑‍💻 开发
+## 开发
 
 ### 快速开始
 
@@ -73,14 +53,14 @@
 - **打包分发版（Electron 应用）**：用户无需手动配置，首次启动时后端会自动生成随机密钥并保存到本地配置目录
 - **自建部署场景**：可通过 `JWT_SECRET` 环境变量或配置文件指定密钥；详见 [后端文档](https://github.com/TiiJeiJ8/Constella_CORE/blob/master/README.md)
 
-## 🎉 功能
+## 功能
 
-- 🧭 无限画布：节点、连线、拖拽、缩放
-- 🤝 实时协作：多人同步编辑与状态共享
-- 🧩 插件化节点系统：Text / Markdown / Image / Hyperlink 等，支持节点插件导入
-- 🔐 房间权限控制：清晰区分成员角色与协作边界
-- 🌍 国际化与主题：中英文切换、亮色 / 暗色
-- 💾 数据持久化：IndexedDB（Web）+ electron-store（桌面端）
+- 无限画布：节点、连线、拖拽、缩放
+- 实时协作：多人同步编辑与状态共享
+- 插件化节点系统：Text / Markdown / Image / Hyperlink 等，支持节点插件导入
+- 房间权限控制：清晰区分成员角色与协作边界
+- 国际化与主题：中英文切换、亮色 / 暗色
+- 数据持久化：IndexedDB（Web）+ electron-store（桌面端）
 
 ## 插件开发与导入安装
 
@@ -98,7 +78,7 @@ Constella 现已同时支持内置节点插件与可安装运行时插件。
 - [插件安装包格式](docs/PLUGIN_PACKAGE_FORMAT.md)
 - [插件开发架构 4.0](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_4.0.md)
 
-## 🖼️ 界面展示
+## 界面展示
 
 <details>
 <summary> 深浅色模式 </summary>
@@ -144,7 +124,7 @@ Constella 现已同时支持内置节点插件与可安装运行时插件。
 
 </details>
 
-## 📦️ 获取
+## 获取
 
 ### 源码运行
 
@@ -165,7 +145,7 @@ npm run dev
 - 前端可作为静态站点部署（Nginx / Caddy / 任意静态托管）
 - 后端服务请参考 [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE)
 
-## 📁 项目结构
+## 项目结构
 
 ```text
 src/
@@ -182,7 +162,7 @@ public/             # 公共资源
 docs/               # 使用与开发文档
 ```
 
-## 🤝 贡献
+## 贡献
 
 欢迎参与贡献：
 
@@ -198,11 +178,11 @@ docs/               # 使用与开发文档
   />
 </a>
 
-## 📢 免责声明
+## 免责声明
 
 本项目处于持续开发阶段，部分功能和接口可能发生调整。请在生产环境使用前完成充分测试与风险评估。
 
-## 📜 开源许可
+## 开源许可
 
 本项目采用 [MIT License](./LICENSE)。
 
@@ -210,7 +190,7 @@ docs/               # 使用与开发文档
 
 Constella 的 Markdown 节点编辑器使用了基于 MarkText / Muya 的内部 fork。相关源码位于 `web/vendor/muya`，其原始 MIT License、NOTICE 与上游说明已保留在该目录中。
 
-## ⭐ Star History
+## Star History
 
 <a href="https://www.star-history.com/?repos=TiiJeiJ8%2Fconstella&type=timeline&legend=bottom-right">
  <picture>

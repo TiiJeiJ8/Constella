@@ -3,31 +3,11 @@
 <h1>Constella</h1>
 <p>A real-time collaborative infinite canvas for structured knowledge and externalized thinking</p>
 
-[中文](./README.md) | [English](./README-en.md)
-
-[Backend Core](https://github.com/TiiJeiJ8/Constella_CORE) | [User Guide](docs/USER_GUIDE-en.md) | [Editor Guide](docs/EDITOR_GUIDE.md) | [Plugin Development](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_4.0.md)
-
-<br />
-
-[Contributing](./CONTRIBUTING.md) | [Security](./SECURITY.md) | [Code of Conduct](./CODE_OF_CONDUCT.md)
-
-<br />
-
-[![License](https://img.shields.io/github/license/TiiJeiJ8/constella)](./LICENSE)
-[![Stars](https://img.shields.io/github/stars/TiiJeiJ8/constella?style=flat)](https://github.com/TiiJeiJ8/constella/stargazers)
-[![Release](https://img.shields.io/github/v/release/TiiJeiJ8/constella)](https://github.com/TiiJeiJ8/constella/releases)
-[![Downloads](https://img.shields.io/github/downloads/TiiJeiJ8/constella/total.svg)](https://github.com/TiiJeiJ8/Constella/releases)
-[![Downloads Latest](https://img.shields.io/github/downloads/TiiJeiJ8/constella/latest/total.svg)](https://github.com/TiiJeiJ8/Constella/releases/latest)
-
-
-</div>
-
 ![DEMO](IMG/canvas_demo.jpg)
 
 ## Overview
 
 > [!IMPORTANT]
->
 > ### Project Scope
 >
 > - This repository is the frontend of Constella (Web + Electron). The backend is [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE)
@@ -43,7 +23,7 @@
 - Collaboration: CRDT-based real-time sync via Yjs + y-websocket
 - Setup: backend URL is entered on the home page and persisted locally
 
-## 🧑‍💻 Development
+## Development
 
 ### Quick Start
 
@@ -73,14 +53,14 @@
 - **Packaged Desktop Release (Electron app)**: Users don't need to configure JWT secret manually. On first startup, the backend automatically generates a random secret and saves it to the local config directory.
 - **Self-Hosted Deployment**: Set JWT secret via `JWT_SECRET` environment variable or config file; see [backend docs](https://github.com/TiiJeiJ8/Constella_CORE/blob/master/README-en.md) for details.
 
-## 🎉 Features
+## Features
 
-- 🧭 Infinite canvas: nodes, edges, free dragging, zooming
-- 🤝 Real-time collaboration: multi-user synchronous editing
-- 🧩 Plugin-based node system: Text / Markdown / Image / Hyperlink and more. Installing Node Plugin is available now.
-- 🔐 Room Permission Control: Clearly Distinguish Member Roles and Collaboration Boundaries
-- 🌍 i18n and theming: Chinese/English + light/dark
-- 💾 Persistence: IndexedDB (Web) + electron-store (desktop)
+- Infinite canvas: nodes, edges, free dragging, zooming
+- Real-time collaboration: multi-user synchronous editing
+- Plugin-based node system: Text / Markdown / Image / Hyperlink and more. Installing Node Plugin is available now.
+- Room Permission Control: Clearly Distinguish Member Roles and Collaboration Boundaries
+- i18n and theming: Chinese/English + light/dark
+- Persistence: IndexedDB (Web) + electron-store (desktop)
 
 ## Plugin Development and Installation
 
@@ -101,7 +81,7 @@ See:
 - [Plugin Package Format](docs/PLUGIN_PACKAGE_FORMAT.md)
 - [Plugin Development Architecture 4.0](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_4.0.md)
 
-## 🖼️ Screenshots
+## Screenshots
 
 <details>
 <summary> Dark & Light Mode </summary>
@@ -147,7 +127,7 @@ See:
 
 </details>
 
-## 📦️ Distribution
+## Distribution
 
 ### Run from Source
 
@@ -168,7 +148,7 @@ npm run dev
 - Frontend can be deployed as static assets (Nginx/Caddy/any static hosting)
 - For backend setup, refer to [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE)
 
-## 📁 Project Structure
+## Project Structure
 
 ```text
 src/
@@ -185,7 +165,7 @@ public/             # Public assets
 docs/               # Usage and development docs
 ```
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome:
 
@@ -201,11 +181,11 @@ Contributions are welcome:
   />
 </a>
 
-## 📢 Disclaimer
+## Disclaimer
 
 This project is under active development. Some features and interfaces may change. Please evaluate and test thoroughly before production use.
 
-## 📜 License
+## License
 
 This project is licensed under [MIT License](./LICENSE).
 
@@ -213,7 +193,7 @@ This project is licensed under [MIT License](./LICENSE).
 
 Constella's Markdown node editor uses an internal fork based on MarkText / Muya. The related source is located in `web/vendor/muya`, with the original MIT License, NOTICE, and upstream README preserved in that directory.
 
-## ⭐ Star History
+## Star History
 
 <a href="https://www.star-history.com/?repos=TiiJeiJ8%2Fconstella&type=timeline&legend=bottom-right">
  <picture>
