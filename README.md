@@ -15,7 +15,7 @@ Vue 3 · TypeScript · Vite · Electron · Yjs
 
 [快速开始](#快速开始) · [核心功能](#核心功能) · [界面展示](#界面展示) · [插件生态](#插件生态) · [参与贡献](#参与贡献)
 
-[后端工程](https://github.com/TiiJeiJ8/Constella_CORE) · [问题反馈](https://github.com/TiiJeiJ8/constella/issues)
+[后端工程](https://github.com/TiiJeiJ8/Constella_CORE) · [问题反馈](https://github.com/TiiJeiJ8/constella/issues) · [EN README](README-en.md)
 
 </div>
 
