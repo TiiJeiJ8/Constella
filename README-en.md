@@ -1,152 +1,209 @@
 <div align="center">
-<img alt="logo" height="100" width="100" src="public/icon/favicon.png" />
-<h1>Constella</h1>
-<p>A real-time collaborative infinite canvas for structured knowledge and externalized thinking</p>
 
-![DEMO](IMG/canvas_demo.jpg)
+<img src="public/icon/favicon.png" alt="Constella Logo" width="100" height="100" />
+
+# Constella
+
+**A real-time collaborative infinite canvas for structured knowledge and externalized thinking**
+
+Vue 3 · TypeScript · Vite · Electron · Yjs
+
+[![GitHub Stars](https://img.shields.io/github/stars/TiiJeiJ8/constella?style=flat-square&logo=github)](https://github.com/TiiJeiJ8/constella/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/TiiJeiJ8/constella?style=flat-square&logo=github)](https://github.com/TiiJeiJ8/constella/forks)
+[![GitHub Issues](https://img.shields.io/github/issues/TiiJeiJ8/constella?style=flat-square&logo=github)](https://github.com/TiiJeiJ8/constella/issues)
+[![License](https://img.shields.io/github/license/TiiJeiJ8/constella?style=flat-square)](./LICENSE)
+
+[Quick Start](#quick-start) · [Core Features](#core-features) · [Screenshots](#screenshots) · [Plugin Ecosystem](#plugin-ecosystem) · [Contributing](#contributing)
+
+[Backend Repository](https://github.com/TiiJeiJ8/Constella_CORE) · [Report an Issue](https://github.com/TiiJeiJ8/constella/issues) · [CN README](README.md)
+
+</div>
+
+![Constella infinite canvas demo](IMG/canvas_demo.jpg)
 
 ## Overview
 
+Constella focuses on structured thinking, connecting nodes, content, and collaborators on an infinite canvas. It runs in modern browsers and as an Electron desktop app.
+
 > [!IMPORTANT]
-> ### Project Scope
+> This repository contains the Constella frontend (Web + Electron). For the backend, use [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE).
 >
-> - This repository is the frontend of Constella (Web + Electron). The backend is [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE)
-> - Constella focuses on structure-first knowledge expression instead of linear documents
-> - The project is actively evolving; contributions via Issues and PRs are welcome
+> The project is actively evolving. Contributions through Issues and PRs are welcome.
 
 > [!NOTE]
-> - **Running from source requires Node.js**
-> - **Desktop releases (installer/zip) include Node.js, no extra installation needed for end users**
+> **Developing or building from source** requires Node.js.
+>
+> **Desktop releases (installer / zip)** include Node.js, so end users do not need to install it separately.
 
-- Stack: Vue 3 + TypeScript + Vite + Electron + Yjs
-- Runtime: modern browsers and Electron desktop
-- Collaboration: CRDT-based real-time sync via Yjs + y-websocket
-- Setup: backend URL is entered on the home page and persisted locally
+## Core Features
 
-## Development
+| Feature | Description |
+| --- | --- |
+| Infinite canvas | Nodes, edges, free dragging, and zooming |
+| Real-time collaboration | CRDT-based synchronization with Yjs + y-websocket for simultaneous editing and shared state |
+| Plugin-based nodes | Text, Markdown, Image, Hyperlink, and more, with support for importing node plugins |
+| Room permissions | Defined member roles and collaboration boundaries |
+| Languages and themes | Chinese and English, with light and dark themes |
+| Data persistence | IndexedDB on the Web and electron-store on desktop |
 
-### Quick Start
+## Quick Start
 
-1. Use Node.js 22.12.0 for development and building from source
-2. Install dependencies: `npm install`
-3. Start Web dev server: `npm run dev`
-4. Start Electron dev mode: `npm run dev:electron`
-5. Build Web assets: `npm run build`
+### Prerequisites
 
-### Build Desktop Package
+- Node.js **22.12.0**
+- Backend service: [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE)
 
-- Run `npm run version:bump -- 1.x.x` to update version number before building
-- This command updates `web/package.json` and `web/package-lock.json`, then tries to sync `../server/package.json` and `../server/package-lock.json`
-- If the `server` folder or backend version files are missing, backend sync is skipped automatically and frontend bump still succeeds
-- Run `npm run build:electron:release` for production build (generates both installer and zip)
-- Run `npm run build:electron:installer` for installer version
-- Run `npm run build:electron:zip` for zip version
-- Build artifacts are generated in `dist-electron/`
+### Get the Source
+
+```bash
+git clone https://github.com/TiiJeiJ8/constella.git
+```
+
+Navigate to the frontend's `web` directory, then install dependencies and start the app:
+
+```bash
+npm install
+npm run dev
+```
+
+On first launch, enter your backend URL on the home page. The address is saved locally for future sessions.
+
+### Common Commands
+
+| Purpose | Command | Output Directory |
+| --- | --- | --- |
+| Start the Web development server | `npm run dev` | — |
+| Start Electron in development mode | `npm run dev:electron` | — |
+| Build Web assets | `npm run build` | `dist/` |
+| Build the Electron client (includes the Node runtime) | `npm run build:electron` | `dist-electron/` |
+
+## Build and Deployment
+
+### Build Desktop Releases
+
+**1. Update the version number (required before building)**
+
+Replace `1.x.x` with your target version:
+
+```bash
+npm run version:bump -- 1.x.x
+```
+
+This command updates `web/package.json` and `web/package-lock.json`, then attempts to synchronize `../server/package.json` and `../server/package-lock.json`. If the `server` directory or backend version files are missing, backend synchronization is skipped automatically and the frontend version update still succeeds.
+
+**2. Choose a build option**
+
+| Build Option | Command |
+| --- | --- |
+| Generate both installer and zip | `npm run build:electron:release` |
+| Generate the installer only | `npm run build:electron:installer` |
+| Generate the zip only | `npm run build:electron:zip` |
+
+Build artifacts are generated in `dist-electron/`.
+
+### Web Deployment
+
+Run `npm run build`, then deploy the frontend assets in `dist/` using Nginx, Caddy, or any static hosting platform.
+
+For backend deployment, refer to [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE).
 
 ### Collaboration Address Configuration
 
-- WebSocket URL is derived automatically from your backend URL
-- You can override it in `.env.development` with `VITE_WS_URL=localhost:3000`
+The WebSocket URL is derived automatically from the backend URL entered on the home page. To override it, add the following to `.env.development`:
+
+```dotenv
+VITE_WS_URL=localhost:3000
+```
 
 ### Backend JWT Secret Configuration
 
-- **Packaged Desktop Release (Electron app)**: Users don't need to configure JWT secret manually. On first startup, the backend automatically generates a random secret and saves it to the local config directory.
-- **Self-Hosted Deployment**: Set JWT secret via `JWT_SECRET` environment variable or config file; see [backend docs](https://github.com/TiiJeiJ8/Constella_CORE/blob/master/README-en.md) for details.
+| Scenario | Configuration |
+| --- | --- |
+| Packaged desktop release (Electron app) | No manual configuration is required. On first startup, the backend generates a random secret and saves it to the local configuration directory. |
+| Self-hosted deployment | Set the secret through the `JWT_SECRET` environment variable or a configuration file. See the [backend documentation](https://github.com/TiiJeiJ8/Constella_CORE/blob/master/README-en.md). |
 
-## Features
+## Plugin Ecosystem
 
-- Infinite canvas: nodes, edges, free dragging, zooming
-- Real-time collaboration: multi-user synchronous editing
-- Plugin-based node system: Text / Markdown / Image / Hyperlink and more. Installing Node Plugin is available now.
-- Room Permission Control: Clearly Distinguish Member Roles and Collaboration Boundaries
-- i18n and theming: Chinese/English + light/dark
-- Persistence: IndexedDB (Web) + electron-store (desktop)
+Constella supports both built-in node plugins and installable runtime plugins.
 
-## Plugin Development and Installation
+### Plugin Types
 
-Constella now supports both built-in node plugins and installable runtime plugins.
+| Type | Description |
+| --- | --- |
+| Built-in official plugins | Located in `src/plugins/` and shipped as part of the application |
+| User-installed plugins | Distributed primarily as `.constella-plugin` packages, with `.zip` supported for compatibility |
+| Development plugins | Imported from a plugin folder when `Developer Mode` is enabled in Settings |
 
-- Built-in official plugins live in `src/plugins/`
-- End-user plugin distribution should use `.constella-plugin` as the primary format, with `.zip` as a compatibility format
-- Development plugins can still be loaded from a plugin folder during local iteration
-- `manifest.json` is the entry file inside a plugin folder, not a standalone plugin package
-- Built-in plugins, user-installed plugins, and development plugins should be kept as separate layers
-- Plugin management is available in both `Settings -> Plugins` and the room dock plugin panel
-- The plugin panel defaults to end-user package installation flow; development plugin loading is shown only when Developer Mode is enabled in Settings
-- Turning Developer Mode off hides development plugin entry points and prevents development plugins from being loaded at runtime, while keeping their records for later reuse
-- Installed user plugins are persisted under Electron user data, so they remain after restarting the desktop app
+Keep these three plugin categories separate so that each directory has a clear responsibility.
 
-See:
+### Installation and Persistence
+
+- Manage plugins through **Settings → Plugins** or the room dock plugin panel. The plugin panel defaults to package installation for end users.
+- `manifest.json` is the entry file inside a plugin directory and should not be distributed as a standalone installation package.
+- Installed user plugins are persisted under Electron user data and remain available after restarting the desktop app.
+- Turning off `Developer Mode` hides development plugin entry points and prevents development plugins from loading at runtime. Their records are retained for later reuse.
+
+### Developer Documentation
 
 - [Plugin Package Format](docs/PLUGIN_PACKAGE_FORMAT.md)
 - [Plugin Development Architecture 4.0](docs/PLUGIN_DEVELOPMENT_ARCHITECTURE_4.0.md)
 
 ## Screenshots
 
-<details>
-<summary> Dark & Light Mode </summary>
+Expand an item below to view the corresponding interface.
 
-![Dark&Light](IMG/dark_theme.jpg)
-![Dark&Light](IMG/light_theme.jpg)
+<details>
+<summary><strong>Themes · Dark and Light Modes</strong></summary>
+
+### Dark Mode
+
+![Constella dark mode](IMG/dark_theme.jpg)
+
+### Light Mode
+
+![Constella light mode](IMG/light_theme.jpg)
 
 </details>
 
 <details>
-<summary> Room Page </summary>
+<summary><strong>Room Management · Room Page and Room Creation</strong></summary>
 
-![Room Page](IMG/roompage.jpg)
+### Room Page
 
-</details>
+![Constella room page](IMG/roompage.jpg)
 
-<details>
-<summary> Create Room </summary>
+### Create a Room
 
-![Create Room](IMG/createroom.jpg)
-
-</details>
-
-<details>
-<summary> Editor Demo </summary>
-
-![Editor Demo](IMG/editorwindow.jpg)
+![Constella room creation](IMG/createroom.jpg)
 
 </details>
 
 <details>
-<summary> Plugin Panel </summary>
+<summary><strong>Canvas Editing · Editor Demo</strong></summary>
 
-![Plugin Panel](IMG/plugin_panel.jpg)
-![Plugin Setting Panel](IMG/plugin_panel_setting_panel.jpg)
+![Constella editor demo](IMG/editorwindow.jpg)
 
 </details>
 
 <details>
-<summary> Plugin Development </summary>
+<summary><strong>Plugin Management · Plugin Panel and Settings</strong></summary>
 
-![Plugin Panel Error](IMG/plugin_developer_error.jpg)
+### Plugin Panel
+
+![Constella plugin panel](IMG/plugin_panel.jpg)
+
+### Plugin Settings
+
+![Constella plugin settings panel](IMG/plugin_panel_setting_panel.jpg)
 
 </details>
 
-## Distribution
+<details>
+<summary><strong>Plugin Development · Debugging Interface</strong></summary>
 
-### Run from Source
+![Constella plugin debugging interface](IMG/plugin_developer_error.jpg)
 
-```bash
-git clone https://github.com/TiiJeiJ8/constella.git
-cd web
-npm install
-npm run dev
-```
-
-### Build Artifacts
-
-- Web build: `npm run build` outputs to `dist/`
-- Electron package: `npm run build:electron` (includes built-in Node runtime)
-
-### Deployment Notes
-
-- Frontend can be deployed as static assets (Nginx/Caddy/any static hosting)
-- For backend setup, refer to [Constella_CORE](https://github.com/TiiJeiJ8/Constella_CORE)
+</details>
 
 ## Project Structure
 
@@ -156,25 +213,26 @@ src/
 ├─ plugins/         # Node plugins
 ├─ composables/     # Reusable composition logic
 ├─ services/        # API and collaboration services
-├─ locales/         # i18n resources
+├─ locales/         # Internationalization resources
 ├─ views/           # Page-level views
 └─ assets/          # Static assets
 
-electron/           # Electron main/preload process
+electron/           # Electron main process and preload
 public/             # Public assets
-docs/               # Usage and development docs
+docs/               # Usage and development documentation
 ```
 
 ## Contributing
 
-Contributions are welcome:
+You can contribute to Constella in the following ways:
 
-- Open Issues for bugs, discussions, and proposals
-- Submit PRs for features, fixes, docs, and tests
-- Support long-term iteration via Stars and Forks
+- **Share feedback:** Open an Issue to report a bug, start a discussion, or propose an improvement.
+- **Improve the project:** Submit a PR for features, fixes, documentation, or tests.
+- **Support development:** Star or Fork the project to support its continued development.
 
 <a href="https://github.com/TiiJeiJ8/constella/graphs/contributors" target="_blank" rel="noopener">
-  <img src="https://contrib.rocks/image?repo=TiiJeiJ8/constella&max=100&anon=1&v=2&columns=10"
+  <img
+    src="https://contrib.rocks/image?repo=TiiJeiJ8/constella&max=100&anon=1&v=2&columns=10"
     alt="Constella contributors"
     width="650"
     loading="lazy"
@@ -187,7 +245,7 @@ This project is under active development. Some features and interfaces may chang
 
 ## License
 
-This project is licensed under [MIT License](./LICENSE).
+This project is licensed under the [MIT License](./LICENSE).
 
 ### Third-party Open Source Components
 
@@ -196,9 +254,9 @@ Constella's Markdown node editor uses an internal fork based on MarkText / Muya.
 ## Star History
 
 <a href="https://www.star-history.com/?repos=TiiJeiJ8%2Fconstella&type=timeline&legend=bottom-right">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=TiiJeiJ8/constella&type=timeline&theme=dark&legend=bottom-right" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=TiiJeiJ8/constella&type=timeline&legend=bottom-right" />
-   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=TiiJeiJ8/constella&type=timeline&legend=bottom-right" />
- </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=TiiJeiJ8/constella&type=timeline&theme=dark&legend=bottom-right" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=TiiJeiJ8/constella&type=timeline&legend=bottom-right" />
+    <img alt="Constella Star History" src="https://api.star-history.com/image?repos=TiiJeiJ8/constella&type=timeline&legend=bottom-right" />
+  </picture>
 </a>
