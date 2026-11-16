@@ -1,0 +1,599 @@
+/* ==================== 浮动入口与面板 ==================== */
+.todo-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.todo-fab {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    background: var(--canvas-toolbar-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 12px;
+    transition:
+        transform 0.2s,
+        box-shadow 0.2s,
+        border-color 0.2s;
+    white-space: nowrap;
+    box-shadow: var(--shadow-sm);
+}
+.todo-fab:hover {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+.fab-icon {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+.fab-badge {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+}
+.todo-panel {
+    background: color-mix(in srgb, var(--canvas-panel-bg) 90%, transparent);
+    backdrop-filter: blur(20px);
+    border: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent);
+    border-radius: 14px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+    z-index: 200;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+}
+.tp-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    cursor: grab;
+    flex-shrink: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--border-color) 65%, transparent);
+}
+.tp-head:active {
+    cursor: grabbing;
+}
+.tp-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.tp-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.tp-summary {
+    font-size: 11px;
+    color: var(--text-tertiary);
+}
+.tp-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+.tp-mini-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 0;
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.tp-mini-btn svg {
+    width: 15px;
+    height: 15px;
+}
+.tp-mini-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+.tp-mini-btn:disabled {
+    cursor: default;
+    background: var(--bg-tertiary);
+    color: var(--color-primary);
+    opacity: 0.85;
+}
+.tp-icon-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.tp-icon-btn svg {
+    width: 15px;
+    height: 15px;
+}
+.tp-icon-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+/* ==================== 任务输入与筛选 ==================== */
+.tp-add {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px 8px;
+    flex-shrink: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--border-color) 35%, transparent);
+}
+.tp-row1 {
+    display: flex;
+    gap: 6px;
+}
+.tp-inp {
+    flex: 1;
+    height: 34px;
+    padding: 0 10px;
+    border-radius: 7px;
+    border: 1px solid color-mix(in srgb, var(--border-color) 80%, transparent);
+    background: color-mix(in srgb, var(--bg-secondary) 82%, transparent);
+    color: var(--text-primary);
+    font-size: 13px;
+    outline: none;
+    min-width: 0;
+}
+.tp-inp:focus {
+    border-color: var(--color-primary);
+}
+.tp-addbtn {
+    width: 34px;
+    height: 34px;
+    border-radius: 7px;
+    border: none;
+    background: var(--color-primary);
+    color: #fff;
+    cursor: pointer;
+    line-height: 1;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+        transform 0.15s,
+        opacity 0.15s;
+}
+.tp-addbtn svg {
+    width: 17px;
+    height: 17px;
+}
+.tp-addbtn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+.tp-addbtn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+.tp-filters::-webkit-scrollbar {
+    display: none;
+}
+.tp-filters {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    margin-top: -2px;
+}
+.tp-filter {
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    border: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+}
+.tp-filter:hover {
+    color: var(--text-primary);
+    background: color-mix(in srgb, var(--bg-secondary) 70%, transparent);
+}
+.tp-filter.active {
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    color: var(--color-primary);
+}
+/* ==================== 任务列表 ==================== */
+.tp-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 14px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.tp-list::-webkit-scrollbar {
+    width: 4px;
+}
+.tp-list::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 2px;
+}
+.tp-empty {
+    margin: auto;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 13px;
+}
+.tp-empty-icon {
+    width: 28px;
+    height: 28px;
+    opacity: 0.46;
+}
+.tp-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 8px 6px;
+    margin: 0 -6px;
+    border-radius: 8px;
+    transition: background 0.15s;
+}
+.tp-row:hover {
+    background: color-mix(in srgb, var(--bg-secondary) 82%, transparent);
+}
+.tp-cb {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    margin-top: 2px;
+    border-radius: 5px;
+    border: 1.6px solid var(--border-color);
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: transparent;
+    transition: all 0.15s;
+}
+.tp-cb:hover {
+    border-color: var(--color-primary);
+}
+.tp-cb.chk {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+}
+.tp-cbic {
+    width: 13px;
+    height: 13px;
+    display: block;
+    animation: todo-check 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes todo-check {
+    0% {
+        transform: scale(0.35) rotate(-12deg);
+        opacity: 0;
+    }
+    70% {
+        transform: scale(1.18) rotate(0);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+.tp-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.tp-lbl {
+    font-size: 13px;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    line-height: 1.4;
+}
+.tp-lbl.done {
+    text-decoration: line-through;
+    color: var(--text-tertiary);
+}
+.tp-edit-input {
+    height: 24px;
+    width: 100%;
+    padding: 0 7px;
+    border-radius: 6px;
+    border: 1px solid var(--color-primary);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 13px;
+    outline: none;
+}
+/* ==================== 任务元信息与日期 ==================== */
+.tp-meta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: nowrap;
+    min-width: 0;
+    overflow: hidden;
+}
+.tp-assign {
+    height: 20px;
+    max-width: 92px;
+    padding: 0 7px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--border-color) 62%, transparent);
+    background: color-mix(in srgb, var(--bg-secondary) 72%, transparent);
+    color: var(--text-secondary);
+    font-size: 11px;
+    line-height: 18px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+}
+.tp-assign:hover {
+    color: var(--color-primary);
+    border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+.tp-date-label {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.tp-date-label.today {
+    color: #2563eb;
+}
+.tp-date-label.overdue {
+    color: var(--color-danger);
+    font-weight: 600;
+}
+.tp-item-date-wrap {
+    position: relative;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    border: 0;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-secondary) 68%, transparent);
+    color: var(--text-secondary);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.tp-item-date-wrap.today {
+    color: #2563eb;
+}
+.tp-item-date-wrap.overdue {
+    color: var(--color-danger);
+}
+.tp-item-date-icon {
+    width: 12px;
+    height: 12px;
+    margin-left: 7px;
+    flex-shrink: 0;
+    opacity: 0.82;
+    pointer-events: none;
+}
+.tp-item-date-display {
+    min-width: 34px;
+    padding: 0 7px 0 4px;
+    font-size: 11px;
+    line-height: 22px;
+    text-align: center;
+    pointer-events: none;
+}
+.tp-item-date {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: transparent;
+    font-size: 16px;
+    outline: none;
+    cursor: pointer;
+    opacity: 0;
+}
+.tp-item-date:focus {
+    color: var(--text-primary);
+}
+.tp-item-date-clear {
+    position: relative;
+    z-index: 2;
+    width: 18px;
+    height: 20px;
+    border: 0;
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.tp-item-date-clear svg {
+    width: 12px;
+    height: 12px;
+}
+.tp-item-date-clear:hover {
+    color: var(--color-danger);
+    background: rgba(var(--color-danger-rgb), 0.08);
+}
+/* ==================== 下拉菜单 ==================== */
+.tp-dropdown {
+    margin-top: 4px;
+    background: var(--canvas-panel-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    padding: 4px;
+    position: relative;
+    z-index: 300;
+}
+.tp-drop-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+.tp-drop-check:hover {
+    background: var(--bg-secondary);
+}
+.tp-drop-check input {
+    width: 13px;
+    height: 13px;
+    margin: 0;
+    accent-color: var(--color-primary);
+}
+.tp-drop-label {
+    padding: 4px 10px 3px;
+    color: var(--text-tertiary);
+    font-size: 11px;
+    font-weight: 600;
+}
+.tp-drop-empty {
+    padding: 8px 10px;
+    color: var(--text-tertiary);
+    font-size: 12px;
+}
+.tp-drop-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.tp-drop-item:hover {
+    background: var(--bg-secondary);
+}
+.tp-drop-item.sel {
+    background: rgba(var(--color-primary-rgb), 0.08);
+    color: var(--color-primary);
+}
+.tp-drop-item.danger {
+    color: var(--color-danger);
+}
+.tp-drop-item.danger:hover {
+    background: rgba(var(--color-danger-rgb), 0.08);
+}
+.tp-drop-div {
+    height: 1px;
+    margin: 3px 6px;
+    background: var(--border-color);
+}
+/* ==================== 删除与尺寸调整 ==================== */
+.tp-del {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    margin-top: 1px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.tp-del svg {
+    width: 16px;
+    height: 16px;
+}
+.tp-row:hover .tp-del {
+    opacity: 1;
+}
+.tp-del:hover {
+    background: rgba(var(--color-danger-rgb), 0.12);
+    color: var(--color-danger);
+}
+.tp-resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    background: linear-gradient(135deg, transparent 50%, var(--text-tertiary) 50%);
+    opacity: 0.3;
+    transition: opacity 0.2s;
+}
+.tp-resize-handle:hover {
+    opacity: 0.7;
+}
+/* ==================== 过渡动画 ==================== */
+.todo-pop-enter-active,
+.todo-pop-leave-active {
+    transition:
+        opacity 0.18s ease,
+        transform 0.18s ease;
+}
+.todo-pop-enter-from,
+.todo-pop-leave-to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+}
+.todo-row-enter-active,
+.todo-row-leave-active,
+.todo-row-move {
+    transition: all 0.2s ease;
+}
+.todo-row-enter-from,
+.todo-row-leave-to {
+    opacity: 0;
+    transform: translateY(-4px);
+}
+.todo-row-leave-active {
+    position: absolute;
+}
