@@ -1,0 +1,266 @@
+/* Self-contained markdown export layout; settings are supplied by the HTML builder. */
+* {
+    box-sizing: border-box;
+}
+html,
+body {
+    margin: 0;
+    min-height: 100%;
+    background: var(--page-surface);
+    color: var(--text);
+    font-family: var(--export-font-family);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+body {
+    padding: 32px;
+}
+.markdown-export-page {
+    width: min(100%, var(--content-width));
+    margin: 0 auto;
+    padding: var(--export-page-padding);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: var(--export-page-box-shadow);
+}
+.markdown-export-title {
+    margin: var(--export-title-margin);
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+    font-size: var(--export-title-font-size);
+    line-height: 1.18;
+    letter-spacing: 0;
+}
+.markdown-export-body {
+    font-size: var(--export-body-font-size);
+    line-height: var(--export-body-line-height);
+    overflow-wrap: break-word;
+}
+.markdown-export-body > :first-child {
+    margin-top: 0;
+}
+.markdown-export-body h1,
+.markdown-export-body h2,
+.markdown-export-body h3,
+.markdown-export-body h4,
+.markdown-export-body h5,
+.markdown-export-body h6 {
+    margin: var(--export-heading-margin);
+    line-height: 1.25;
+    letter-spacing: 0;
+    font-family: var(--export-heading-font-family);
+}
+.markdown-export-body h1 {
+    font-size: 2em;
+}
+.markdown-export-body h2 {
+    font-size: 1.5em;
+    padding-bottom: 0.25em;
+    border-bottom: 1px solid var(--line);
+}
+.markdown-export-body h3 {
+    font-size: 1.25em;
+}
+.markdown-export-body p,
+.markdown-export-body ul,
+.markdown-export-body ol,
+.markdown-export-body blockquote,
+.markdown-export-body table,
+.markdown-export-body pre {
+    margin: var(--export-block-margin);
+}
+.markdown-export-body a {
+    color: var(--accent);
+    text-decoration: none;
+}
+.markdown-export-body a:hover {
+    text-decoration: underline;
+}
+.markdown-export-body ul,
+.markdown-export-body ol {
+    padding-left: 1.45em;
+}
+.markdown-export-body li + li {
+    margin-top: 0.28em;
+}
+.markdown-export-body blockquote {
+    padding: 0.75em 1em;
+    border-left: var(--export-body-blockquote-border-left);
+    background: var(--surface-alt);
+    color: var(--export-body-blockquote-color);
+}
+.markdown-export-body hr {
+    border: 0;
+    border-top: 1px solid var(--line);
+    margin: 2em 0;
+}
+.markdown-export-body img {
+    display: block;
+    max-width: 100%;
+    max-height: var(--export-body-img-max-height);
+    width: auto;
+    height: auto;
+    margin: 1.1em auto;
+    object-fit: contain;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+.markdown-export-body code {
+    padding: 0.12em 0.34em;
+    border-radius: 4px;
+    background: var(--surface-alt);
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    font-size: 0.9em;
+}
+.code-block-shell {
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--export-code-block-shell-background);
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+.code-block-lang,
+.mermaid-block-lang {
+    display: inline-flex;
+    margin: 10px 12px 0;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--export-code-block-lang-background);
+    color: var(--muted);
+    font:
+        700 10px/1.2 'Segoe UI',
+        system-ui,
+        sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0;
+}
+.markdown-export-body pre {
+    overflow: visible;
+}
+.markdown-export-body pre code {
+    display: block;
+    padding: 14px 16px 18px;
+    background: transparent;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.markdown-export-body table {
+    width: 100%;
+    border-collapse: collapse;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+.markdown-export-body th,
+.markdown-export-body td {
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    vertical-align: top;
+}
+.markdown-export-body th {
+    background: var(--surface-alt);
+    text-align: left;
+}
+.katex-block {
+    display: flex;
+    justify-content: center;
+    padding: 12px;
+    overflow-x: auto;
+    background: var(--surface-alt);
+    border-radius: 8px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+.markdown-export-toc {
+    margin: 0 0 28px;
+    padding: 18px 20px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface-alt);
+    page-break-inside: auto;
+    break-inside: auto;
+}
+.toc-title {
+    margin-bottom: 10px;
+    color: var(--muted);
+    font-weight: 760;
+}
+.markdown-export-toc ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.markdown-export-toc.long-toc ol {
+    column-count: 2;
+    column-gap: 24px;
+}
+.markdown-export-toc li {
+    margin: 5px 0;
+    padding-left: calc(var(--toc-indent) * 16px);
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+.markdown-export-toc a {
+    color: var(--text);
+}
+.mermaid-wrapper {
+    margin: var(--export-mermaid-wrapper-margin);
+    padding: var(--export-mermaid-wrapper-padding);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface-alt);
+    overflow: visible;
+    page-break-inside: var(--export-mermaid-wrapper-page-break-inside);
+    break-inside: var(--export-mermaid-wrapper-break-inside);
+}
+.mermaid-wrapper svg {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: var(--export-mermaid-wrapper-svg-max-height);
+    margin: 10px auto 0;
+    overflow: visible;
+}
+.mermaid text,
+.mermaid .label,
+.mermaid .nodeLabel,
+.mermaid .edgeLabel,
+.mermaid foreignObject {
+    color: var(--text) !important;
+    fill: var(--text) !important;
+}
+@media print {
+    html,
+    body {
+        background: var(--surface);
+    }
+    body {
+        padding: 0;
+    }
+    .markdown-export-page {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+    a {
+        color: inherit;
+        text-decoration: none;
+    }
+    .markdown-export-toc {
+        margin-bottom: 18px;
+        padding: 12px 14px;
+    }
+    .markdown-export-toc.long-toc ol {
+        column-count: 2;
+        column-gap: 18px;
+    }
+    .markdown-export-toc li {
+        margin: 3px 0;
+    }
+}

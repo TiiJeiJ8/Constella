@@ -1,0 +1,24 @@
+.markdown-export-body {
+    counter-reset: h2;
+}
+.markdown-export-body h2 {
+    counter-reset: h3;
+}
+.markdown-export-body h3 {
+    counter-reset: h4;
+}
+.markdown-export-body h4 {
+    counter-reset: h5;
+}
+.markdown-export-body h2::before {
+    counter-increment: h2;
+    content: counter(h2) '. ';
+}
+.markdown-export-body h3::before {
+    counter-increment: h3;
+    content: counter(h2) '.' counter(h3) '. ';
+}
+.markdown-export-body h4::before {
+    counter-increment: h4;
+    content: counter(h2) '.' counter(h3) '.' counter(h4) '. ';
+}

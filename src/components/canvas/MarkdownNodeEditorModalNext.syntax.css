@@ -1,0 +1,172 @@
+/* Markdown 编辑器代码高亮 */
+.md-next-editor :deep(.token.comment),
+.md-next-editor :deep(.token.prolog),
+.md-next-editor :deep(.token.doctype),
+.md-next-editor :deep(.token.cdata) {
+    color: #6a737d;
+    font-style: italic;
+}
+.md-next-editor :deep(.token.punctuation) {
+    color: #6e7781;
+}
+.md-next-editor :deep(.token.property),
+.md-next-editor :deep(.token.tag),
+.md-next-editor :deep(.token.boolean),
+.md-next-editor :deep(.token.number),
+.md-next-editor :deep(.token.constant),
+.md-next-editor :deep(.token.symbol),
+.md-next-editor :deep(.token.deleted) {
+    color: #bc4c00;
+}
+.md-next-editor :deep(.token.selector),
+.md-next-editor :deep(.token.attr-name),
+.md-next-editor :deep(.token.string),
+.md-next-editor :deep(.token.char),
+.md-next-editor :deep(.token.builtin),
+.md-next-editor :deep(.token.inserted) {
+    color: #116329;
+}
+.md-next-editor :deep(.token.operator),
+.md-next-editor :deep(.token.entity),
+.md-next-editor :deep(.token.url),
+.md-next-editor :deep(.language-css .token.string),
+.md-next-editor :deep(.style .token.string) {
+    color: #953800;
+}
+.md-next-editor :deep(.token.atrule),
+.md-next-editor :deep(.token.attr-value),
+.md-next-editor :deep(.token.keyword) {
+    color: #0550ae;
+}
+.md-next-editor :deep(.token.function),
+.md-next-editor :deep(.token.class-name) {
+    color: #8250df;
+}
+.md-next-editor :deep(.token.regex),
+.md-next-editor :deep(.token.important),
+.md-next-editor :deep(.token.variable) {
+    color: #b35900;
+}
+.md-next-editor :deep(.token.important),
+.md-next-editor :deep(.token.bold) {
+    font-weight: 400;
+}
+.md-next-editor :deep(.token.italic) {
+    font-style: italic;
+}
+html[data-theme='dark'] .md-next-editor :deep(.token.comment),
+html[data-theme='dark'] .md-next-editor :deep(.token.prolog),
+html[data-theme='dark'] .md-next-editor :deep(.token.doctype),
+html[data-theme='dark'] .md-next-editor :deep(.token.cdata) {
+    color: #8f9aa7;
+    font-style: italic;
+}
+html[data-theme='dark'] .md-next-editor :deep(.token.punctuation) {
+    color: #c8d3df;
+}
+html[data-theme='dark'] .md-next-editor :deep(.token.selector),
+html[data-theme='dark'] .md-next-editor :deep(.token.tag) {
+    color: #ff7b93;
+}
+html[data-theme='dark'] .md-next-editor :deep(.token.property),
+html[data-theme='dark'] .md-next-editor :deep(.token.boolean),
+html[data-theme='dark'] .md-next-editor :deep(.token.number),
+html[data-theme='dark'] .md-next-editor :deep(.token.constant),
+html[data-theme='dark'] .md-next-editor :deep(.token.symbol),
+html[data-theme='dark'] .md-next-editor :deep(.token.attr-name),
+html[data-theme='dark'] .md-next-editor :deep(.token.deleted) {
+    color: #ffb86c;
+}
+html[data-theme='dark'] .md-next-editor :deep(.token.string),
+html[data-theme='dark'] .md-next-editor :deep(.token.char),
+html[data-theme='dark'] .md-next-editor :deep(.token.attr-value),
+html[data-theme='dark'] .md-next-editor :deep(.token.builtin),
+html[data-theme='dark'] .md-next-editor :deep(.token.inserted) {
+    color: #8bdc7f;
+}
+html[data-theme='dark'] .md-next-editor :deep(.token.operator),
+html[data-theme='dark'] .md-next-editor :deep(.token.entity),
+html[data-theme='dark'] .md-next-editor :deep(.token.url),
+html[data-theme='dark'] .md-next-editor :deep(.language-css .token.string),
+html[data-theme='dark'] .md-next-editor :deep(.style .token.string) {
+    color: #56d4dd;
+}
+html[data-theme='dark'] .md-next-editor :deep(.token.atrule),
+html[data-theme='dark'] .md-next-editor :deep(.token.keyword) {
+    color: #c792ea;
+}
+html[data-theme='dark'] .md-next-editor :deep(.token.function),
+html[data-theme='dark'] .md-next-editor :deep(.token.class-name) {
+    color: #82aaff;
+}
+html[data-theme='dark'] .md-next-editor :deep(.token.regex),
+html[data-theme='dark'] .md-next-editor :deep(.token.important),
+html[data-theme='dark'] .md-next-editor :deep(.token.variable) {
+    color: #f78c6c;
+}
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.comment),
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.prolog),
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.doctype),
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.cdata) {
+    color: #64748b;
+}
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.keyword),
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.atrule) {
+    color: #667eea;
+}
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.string),
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.char),
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.inserted) {
+    color: #0f766e;
+}
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.function),
+.md-next-layer.code-theme-soft .md-next-editor :deep(.token.class-name) {
+    color: #7c3aed;
+}
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.comment),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.prolog),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.doctype),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.cdata) {
+    color: #94a3b8;
+}
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.punctuation) {
+    color: #cbd5e1;
+}
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.keyword),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.atrule) {
+    color: #c084fc;
+}
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.string),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.char),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.inserted) {
+    color: #86efac;
+}
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.function),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.class-name) {
+    color: #93c5fd;
+}
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.number),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.boolean),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.property),
+.md-next-layer.code-theme-contrast .md-next-editor :deep(.token.constant) {
+    color: #fdba74;
+}
+html[data-theme='dark'] .md-next-layer.code-theme-soft .md-next-editor :deep(.token.comment),
+html[data-theme='dark'] .md-next-layer.code-theme-soft .md-next-editor :deep(.token.prolog),
+html[data-theme='dark'] .md-next-layer.code-theme-soft .md-next-editor :deep(.token.doctype),
+html[data-theme='dark'] .md-next-layer.code-theme-soft .md-next-editor :deep(.token.cdata) {
+    color: #94a3b8;
+}
+html[data-theme='dark'] .md-next-layer.code-theme-soft .md-next-editor :deep(.token.keyword),
+html[data-theme='dark'] .md-next-layer.code-theme-soft .md-next-editor :deep(.token.atrule) {
+    color: #a5b4fc;
+}
+html[data-theme='dark'] .md-next-layer.code-theme-soft .md-next-editor :deep(.token.string),
+html[data-theme='dark'] .md-next-layer.code-theme-soft .md-next-editor :deep(.token.char),
+html[data-theme='dark'] .md-next-layer.code-theme-soft .md-next-editor :deep(.token.inserted) {
+    color: #5eead4;
+}
+html[data-theme='dark'] .md-next-layer.code-theme-soft .md-next-editor :deep(.token.function),
+html[data-theme='dark'] .md-next-layer.code-theme-soft .md-next-editor :deep(.token.class-name) {
+    color: #c4b5fd;
+}

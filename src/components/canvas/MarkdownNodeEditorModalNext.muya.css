@@ -1,0 +1,188 @@
+/* Markdown 编辑器正文与第三方 DOM 适配 */
+.md-next-editor :deep(.mu-container) {
+    max-width: 900px;
+    min-height: 100%;
+    margin: 0 auto;
+    padding: 42px 52px 72px;
+    color: var(--md-editor-text);
+    font-size: var(--md-editor-user-font-size);
+    line-height: var(--md-editor-user-line-height);
+    transition:
+        max-width 160ms ease,
+        padding 160ms ease;
+}
+
+.md-next-editor :deep(.mu-container),
+.md-next-editor :deep(.mu-editor),
+.md-next-editor :deep(.mu-content),
+.md-next-editor :deep(.ag-root),
+.md-next-editor :deep(.ag-editor) {
+    background: var(--md-editor-workspace) !important;
+}
+
+.md-next-editor :deep(.mu-paragraph),
+.md-next-editor :deep(.mu-paragraph span),
+.md-next-editor :deep(.mu-paragraph li),
+.md-next-editor :deep(.mu-paragraph p),
+.md-next-editor :deep(.ag-container) {
+    color: inherit;
+}
+
+.md-next-editor :deep(h1),
+.md-next-editor :deep(h2),
+.md-next-editor :deep(h3),
+.md-next-editor :deep(h4),
+.md-next-editor :deep(h5),
+.md-next-editor :deep(h6),
+.md-next-editor :deep(.ag-heading),
+.md-next-editor :deep(.ag-header),
+.md-next-editor :deep(.mu-heading) {
+    color: var(--md-editor-text) !important;
+    letter-spacing: 0;
+}
+
+.md-next-editor :deep(p),
+.md-next-editor :deep(li),
+.md-next-editor :deep(ol),
+.md-next-editor :deep(ul),
+.md-next-editor :deep(.ag-paragraph),
+.md-next-editor :deep(.ag-list),
+.md-next-editor :deep(.ag-list-item),
+.md-next-editor :deep(.mu-paragraph) {
+    color: var(--md-editor-text) !important;
+}
+
+.md-next-editor :deep(a) {
+    color: var(--md-editor-accent) !important;
+}
+
+.md-next-editor :deep(:not(pre) > code),
+.md-next-editor :deep(.ag-inline-code) {
+    color: var(--md-editor-text) !important;
+    background: var(--md-editor-code-bg);
+}
+
+.md-next-editor :deep(pre),
+.md-next-editor :deep(.mu-code-block),
+.md-next-editor :deep(.mu-diagram-container),
+.md-next-editor :deep(.mu-frontmatter),
+.md-next-editor :deep(.mu-html-container),
+.md-next-editor :deep(.mu-math-container),
+.md-next-editor :deep(.ag-code-block),
+.md-next-editor :deep(.ag-fence) {
+    color: color-mix(in srgb, var(--md-editor-text) 84%, transparent);
+    background: var(--md-editor-code-bg);
+    font-weight: 400;
+}
+
+.md-next-editor :deep(.mu-code),
+.md-next-editor :deep(.mu-codeblock-content),
+.md-next-editor :deep(code[class*='language-']) {
+    color: color-mix(in srgb, var(--md-editor-text) 86%, transparent);
+    background: transparent !important;
+    font-family: 'Cascadia Mono', Consolas, 'SFMono-Regular', Menlo, monospace;
+    font-weight: 400 !important;
+    white-space: pre;
+    word-break: normal;
+    overflow-wrap: normal;
+    tab-size: 4;
+}
+
+.md-next-editor :deep(blockquote),
+.md-next-editor :deep(.ag-blockquote) {
+    color: var(--md-editor-text) !important;
+    border-left-color: var(--md-editor-border) !important;
+    background: var(--md-editor-quote-bg);
+}
+
+.md-next-editor :deep(table),
+.md-next-editor :deep(th),
+.md-next-editor :deep(td) {
+    color: var(--md-editor-text) !important;
+    border-color: var(--md-editor-border) !important;
+}
+
+.md-next-editor :deep(th) {
+    background: var(--md-editor-code-bg);
+}
+
+.md-next-editor :deep(.katex),
+.md-next-editor :deep(.katex *),
+.md-next-editor :deep(.math),
+.md-next-editor :deep(.math *) {
+    color: var(--md-editor-text) !important;
+}
+
+.md-next-editor :deep(hr) {
+    border-color: var(--md-editor-border) !important;
+}
+
+.md-next-editor :deep(.ag-front-icon),
+.md-next-editor :deep(.ag-hidden),
+.md-next-editor :deep(.ag-selection),
+.md-next-editor :deep(.ag-markdown),
+.md-next-editor :deep(.ag-list-marker),
+.md-next-editor :deep(.ag-bullet),
+.md-next-editor :deep(.ag-ordered-list-marker),
+.md-next-editor :deep(.ag-placeholder),
+.md-next-editor :deep(.mu-placeholder) {
+    color: var(--md-editor-faint) !important;
+}
+
+.md-next-editor
+    :deep(
+        .mu-show-quick-insert-hint
+            .mu-paragraph.mu-active
+            > .mu-paragraph-content:first-of-type::after
+    ),
+.md-next-editor
+    :deep(
+        .mu-show-quick-insert-hint
+            .mu-paragraph.mu-active
+            > .mu-paragraph-content:first-of-type:empty::after
+    ) {
+    color: var(--editor-color-50);
+}
+
+.md-next-editor :deep(::selection) {
+    background: var(--md-editor-selection);
+}
+
+.md-next-editor :deep(.ag-selected),
+.md-next-editor :deep(.ag-selection),
+.md-next-editor :deep(.mu-selection) {
+    background: var(--md-editor-selection) !important;
+}
+
+.md-next-editor :deep(.mu-diagram-preview) {
+    color: var(--md-editor-text);
+    background: var(--md-editor-panel);
+    border: 1px solid var(--md-editor-border);
+    border-radius: 6px;
+}
+
+.md-next-editor :deep(.mu-diagram-preview svg) {
+    max-width: 100%;
+}
+
+html[data-theme='dark'] .md-next-editor :deep(.mu-diagram-preview) {
+    background: #2d2d2d;
+}
+
+html[data-theme='dark'] .md-next-editor :deep(.mu-diagram-preview .messageText),
+html[data-theme='dark'] .md-next-editor :deep(.mu-diagram-preview .loopText),
+html[data-theme='dark'] .md-next-editor :deep(.mu-diagram-preview .label),
+html[data-theme='dark'] .md-next-editor :deep(.mu-diagram-preview .nodeLabel),
+html[data-theme='dark'] .md-next-editor :deep(.mu-diagram-preview .edgeLabel),
+html[data-theme='dark'] .md-next-editor :deep(.mu-diagram-preview text),
+html[data-theme='dark'] .md-next-editor :deep(.mu-diagram-preview foreignObject) {
+    color: #e4e7ed !important;
+    fill: #e4e7ed !important;
+}
+
+html[data-theme='dark'] .md-next-editor :deep(.mu-diagram-preview .edgePath .path),
+html[data-theme='dark'] .md-next-editor :deep(.mu-diagram-preview .flowchart-link),
+html[data-theme='dark'] .md-next-editor :deep(.mu-diagram-preview line),
+html[data-theme='dark'] .md-next-editor :deep(.mu-diagram-preview path) {
+    stroke: #c0c4cc;
+}
