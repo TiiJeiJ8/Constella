@@ -134,7 +134,10 @@ function save() {
     font-size: 14px;
     line-height: 1.5;
     outline: none;
-    transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+    transition:
+        border-color 140ms ease,
+        box-shadow 140ms ease,
+        background-color 140ms ease;
 }
 
 .field textarea:focus,
@@ -169,7 +172,11 @@ function save() {
     border-radius: 8px;
     padding: 10px 16px;
     font-weight: 600;
-    transition: transform 140ms ease, background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+    transition:
+        transform 140ms ease,
+        background-color 140ms ease,
+        color 140ms ease,
+        box-shadow 140ms ease;
 }
 
 .close-btn:hover,

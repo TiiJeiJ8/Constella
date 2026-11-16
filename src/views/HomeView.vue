@@ -505,7 +505,9 @@ function showInfo() {
     opacity: 0;
     pointer-events: none;
     transform: translateY(-10px);
-    transition: opacity 0.6s ease 0.5s, transform 0.6s ease 0.5s;
+    transition:
+        opacity 0.6s ease 0.5s,
+        transform 0.6s ease 0.5s;
 }
 
 .control-buttons.show {
@@ -703,15 +705,15 @@ function showInfo() {
 
 .server-input:focus {
     border-color: var(--accent-primary);
-    box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1);
+    box-shadow: 0 0 0 3px var(--accent-focus-ring);
 }
 
 .server-input.error {
-    border-color: #e53935;
+    border-color: var(--form-error-color);
 }
 
 .server-input.success {
-    border-color: #43a047;
+    border-color: var(--form-success-color);
 }
 
 .server-input.disabled {
@@ -741,11 +743,11 @@ function showInfo() {
 }
 
 .connect-btn.connecting {
-    background: #ff9800;
+    background: var(--form-warning-color);
 }
 
 .connect-btn.success {
-    background: #43a047;
+    background: var(--form-success-color);
     cursor: default;
 }
 
@@ -798,7 +800,9 @@ function showInfo() {
     background: transparent;
     border: none;
     color: var(--text-secondary);
-    transition: color 0.2s ease, transform 0.2s ease;
+    transition:
+        color 0.2s ease,
+        transform 0.2s ease;
 }
 
 .discovery-inline-icon:hover {
@@ -884,7 +888,7 @@ function showInfo() {
 .discovery-pill.active {
     border-color: var(--accent-primary);
     background: color-mix(in srgb, var(--accent-primary) 12%, var(--bg-secondary) 88%);
-    box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.08);
+    box-shadow: 0 0 0 3px rgba(var(--accent-primary-rgb), 0.08);
     transform: translateY(-1px);
 }
 
@@ -907,7 +911,7 @@ function showInfo() {
 .discovery-badge {
     padding: 3px 8px;
     border-radius: 999px;
-    background: rgba(64, 158, 255, 0.12);
+    background: rgba(var(--accent-primary-rgb), 0.12);
     color: var(--accent-primary);
     font-size: 0.75rem;
     font-weight: 700;
@@ -951,8 +955,12 @@ function showInfo() {
     width: 5px;
     align-self: stretch;
     border-radius: 999px;
-    background: linear-gradient(180deg, var(--accent-primary), color-mix(in srgb, var(--accent-primary) 55%, white 45%));
-    box-shadow: 0 0 0 1px rgba(64, 158, 255, 0.1);
+    background: linear-gradient(
+        180deg,
+        var(--accent-primary),
+        color-mix(in srgb, var(--accent-primary) 55%, white 45%)
+    );
+    box-shadow: 0 0 0 1px var(--accent-focus-ring);
 }
 
 .selected-server-strip-main {
@@ -1023,10 +1031,10 @@ html[data-theme='dark'] .discovery-icon-btn {
 }
 
 html[data-theme='dark'] .discovery-icon-btn:hover:not(:disabled) {
-    background: rgba(64, 158, 255, 0.14);
-    border-color: rgba(64, 158, 255, 0.5);
+    background: rgba(var(--accent-primary-rgb), 0.14);
+    border-color: rgba(var(--accent-primary-rgb), 0.5);
     color: var(--accent-hover);
-    box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.12);
+    box-shadow: 0 0 0 3px rgba(var(--accent-primary-rgb), 0.12);
 }
 
 html[data-theme='dark'] .discovery-pill {
@@ -1038,10 +1046,10 @@ html[data-theme='dark'] .discovery-pill {
 
 html[data-theme='dark'] .discovery-pill:hover:not(:disabled),
 html[data-theme='dark'] .discovery-pill.active {
-    background: rgba(64, 158, 255, 0.16);
-    border-color: rgba(64, 158, 255, 0.5);
+    background: rgba(var(--accent-primary-rgb), 0.16);
+    border-color: rgba(var(--accent-primary-rgb), 0.5);
     color: var(--text-primary);
-    box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.12);
+    box-shadow: 0 0 0 3px rgba(var(--accent-primary-rgb), 0.12);
 }
 
 html[data-theme='dark'] .discovery-pill-version {
@@ -1049,7 +1057,7 @@ html[data-theme='dark'] .discovery-pill-version {
 }
 
 html[data-theme='dark'] .discovery-badge {
-    background: rgba(64, 158, 255, 0.18);
+    background: rgba(var(--accent-primary-rgb), 0.18);
     color: var(--accent-hover);
 }
 
@@ -1068,7 +1076,7 @@ html[data-theme='dark'] .selected-server-strip {
 
 html[data-theme='dark'] .selected-server-accent {
     background: linear-gradient(180deg, var(--accent-primary), var(--color-primary));
-    box-shadow: 0 0 0 1px rgba(64, 158, 255, 0.18);
+    box-shadow: 0 0 0 1px rgba(var(--accent-primary-rgb), 0.18);
 }
 
 html[data-theme='dark'] .selected-server-url,
@@ -1089,7 +1097,7 @@ html[data-theme='dark'] .selected-server-meta-label {
     width: 14px;
     height: 14px;
     border-width: 2px;
-    border-color: rgba(64, 158, 255, 0.25);
+    border-color: rgba(var(--accent-primary-rgb), 0.25);
     border-top-color: var(--accent-primary);
 }
 
@@ -1113,15 +1121,15 @@ html[data-theme='dark'] .selected-server-meta-label {
 }
 
 .error-message {
-    background: rgba(229, 57, 53, 0.1);
-    color: #e53935;
-    border: 1px solid rgba(229, 57, 53, 0.3);
+    background: rgba(var(--form-error-rgb), 0.1);
+    color: var(--form-error-color);
+    border: 1px solid rgba(var(--form-error-rgb), 0.3);
 }
 
 .success-message {
-    background: rgba(67, 160, 71, 0.1);
-    color: #43a047;
-    border: 1px solid rgba(67, 160, 71, 0.3);
+    background: rgba(var(--form-success-rgb), 0.1);
+    color: var(--form-success-color);
+    border: 1px solid rgba(var(--form-success-rgb), 0.3);
 }
 
 .fade-enter-active,
@@ -1137,7 +1145,9 @@ html[data-theme='dark'] .selected-server-meta-label {
 
 .strip-float-enter-active,
 .strip-float-leave-active {
-    transition: opacity 0.22s ease, transform 0.22s ease;
+    transition:
+        opacity 0.22s ease,
+        transform 0.22s ease;
 }
 
 .strip-float-enter-from,

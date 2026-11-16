@@ -1,13 +1,13 @@
 <template>
     <Transition name="dialog-fade">
-        <div v-if="modelValue" class="dialog-overlay" @click="handleOverlayClick">
-            <div class="dialog-container" @click.stop>
-                <div class="dialog-header">
-                    <h3 class="dialog-title">{{ dialogTitle }}</h3>
-                    <button class="close-btn" @click="handleClose">&times;</button>
+        <div v-if="modelValue" class="ct-room-dialog-overlay" @click="handleOverlayClick">
+            <div class="ct-room-dialog-panel" @click.stop>
+                <div class="ct-room-dialog-header">
+                    <h3 class="ct-room-dialog-title">{{ dialogTitle }}</h3>
+                    <button class="ct-room-dialog-close" @click="handleClose">&times;</button>
                 </div>
 
-                <div class="dialog-body">
+                <div class="ct-room-dialog-body">
                     <div v-if="room" class="room-info">
                         <div class="room-icon">{{ roomIcon }}</div>
                         <div class="room-details">
@@ -39,12 +39,12 @@
                     </form>
                 </div>
 
-                <div class="dialog-footer">
+                <div class="ct-room-dialog-footer">
                     <button class="btn btn-secondary" :disabled="loading" @click="handleClose">
                         {{ t('common.cancel') }}
                     </button>
                     <button class="btn btn-primary" :disabled="loading || !password" @click="handleSubmit">
-                        <span v-if="loading" class="loading-spinner"></span>
+                        <span v-if="loading" class="ct-room-dialog-spinner"></span>
                         {{ loading ? t('joinRoom.joining') : submitLabel }}
                     </button>
                 </div>
@@ -54,6 +54,7 @@
 </template>
 
 <script setup lang="ts">
+import '@/styles/room-dialogs.css'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { apiService } from '@/services/api'
@@ -145,30 +146,110 @@ watch(() => props.modelValue, (open) => {
 </script>
 
 <style scoped>
-.dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
-.dialog-container{background:var(--bg-primary);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);width:100%;max-width:460px;display:flex;flex-direction:column;overflow:hidden}
-.dialog-header{padding:24px 24px 16px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between}
-.dialog-title{font-size:20px;font-weight:600;color:var(--text-primary);margin:0}
-.close-btn{width:32px;height:32px;border-radius:16px;background:transparent;color:var(--text-secondary);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer}
-.close-btn:hover{background:var(--bg-tertiary);color:var(--text-primary)}
-.dialog-body{padding:24px}
-.room-info{display:flex;gap:16px;margin-bottom:24px;padding:16px;background:var(--bg-secondary);border-radius:12px}
-.room-icon{width:56px;height:56px;border-radius:12px;background:var(--bg-tertiary);display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0}
-.room-details{flex:1;min-width:0}
-.room-name{font-size:16px;font-weight:600;color:var(--text-primary);margin:0 0 6px}
-.room-meta{display:flex;gap:8px;align-items:center;margin:0 0 8px;color:var(--text-secondary);font-size:13px}
-.separator{opacity:.45}
-.room-description,.join-mode-hint{margin:0;color:var(--text-secondary);font-size:13px;line-height:1.5}
-.join-mode-hint{margin-top:8px}
-.form-group{display:grid;gap:8px}
-.form-label{font-size:13px;font-weight:600;color:var(--text-primary)}
-.form-input{width:100%;padding:12px 14px;border:1px solid var(--border-color);border-radius:12px;background:var(--bg-primary);color:var(--text-primary)}
-.form-input.error{border-color:#dc2626}
-.error-text{color:#dc2626;font-size:12px}
-.dialog-footer{padding:16px 24px 24px;display:flex;justify-content:flex-end;gap:12px}
-.btn{border:none;border-radius:12px;padding:10px 16px;font-weight:700;cursor:pointer}
-.btn-secondary{background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border-color)}
-.btn-primary{background:var(--accent-primary);color:#fff}
-.loading-spinner{display:inline-block;width:14px;height:14px;margin-right:6px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+.ct-room-dialog-panel {
+    --ct-room-dialog-width: 460px;
+}
+.ct-room-dialog-close {
+    font-size: 20px;
+}
+.room-info {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+}
+.room-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    background: var(--bg-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    flex-shrink: 0;
+}
+.room-details {
+    flex: 1;
+    min-width: 0;
+}
+.room-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 6px;
+}
+.room-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin: 0 0 8px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+.separator {
+    opacity: 0.45;
+}
+.room-description,
+.join-mode-hint {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.5;
+}
+.join-mode-hint {
+    margin-top: 8px;
+}
+.form-group {
+    display: grid;
+    gap: 8px;
+}
+.form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.form-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+.form-input.error {
+    border-color: #dc2626;
+}
+.error-text {
+    color: #dc2626;
+    font-size: 12px;
+}
+.ct-room-dialog-footer {
+    padding: 16px 24px 24px;
+}
+.btn {
+    border: none;
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.btn-secondary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+.btn-primary {
+    background: var(--accent-primary);
+    color: #fff;
+}
+.ct-room-dialog-spinner {
+    display: inline-block;
+    margin-right: 6px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    animation: ct-room-dialog-spin 1s linear infinite;
+}
 </style>

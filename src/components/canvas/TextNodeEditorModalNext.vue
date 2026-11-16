@@ -483,7 +483,12 @@ function closeEditor() {
     background: transparent;
     color: var(--text-editor-muted);
     cursor: pointer;
-    transition: background 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+    transition:
+        background 120ms ease,
+        border-color 120ms ease,
+        color 120ms ease,
+        transform 120ms ease,
+        box-shadow 120ms ease;
 }
 
 .text-next-icon-btn svg {
@@ -566,7 +571,13 @@ function closeEditor() {
     border: 0;
     background: var(--text-editor-workspace);
     color: var(--text-editor-text);
-    font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family:
+        'Inter',
+        'Segoe UI',
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        sans-serif;
     font-size: 16px;
     line-height: 1.72;
     letter-spacing: 0;
@@ -587,8 +598,12 @@ html[data-theme='dark'] .text-next-layer {
 }
 
 @keyframes text-next-fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 @keyframes text-next-pop-in {

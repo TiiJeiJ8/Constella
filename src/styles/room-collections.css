@@ -1,0 +1,90 @@
+.ct-room-collection {
+    width: 100%;
+    height: 100%;
+}
+
+.ct-room-collection-content {
+    padding: 16px 40px 0;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.ct-room-collection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.ct-room-collection-card {
+    position: relative;
+}
+
+.ct-room-collection-error,
+.ct-room-collection-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+    gap: 16px;
+}
+
+.ct-room-collection-error-icon {
+    font-size: 64px;
+}
+
+.ct-room-collection-error p,
+.ct-room-collection-empty p {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.ct-room-collection-empty-hint {
+    font-size: 14px;
+    color: var(--text-tertiary);
+}
+
+.ct-room-collection-retry {
+    padding: 8px 20px;
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.ct-room-collection-retry:hover {
+    opacity: 0.8;
+}
+
+.ct-room-collection-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.ct-room-collection-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ct-room-collection-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.ct-room-collection-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+@media (max-width: 768px) {
+    .ct-room-collection-content {
+        padding: 16px 16px 0;
+    }
+
+    .ct-room-collection-grid {
+        grid-template-columns: 1fr;
+    }
+}

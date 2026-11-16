@@ -115,16 +115,101 @@ const tools = computed(() => {
 </script>
 
 <style scoped>
-.toolbox{position:absolute;left:16px;top:96px;z-index:90;display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 8px;background:var(--canvas-toolbar-bg);backdrop-filter:blur(20px);border:1px solid var(--border-color);border-radius:24px;box-shadow:var(--shadow-md);transition:all .3s cubic-bezier(.4,0,.2,1)}
-.toolbox:hover{box-shadow:var(--shadow-lg)}
-.tool-group{display:flex;flex-direction:column;gap:6px}
-.tool-btn{position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:transparent;color:var(--text-primary);transition:all .3s cubic-bezier(.4,0,.2,1)}
-.tool-btn:hover{background:var(--bg-tertiary);transform:scale(1.1)}
-.tool-btn.active{background:var(--color-primary);color:#fff;box-shadow:0 4px 12px rgba(102,126,234,.4)}
-.tool-btn.disabled,.tool-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
-.tool-btn.disabled:hover,.tool-btn:disabled:hover{background:transparent;transform:none}
-.tool-icon{width:22px;height:22px;display:block}
-.hotkey{position:absolute;right:6px;bottom:6px;padding:2px 6px;border-radius:6px;background:rgba(0,0,0,.08);color:var(--text-primary);font-size:10px;line-height:1;box-shadow:0 1px 2px rgba(0,0,0,.06);user-select:none}
-.tool-divider{width:32px;height:1px;margin:4px 0;background:var(--border-color)}
-@media (max-width:768px){.toolbox{left:12px;top:84px;padding:10px 6px;border-radius:20px}.tool-btn{width:44px;height:44px}.tool-icon{width:20px;height:20px}}
+.toolbox {
+    position: absolute;
+    left: 16px;
+    top: 96px;
+    z-index: 90;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 8px;
+    background: var(--canvas-toolbar-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.toolbox:hover {
+    box-shadow: var(--shadow-lg);
+}
+.tool-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.tool-btn {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-primary);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.tool-btn:hover {
+    background: var(--bg-tertiary);
+    transform: scale(1.1);
+}
+.tool-btn.active {
+    background: var(--color-primary);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+.tool-btn.disabled,
+.tool-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+.tool-btn.disabled:hover,
+.tool-btn:disabled:hover {
+    background: transparent;
+    transform: none;
+}
+.tool-icon {
+    width: 22px;
+    height: 22px;
+    display: block;
+}
+.hotkey {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.08);
+    color: var(--text-primary);
+    font-size: 10px;
+    line-height: 1;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    user-select: none;
+}
+.tool-divider {
+    width: 32px;
+    height: 1px;
+    margin: 4px 0;
+    background: var(--border-color);
+}
+@media (max-width: 768px) {
+    .toolbox {
+        left: 12px;
+        top: 84px;
+        padding: 10px 6px;
+        border-radius: 20px;
+    }
+    .tool-btn {
+        width: 44px;
+        height: 44px;
+    }
+    .tool-icon {
+        width: 20px;
+        height: 20px;
+    }
+}
 </style>

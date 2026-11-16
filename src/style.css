@@ -12,12 +12,39 @@
     --border-color: #dcdfe6;
     --border-light: #e4e7ed;
 
-    --color-primary: #667eea;
-    --color-primary-alpha: rgba(102, 126, 234, 0.15);
-    --accent-primary: #409eff;
+    /* 品牌色：选中态、品牌按钮；交互强调色：链接、通用控件。 */
+    --color-primary-rgb: 102, 126, 234;
+    --color-primary: rgb(var(--color-primary-rgb));
+    --color-primary-alpha: rgba(var(--color-primary-rgb), 0.15);
+    --color-primary-gradient: linear-gradient(135deg, var(--color-primary) 0%, #764ba2 100%);
+    --accent-primary-rgb: 64, 158, 255;
+    --accent-primary: rgb(var(--accent-primary-rgb));
     --accent-hover: #66b1ff;
     --accent-active: #3a8ee6;
     --color-primary-dark: #3a54c6;
+
+    /* 表单反馈保留现有色盘；危险操作和同步状态分别维护。 */
+    --form-error-rgb: 229, 57, 53;
+    --form-error-color: rgb(var(--form-error-rgb));
+    --form-error-hover: #c62828;
+    --form-success-rgb: 67, 160, 71;
+    --form-success-color: rgb(var(--form-success-rgb));
+    --form-warning-rgb: 255, 152, 0;
+    --form-warning-color: rgb(var(--form-warning-rgb));
+    --color-danger-rgb: 239, 68, 68;
+    --color-danger: rgb(var(--color-danger-rgb));
+    --status-success: #67c23a;
+    --status-warning: #e6a23c;
+    --status-error: #f56c6c;
+
+    /* 通用交互状态，不随主题改变透明度。 */
+    --accent-focus-ring: rgba(var(--accent-primary-rgb), 0.1);
+    --color-primary-hover-bg: rgba(var(--color-primary-rgb), 0.05);
+    --color-primary-selected-bg: rgba(var(--color-primary-rgb), 0.1);
+    --color-primary-selection-ring: rgba(var(--color-primary-rgb), 0.2);
+    --modal-backdrop: rgba(0, 0, 0, 0.5);
+    --control-hover-bg: rgba(0, 0, 0, 0.05);
+    --control-muted-bg: rgba(0, 0, 0, 0.05);
 
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
@@ -68,12 +95,9 @@ html[data-theme='dark'] {
     --border-color: rgba(255, 255, 255, 0.1);
     --border-light: #2d2d2d;
 
-    --color-primary: #667eea;
-    --color-primary-alpha: rgba(102, 126, 234, 0.2);
-    --accent-primary: #409eff;
-    --accent-hover: #66b1ff;
-    --accent-active: #3a8ee6;
-    --color-primary-dark: #3a54c6;
+    --color-primary-alpha: rgba(var(--color-primary-rgb), 0.2);
+    --control-hover-bg: rgba(255, 255, 255, 0.1);
+    --control-muted-bg: rgba(255, 255, 255, 0.05);
 
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
@@ -126,12 +150,14 @@ body {
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-        'Microsoft YaHei', sans-serif;
+    font-family:
+        -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+        'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
     background-color: var(--bg-primary);
     color: var(--text-primary);
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition:
+        background-color 0.3s ease,
+        color 0.3s ease;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }

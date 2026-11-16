@@ -3,7 +3,7 @@
         <Transition name="overlay">
             <div v-if="isOpen" class="settings-overlay" @click="handleOverlayClick"></div>
         </Transition>
-        
+
         <Transition name="slide">
             <div v-if="isOpen" class="settings-panel">
                 <!-- 顶部标题栏 -->
@@ -34,7 +34,7 @@
                         <!-- 账户设置 -->
                         <div v-show="activeCategory === 'account'" class="settings-section">
                             <h3 class="section-title">{{ t('settings.account.title') }}</h3>
-                            
+
                             <!-- 头像 -->
                             <div class="setting-item avatar-item">
                                 <label class="setting-label">{{ t('settings.account.avatar') }}</label>
@@ -57,8 +57,8 @@
                                     </div>
                                 </div>
                                 <div class="input-with-button">
-                                    <input 
-                                        v-model="settingsData.userId" 
+                                    <input
+                                        v-model="settingsData.userId"
                                         type="text"
                                         class="setting-input"
                                         :class="{ 'error': userIdError }"
@@ -77,16 +77,16 @@
                                 <label class="setting-label">{{ t('settings.account.name') }}</label>
                                 <div class="name-inputs">
                                     <div class="name-field">
-                                        <input 
-                                            v-model="settingsData.lastName" 
+                                        <input
+                                            v-model="settingsData.lastName"
                                             type="text"
                                             class="setting-input"
                                             :placeholder="t('settings.account.lastName')"
                                         />
                                     </div>
                                     <div class="name-field">
-                                        <input 
-                                            v-model="settingsData.firstName" 
+                                        <input
+                                            v-model="settingsData.firstName"
                                             type="text"
                                             class="setting-input"
                                             :placeholder="t('settings.account.firstName')"
@@ -101,8 +101,8 @@
                             <!-- 邮箱 -->
                             <div class="setting-item">
                                 <label class="setting-label">{{ t('settings.account.email') }}</label>
-                                <input 
-                                    v-model="settingsData.email" 
+                                <input
+                                    v-model="settingsData.email"
                                     type="email"
                                     class="setting-input"
                                     :placeholder="t('settings.account.emailPlaceholder')"
@@ -114,7 +114,7 @@
                         <!-- 通用设置 -->
                         <div v-show="activeCategory === 'general'" class="settings-section">
                             <h3 class="section-title">{{ t('settings.general.title') }}</h3>
-                            
+
                             <div class="setting-item">
                                 <label class="setting-label">{{ t('settings.general.language') }}</label>
                                 <select v-model="settingsData.language" class="setting-select">
@@ -127,7 +127,7 @@
                         <!-- 外观设置 -->
                         <div v-show="activeCategory === 'appearance'" class="settings-section">
                             <h3 class="section-title">{{ t('settings.appearance.title') }}</h3>
-                            
+
                             <div class="setting-item">
                                 <label class="setting-label">{{ t('settings.appearance.theme') }}</label>
                                 <select v-model="settingsData.theme" class="setting-select">
@@ -265,7 +265,7 @@
 
                         <div v-show="activeCategory === 'editor'" class="settings-section">
                             <h3 class="section-title">{{ t('settings.editor.title') }}</h3>
-                            
+
                             <div class="setting-item">
                                 <label class="setting-label">{{ t('settings.editor.defaultFormat') }}</label>
                                 <select v-model="settingsData.defaultFormat" class="setting-select">
@@ -287,7 +287,7 @@
                         <!-- 协作设置 -->
                         <div v-show="activeCategory === 'collaboration'" class="settings-section">
                             <h3 class="section-title">{{ t('settings.collaboration.title') }}</h3>
-                            
+
                             <div class="setting-item">
                                 <label class="setting-label">{{ t('settings.collaboration.showCursors') }}</label>
                                 <label class="toggle-switch">
@@ -308,7 +308,7 @@
                         <!-- 高级设置 -->
                         <div v-show="activeCategory === 'advanced'" class="settings-section">
                             <h3 class="section-title">{{ t('settings.advanced.title') }}</h3>
-                            
+
                             <div class="setting-item">
                                 <label class="setting-label">{{ t('settings.advanced.debugMode') }}</label>
                                 <label class="toggle-switch">
@@ -811,7 +811,7 @@ const loadSettings = () => {
     }
 
     lastAppliedDeveloperMode.value = settingsData.developerMode === true
-    
+
     // 初始化账户信息（如果没有）
     initializeAccount()
 }
@@ -821,15 +821,15 @@ const initializeAccount = () => {
     if (!settingsData.userId) {
         settingsData.userId = generateUserId()
     }
-    
+
     if (!settingsData.firstName || !settingsData.lastName) {
-        const name = settingsData.language === 'zh-CN' 
-            ? generateChineseName() 
+        const name = settingsData.language === 'zh-CN'
+            ? generateChineseName()
             : generateEnglishName()
         settingsData.firstName = name.firstName
         settingsData.lastName = name.lastName
     }
-    
+
     if (!settingsData.avatar) {
         settingsData.avatar = generateAvatar(settingsData.userId)
     }
@@ -1070,8 +1070,8 @@ const confirmRegenerateUserId = () => {
 
 // 重新生成姓名
 const regenerateName = () => {
-    const name = settingsData.language === 'zh-CN' 
-        ? generateChineseName() 
+    const name = settingsData.language === 'zh-CN'
+        ? generateChineseName()
         : generateEnglishName()
     settingsData.firstName = name.firstName
     settingsData.lastName = name.lastName
@@ -1090,7 +1090,7 @@ const checkUserId = () => {
         userIdError.value = ''
         return
     }
-    
+
     if (!validateUserId(settingsData.userId)) {
         userIdError.value = t('settings.account.errors.invalidUserId')
     } else {
@@ -1115,7 +1115,7 @@ void syncWindowState().finally(() => {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--modal-backdrop);
     z-index: 2000;
     backdrop-filter: blur(2px);
 }
@@ -1429,7 +1429,7 @@ void syncWindowState().finally(() => {
 
 .link-btn {
     background: transparent;
-    color: var(--primary-color, #2563eb);
+    color: var(--accent-primary);
     padding: 0;
     font-size: 13px;
 }
@@ -1674,7 +1674,7 @@ void syncWindowState().finally(() => {
 }
 
 .setting-input.error {
-    border-color: #e53935;
+    border-color: var(--form-error-color);
 }
 
 /* ==================== 头像相关 ==================== */
@@ -1762,7 +1762,7 @@ void syncWindowState().finally(() => {
 /* ==================== 错误提示 ==================== */
 .error-text {
     font-size: 0.75rem;
-    color: #e53935;
+    color: var(--form-error-color);
     margin-top: 4px;
 }
 
@@ -1807,18 +1807,18 @@ void syncWindowState().finally(() => {
 }
 
 .strength-indicator.weak {
-    color: #e53935;
-    background: rgba(229, 57, 53, 0.1);
+    color: var(--form-error-color);
+    background: rgba(var(--form-error-rgb), 0.1);
 }
 
 .strength-indicator.medium {
-    color: #ff9800;
-    background: rgba(255, 152, 0, 0.1);
+    color: var(--form-warning-color);
+    background: rgba(var(--form-warning-rgb), 0.1);
 }
 
 .strength-indicator.strong {
-    color: #43a047;
-    background: rgba(67, 160, 71, 0.1);
+    color: var(--form-success-color);
+    background: rgba(var(--form-success-rgb), 0.1);
 }
 
 /* ==================== 开关按钮 ==================== */
@@ -1849,7 +1849,7 @@ void syncWindowState().finally(() => {
 
 .toggle-slider:before {
     position: absolute;
-    content: "";
+    content: '';
     height: 20px;
     width: 20px;
     left: 3px;
@@ -1870,7 +1870,7 @@ void syncWindowState().finally(() => {
 /* ==================== 危险按钮 ==================== */
 .danger-btn {
     padding: 8px 16px;
-    background: #e53935;
+    background: var(--form-error-color);
     color: white;
     border: none;
     border-radius: 8px;
@@ -1881,7 +1881,7 @@ void syncWindowState().finally(() => {
 }
 
 .danger-btn:hover {
-    background: #c62828;
+    background: var(--form-error-hover);
 }
 
 /* 全宽按钮（如：重置快捷键） */

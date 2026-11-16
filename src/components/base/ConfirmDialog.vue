@@ -149,7 +149,7 @@ function handleOverlayClick() {
 }
 
 .cancel-btn:hover {
-    background: var(--bg-quaternary);
+    background: var(--dialog-control-hover);
 }
 
 .confirm-btn {
@@ -163,11 +163,11 @@ function handleOverlayClick() {
 }
 
 .confirm-btn.danger {
-    background: #e53935;
+    background: var(--form-error-color);
 }
 
 .confirm-btn.danger:hover {
-    background: #c62828;
+    background: var(--form-error-hover);
 }
 
 .overlay-fade-enter-active,

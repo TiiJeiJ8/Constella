@@ -122,12 +122,16 @@ defineExpose({
 }
 
 .toast.error {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
-    border-color: rgba(239, 68, 68, 0.4);
+    background: linear-gradient(
+        135deg,
+        rgba(var(--color-danger-rgb), 0.15),
+        rgba(var(--color-danger-rgb), 0.05)
+    );
+    border-color: rgba(var(--color-danger-rgb), 0.4);
 }
 
 .toast.error .toast-icon {
-    color: #ef4444;
+    color: var(--color-danger);
 }
 
 .toast.warning {
@@ -140,12 +144,16 @@ defineExpose({
 }
 
 .toast.info {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(102, 126, 234, 0.05));
-    border-color: rgba(102, 126, 234, 0.4);
+    background: linear-gradient(
+        135deg,
+        rgba(var(--color-primary-rgb), 0.15),
+        rgba(var(--color-primary-rgb), 0.05)
+    );
+    border-color: rgba(var(--color-primary-rgb), 0.4);
 }
 
 .toast.info .toast-icon {
-    color: #667eea;
+    color: var(--color-primary);
 }
 
 .toast-icon {

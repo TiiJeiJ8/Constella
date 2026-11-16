@@ -99,19 +99,19 @@ html[data-theme='dark'] .toast {
 }
 
 .toast.info {
-    border-left: 3px solid #409eff;
+    border-left: 3px solid var(--accent-primary);
 }
 
 .toast.success {
-    border-left: 3px solid #67c23a;
+    border-left: 3px solid var(--status-success);
 }
 
 .toast.warning {
-    border-left: 3px solid #e6a23c;
+    border-left: 3px solid var(--status-warning);
 }
 
 .toast.error {
-    border-left: 3px solid #f56c6c;
+    border-left: 3px solid var(--status-error);
 }
 
 /* 动画 */

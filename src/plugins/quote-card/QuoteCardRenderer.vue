@@ -19,7 +19,11 @@ const author = computed(() => String(props.content?.metadata?.author || '').trim
 
 <style scoped>
 .quote-card {
-    --quote-card-surface: linear-gradient(160deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04));
+    --quote-card-surface: linear-gradient(
+        160deg,
+        rgba(255, 255, 255, 0.16),
+        rgba(255, 255, 255, 0.04)
+    );
     --quote-card-text: rgba(255, 255, 255, 0.96);
     --quote-card-muted: rgba(255, 255, 255, 0.72);
     --quote-card-accent: rgba(255, 255, 255, 0.46);

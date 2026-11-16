@@ -351,7 +351,11 @@ function confirm() {
     font-size: 22px;
     line-height: 1;
     cursor: pointer;
-    transition: background 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease;
+    transition:
+        background 120ms ease,
+        border-color 120ms ease,
+        color 120ms ease,
+        transform 120ms ease;
 }
 
 .md-export-close:hover {
@@ -384,7 +388,12 @@ function confirm() {
     color: color-mix(in srgb, var(--md-export-text) 78%, var(--md-export-muted));
     text-align: left;
     cursor: pointer;
-    transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+    transition:
+        background 140ms ease,
+        border-color 140ms ease,
+        color 140ms ease,
+        transform 140ms ease,
+        box-shadow 140ms ease;
 }
 
 .md-export-format.active {
@@ -444,7 +453,11 @@ function confirm() {
     font-size: 12px;
     font-weight: 760;
     cursor: pointer;
-    transition: background 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease;
+    transition:
+        background 120ms ease,
+        border-color 120ms ease,
+        color 120ms ease,
+        transform 120ms ease;
 }
 
 .md-export-tabs button.active {
@@ -500,7 +513,10 @@ function confirm() {
     color: var(--md-export-text);
     font-size: 13px;
     outline: none;
-    transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+    transition:
+        border-color 120ms ease,
+        box-shadow 120ms ease,
+        background 120ms ease;
 }
 
 .field input:focus,
@@ -531,7 +547,10 @@ function confirm() {
     font-size: 12px;
     font-weight: 760;
     cursor: pointer;
-    transition: background 120ms ease, color 120ms ease, box-shadow 120ms ease;
+    transition:
+        background 120ms ease,
+        color 120ms ease,
+        box-shadow 120ms ease;
 }
 
 .segmented button.active {
@@ -586,7 +605,12 @@ function confirm() {
     font-size: 12px;
     font-weight: 780;
     cursor: pointer;
-    transition: background 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+    transition:
+        background 120ms ease,
+        border-color 120ms ease,
+        color 120ms ease,
+        transform 120ms ease,
+        box-shadow 120ms ease;
 }
 
 .md-export-footer-actions .secondary {
@@ -630,8 +654,12 @@ html[data-theme='dark'] .segmented button.active {
 }
 
 @keyframes md-export-fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 @keyframes md-export-pop-in {

@@ -52,7 +52,7 @@ defineEmits<{
     height: 18px;
     padding: 0 4px;
     border-radius: 9px;
-    background: #ef4444;
+    background: var(--color-danger);
     color: white;
     font-size: 10px;
     font-weight: 700;

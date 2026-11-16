@@ -1491,7 +1491,12 @@ function installMuyaPlugins() {
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
-    transition: background 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+    transition:
+        background 120ms ease,
+        border-color 120ms ease,
+        color 120ms ease,
+        transform 120ms ease,
+        box-shadow 120ms ease;
 }
 
 .md-next-icon-btn {
@@ -1707,7 +1712,9 @@ function installMuyaPlugins() {
     border: 0;
     border-radius: 4px;
     background: var(--md-editor-control-bg);
-    transition: box-shadow 120ms ease, background 120ms ease;
+    transition:
+        box-shadow 120ms ease,
+        background 120ms ease;
 }
 
 .md-next-search-field:focus-within {
@@ -1724,7 +1731,9 @@ function installMuyaPlugins() {
     color: var(--md-editor-text);
     font-size: 12px;
     outline: none;
-    transition: box-shadow 120ms ease, background 120ms ease;
+    transition:
+        box-shadow 120ms ease,
+        background 120ms ease;
 }
 
 .md-next-search-field input {
@@ -1743,7 +1752,7 @@ function installMuyaPlugins() {
     box-shadow: none;
 }
 
-.md-next-search input[aria-invalid="true"] {
+.md-next-search input[aria-invalid='true'] {
     color: #f87171;
 }
 
@@ -1853,7 +1862,9 @@ function installMuyaPlugins() {
     color: var(--md-editor-text);
     font-size: var(--md-editor-user-font-size);
     line-height: var(--md-editor-user-line-height);
-    transition: max-width 160ms ease, padding 160ms ease;
+    transition:
+        max-width 160ms ease,
+        padding 160ms ease;
 }
 
 .md-next-editor :deep(.mu-container),
@@ -1973,8 +1984,18 @@ function installMuyaPlugins() {
     color: var(--md-editor-faint) !important;
 }
 
-.md-next-editor :deep(.mu-show-quick-insert-hint .mu-paragraph.mu-active > .mu-paragraph-content:first-of-type::after),
-.md-next-editor :deep(.mu-show-quick-insert-hint .mu-paragraph.mu-active > .mu-paragraph-content:first-of-type:empty::after) {
+.md-next-editor
+    :deep(
+        .mu-show-quick-insert-hint
+            .mu-paragraph.mu-active
+            > .mu-paragraph-content:first-of-type::after
+    ),
+.md-next-editor
+    :deep(
+        .mu-show-quick-insert-hint
+            .mu-paragraph.mu-active
+            > .mu-paragraph-content:first-of-type:empty::after
+    ) {
     color: var(--editor-color-50);
 }
 
@@ -2209,7 +2230,11 @@ function installMuyaPlugins() {
     text-overflow: ellipsis;
     white-space: nowrap;
     cursor: pointer;
-    transition: background 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease;
+    transition:
+        background 120ms ease,
+        border-color 120ms ease,
+        color 120ms ease,
+        transform 120ms ease;
 }
 
 .md-next-outline-item:hover {
@@ -2323,8 +2348,12 @@ html[data-theme='dark'] .md-next-editor :deep(.mu-diagram-preview path) {
 }
 
 @keyframes md-next-fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 @keyframes md-next-pop-in {
@@ -2339,8 +2368,13 @@ html[data-theme='dark'] .md-next-editor :deep(.mu-diagram-preview path) {
 }
 
 @keyframes md-next-pulse {
-    0%, 100% { opacity: 0.62; }
-    50% { opacity: 1; }
+    0%,
+    100% {
+        opacity: 0.62;
+    }
+    50% {
+        opacity: 1;
+    }
 }
 
 @keyframes md-next-search-in {

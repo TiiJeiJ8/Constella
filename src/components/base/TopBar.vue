@@ -277,11 +277,7 @@ html[data-theme='dark'] .topbar {
 }
 
 .search-icon-btn:hover {
-    background: rgba(0, 0, 0, 0.05);
-}
-
-.dark .search-icon-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--control-hover-bg);
 }
 
 .search-glyph {
@@ -314,17 +310,13 @@ html[data-theme='dark'] .topbar {
     gap: 10px;
     height: 36px;
     padding: 0 12px;
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--control-muted-bg);
     border-radius: 18px;
     width: 300px;
 }
 
 .search-input-wrapper.always-visible {
     width: min(220px, 100%);
-}
-
-.dark .search-input-wrapper {
-    background: rgba(255, 255, 255, 0.05);
 }
 
 .search-input {
@@ -533,7 +525,7 @@ html[data-theme='dark'] .topbar {
 }
 
 html[data-theme='dark'] .create-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--color-primary-gradient);
 }
 
 html[data-theme='dark'] .secondary-action-btn {
@@ -547,7 +539,7 @@ html[data-theme='dark'] .secondary-action-btn:hover {
 }
 
 html[data-theme='dark'] .create-btn:hover {
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+    box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.5);
 }
 
 @media (max-width: 1200px) {

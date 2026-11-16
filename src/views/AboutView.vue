@@ -362,12 +362,24 @@ function openAuthorGithub(username: string) {
     font-size: 1.25rem;
 }
 
-.feature-canvas { background: rgba(59, 130, 246, 0.12); }
-.feature-collab { background: rgba(16, 185, 129, 0.12); }
-.feature-permissions { background: rgba(245, 158, 11, 0.14); }
-.feature-network { background: rgba(99, 102, 241, 0.12); }
-.feature-assets { background: rgba(236, 72, 153, 0.12); }
-.feature-plugins { background: rgba(139, 92, 246, 0.12); }
+.feature-canvas {
+    background: rgba(59, 130, 246, 0.12);
+}
+.feature-collab {
+    background: rgba(16, 185, 129, 0.12);
+}
+.feature-permissions {
+    background: rgba(245, 158, 11, 0.14);
+}
+.feature-network {
+    background: rgba(99, 102, 241, 0.12);
+}
+.feature-assets {
+    background: rgba(236, 72, 153, 0.12);
+}
+.feature-plugins {
+    background: rgba(139, 92, 246, 0.12);
+}
 
 .feature-content {
     display: flex;

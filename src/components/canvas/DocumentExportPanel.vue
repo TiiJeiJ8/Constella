@@ -428,8 +428,7 @@ function ensureAllowedFormat() {
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 24px;
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02)),
-        #17181c;
+        linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02)), #17181c;
     box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
 }
 
@@ -514,7 +513,12 @@ function ensureAllowedFormat() {
 .export-panel-btn {
     border: none;
     cursor: pointer;
-    transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    transition:
+        transform 0.18s ease,
+        background 0.18s ease,
+        color 0.18s ease,
+        box-shadow 0.18s ease,
+        border-color 0.18s ease;
 }
 
 .export-format-item {
@@ -739,8 +743,7 @@ function ensureAllowedFormat() {
 html[data-theme='light'] .export-panel {
     border-color: rgba(15, 23, 42, 0.08);
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.94)),
-        #ffffff;
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.94)), #ffffff;
     box-shadow: 0 28px 70px rgba(15, 23, 42, 0.12);
 }
 
@@ -798,19 +801,26 @@ html[data-theme='light'] .export-panel-footer {
 }
 
 @media (max-width: 720px) {
-    .export-panel-overlay { padding: 16px; }
+    .export-panel-overlay {
+        padding: 16px;
+    }
     .export-panel {
         width: 100%;
         height: min(92vh, 720px);
         min-height: 0;
     }
-    .export-panel-body { grid-template-columns: 1fr; min-height: 0; }
+    .export-panel-body {
+        grid-template-columns: 1fr;
+        min-height: 0;
+    }
     .export-sidebar {
         border-right: none;
         border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         padding-right: 16px;
     }
-    .export-options-grid { grid-template-columns: 1fr; }
+    .export-options-grid {
+        grid-template-columns: 1fr;
+    }
     .export-top-row.pdf-mode {
         grid-template-columns: 1fr;
     }

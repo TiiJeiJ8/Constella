@@ -304,12 +304,12 @@ html[data-theme='dark'] .dock-divider {
 }
 
 .dock-item:hover {
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--control-hover-bg);
     transform: translateY(-4px);
 }
 
 html[data-theme='dark'] .dock-item:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--control-hover-bg);
 }
 
 .dock-item:active {

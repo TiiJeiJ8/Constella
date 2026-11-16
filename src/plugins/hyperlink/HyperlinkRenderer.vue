@@ -139,8 +139,16 @@ function handleFaviconError() {
 
 <style scoped>
 .hyperlink-renderer {
-    --link-surface-soft: color-mix(in srgb, var(--bg-primary, #ffffff) 72%, var(--color-primary, #667eea) 6%);
-    --link-border: color-mix(in srgb, var(--border-color, #dcdfe6) 78%, var(--color-primary, #667eea));
+    --link-surface-soft: color-mix(
+        in srgb,
+        var(--bg-primary, #ffffff) 72%,
+        var(--color-primary, #667eea) 6%
+    );
+    --link-border: color-mix(
+        in srgb,
+        var(--border-color, #dcdfe6) 78%,
+        var(--color-primary, #667eea)
+    );
     --link-text: var(--text-primary, #2c3e50);
     --link-muted: var(--text-secondary, #606266);
     --link-faint: var(--text-tertiary, #909399);
@@ -287,7 +295,7 @@ function handleFaviconError() {
     border-radius: 6px;
     background: var(--link-url-bg);
     color: var(--link-faint);
-    font-family: "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, monospace;
+    font-family: 'Cascadia Mono', Consolas, 'SFMono-Regular', Menlo, monospace;
     font-size: 11px;
     font-weight: 400;
     line-height: 1.3;

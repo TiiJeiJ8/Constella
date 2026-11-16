@@ -1414,7 +1414,7 @@ defineExpose({
     overflow: hidden;
     background: v-bind(backgroundColor);
     position: relative;
-    z-index: 0;  /* 确保画布在最底层 */
+    z-index: 0; /* 确保画布在最底层 */
 }
 
 /* Konva 容器样式 */

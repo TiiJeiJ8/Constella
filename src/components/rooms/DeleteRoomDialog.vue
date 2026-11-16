@@ -1,18 +1,18 @@
 <template>
     <Teleport to="body">
         <Transition name="dialog-fade">
-            <div v-if="modelValue" class="dialog-overlay" @click.self="closeDialog">
-                <div class="dialog-container">
-                    <div class="dialog-header">
-                        <h2 class="dialog-title">{{ t('rooms.delete.title') }}</h2>
-                        <button class="close-btn" @click="closeDialog">
+            <div v-if="modelValue" class="ct-room-dialog-overlay" @click.self="closeDialog">
+                <div class="ct-room-dialog-panel">
+                    <div class="ct-room-dialog-header">
+                        <h2 class="ct-room-dialog-title">{{ t('rooms.delete.title') }}</h2>
+                        <button class="ct-room-dialog-close" @click="closeDialog">
                             <svg viewBox="0 0 24 24" aria-hidden="true">
                                 <path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
                             </svg>
                         </button>
                     </div>
 
-                    <div class="dialog-content">
+                    <div class="ct-room-dialog-body">
                         <div class="warning-banner">
                             <svg class="warning-icon" viewBox="0 0 24 24" aria-hidden="true">
                                 <path d="M12 4.5 21 19H3L12 4.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.9" />
@@ -78,7 +78,7 @@
                         </div>
                     </div>
 
-                    <div class="dialog-footer">
+                    <div class="ct-room-dialog-footer ct-room-dialog-footer-bordered">
                         <button
                             class="btn btn-cancel"
                             :disabled="loading"
@@ -91,7 +91,7 @@
                             :disabled="loading || (room?.isPrivate && !password)"
                             @click="handleConfirm"
                         >
-                            <span v-if="loading" class="loading-spinner"></span>
+                            <span v-if="loading" class="ct-room-dialog-spinner"></span>
                             {{ loading ? t('rooms.delete.deleting') : t('rooms.delete.confirm') }}
                         </button>
                     </div>
@@ -102,6 +102,7 @@
 </template>
 
 <script setup>
+import '@/styles/room-dialogs.css'
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -167,75 +168,30 @@ function handleConfirm() {
 </script>
 
 <style scoped>
-.dialog-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.ct-room-dialog-overlay {
     z-index: 10000;
-    padding: 20px;
 }
 
-.dialog-container {
-    background: var(--bg-primary);
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    max-width: 480px;
-    width: 100%;
+.ct-room-dialog-panel {
+    --ct-room-dialog-width: 480px;
     max-height: 90vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
 }
 
-.dialog-header {
+.ct-room-dialog-header {
     padding: 24px 24px 20px;
-    border-bottom: 1px solid var(--border-light);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
 }
 
-.dialog-title {
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0;
-}
-
-.close-btn {
-    width: 32px;
-    height: 32px;
+.ct-room-dialog-close {
     border: none;
-    background: transparent;
-    color: var(--text-secondary);
-    cursor: pointer;
     border-radius: 8px;
     transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
-.close-btn svg {
-    width: 15px;
-    height: 15px;
-    display: block;
-}
-
-.close-btn:hover {
+.ct-room-dialog-close:hover {
     background: var(--bg-secondary);
-    color: var(--text-primary);
 }
 
-.dialog-content {
-    padding: 24px;
+.ct-room-dialog-body {
     overflow-y: auto;
     flex: 1;
 }
@@ -244,21 +200,21 @@ function handleConfirm() {
     display: flex;
     gap: 12px;
     padding: 16px;
-    background: rgba(255, 152, 0, 0.1);
-    border: 1px solid rgba(255, 152, 0, 0.3);
+    background: rgba(var(--form-warning-rgb), 0.1);
+    border: 1px solid rgba(var(--form-warning-rgb), 0.3);
     border-radius: 12px;
     margin-bottom: 20px;
 }
 
 html[data-theme='dark'] .warning-banner {
-    background: rgba(255, 152, 0, 0.15);
-    border-color: rgba(255, 152, 0, 0.4);
+    background: rgba(var(--form-warning-rgb), 0.15);
+    border-color: rgba(var(--form-warning-rgb), 0.4);
 }
 
 .warning-icon {
     width: 24px;
     height: 24px;
-    color: #ff9800;
+    color: var(--form-warning-color);
     flex-shrink: 0;
 }
 
@@ -310,7 +266,7 @@ html[data-theme='dark'] .warning-banner {
 }
 
 .value.private {
-    color: #ff9800;
+    color: var(--form-warning-color);
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -353,8 +309,8 @@ html[data-theme='dark'] .warning-banner {
 
 .password-input:focus {
     outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(103, 128, 232, 0.1);
+    border-color: var(--dialog-primary);
+    box-shadow: 0 0 0 3px var(--dialog-focus);
 }
 
 .toggle-password {
@@ -387,14 +343,6 @@ html[data-theme='dark'] .warning-banner {
     border-radius: 8px;
     color: #f44336;
     font-size: 13px;
-}
-
-.dialog-footer {
-    padding: 16px 24px;
-    border-top: 1px solid var(--border-light);
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
 }
 
 .btn {
@@ -434,19 +382,10 @@ html[data-theme='dark'] .warning-banner {
     box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
 }
 
-.loading-spinner {
-    width: 14px;
-    height: 14px;
+.ct-room-dialog-spinner {
     border: 2px solid rgba(255, 255, 255, 0.35);
     border-top-color: white;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+    animation: ct-room-dialog-spin 1s linear infinite;
 }
 
 .dialog-fade-enter-active,
@@ -454,8 +393,8 @@ html[data-theme='dark'] .warning-banner {
     transition: opacity 0.3s ease;
 }
 
-.dialog-fade-enter-active .dialog-container,
-.dialog-fade-leave-active .dialog-container {
+.dialog-fade-enter-active .ct-room-dialog-panel,
+.dialog-fade-leave-active .ct-room-dialog-panel {
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -464,8 +403,8 @@ html[data-theme='dark'] .warning-banner {
     opacity: 0;
 }
 
-.dialog-fade-enter-from .dialog-container,
-.dialog-fade-leave-to .dialog-container {
+.dialog-fade-enter-from .ct-room-dialog-panel,
+.dialog-fade-leave-to .ct-room-dialog-panel {
     transform: scale(0.9) translateY(20px);
 }
 </style>

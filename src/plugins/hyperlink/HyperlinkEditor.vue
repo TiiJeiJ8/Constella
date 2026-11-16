@@ -139,18 +139,44 @@ function handleOpen() {
     border-bottom: 1px solid var(--dialog-border);
     background: var(--dialog-section-bg);
 }
-.dialog-title { font-size: 16px; font-weight: 600; color: var(--dialog-text); flex: 1; }
-.close-btn {
-    background: transparent; border: none; color: var(--dialog-muted);
-    cursor: pointer; font-size: 14px; padding: 4px;
+.dialog-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--dialog-text);
+    flex: 1;
 }
-.close-btn:hover { color: var(--dialog-text); }
+.close-btn {
+    background: transparent;
+    border: none;
+    color: var(--dialog-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+}
+.close-btn:hover {
+    color: var(--dialog-text);
+}
 
-.dialog-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.dialog-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
 
-.field-group { display: flex; flex-direction: column; gap: 6px; }
-.field-label { font-size: 13px; color: var(--dialog-muted); font-weight: 600; }
-.required { color: var(--dialog-danger); }
+.field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.field-label {
+    font-size: 13px;
+    color: var(--dialog-muted);
+    font-weight: 600;
+}
+.required {
+    color: var(--dialog-danger);
+}
 .field-input {
     background: var(--dialog-control-bg);
     border: 1px solid var(--dialog-control-border);
@@ -159,7 +185,10 @@ function handleOpen() {
     font-size: 14px;
     padding: 12px 14px;
     outline: none;
-    transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+    transition:
+        border-color 140ms ease,
+        box-shadow 140ms ease,
+        background-color 140ms ease;
 }
 .field-input:focus {
     border-color: var(--dialog-primary);
@@ -168,8 +197,14 @@ function handleOpen() {
 .field-input::placeholder {
     color: var(--dialog-placeholder);
 }
-.field-input[readonly] { opacity: 0.82; cursor: default; }
-.field-error { font-size: 12px; color: var(--dialog-danger); }
+.field-input[readonly] {
+    opacity: 0.82;
+    cursor: default;
+}
+.field-error {
+    font-size: 12px;
+    color: var(--dialog-danger);
+}
 
 .dialog-footer {
     display: flex;
@@ -185,9 +220,18 @@ function handleOpen() {
     gap: 8px;
 }
 .btn {
-    padding: 10px 16px; border-radius: 8px; font-size: 14px;
-    cursor: pointer; border: none; font-weight: 600;
-    transition: transform 140ms ease, background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+    font-weight: 600;
+    transition:
+        transform 140ms ease,
+        background-color 140ms ease,
+        border-color 140ms ease,
+        color 140ms ease,
+        box-shadow 140ms ease;
 }
 .btn:hover:not(:disabled) {
     transform: translateY(-1px);
@@ -197,22 +241,34 @@ function handleOpen() {
     color: var(--dialog-text);
     border: 1px solid transparent;
 }
-.btn-cancel:hover { color: var(--dialog-text); }
+.btn-cancel:hover {
+    color: var(--dialog-text);
+}
 .btn-save {
     background: var(--dialog-primary);
     color: #ffffff;
     box-shadow: 0 8px 18px rgba(102, 126, 234, 0.18);
 }
-.btn-save:hover:not(:disabled) { background: var(--dialog-primary-hover); }
-.btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-save:hover:not(:disabled) {
+    background: var(--dialog-primary-hover);
+}
+.btn-save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 .btn-open {
     background: transparent;
     color: var(--dialog-primary);
     border: 1px solid var(--dialog-primary);
     padding: 10px 14px;
 }
-.btn-open:hover:not(:disabled) { background: var(--dialog-focus); }
-.btn-open:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-open:hover:not(:disabled) {
+    background: var(--dialog-focus);
+}
+.btn-open:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
 
 @media (max-width: 720px) {
     .hyperlink-overlay {

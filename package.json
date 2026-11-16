@@ -25,7 +25,9 @@
     "build:electron:portable": "npm run build:server && npm run prepare:server-runtime && npm run prepare:node-runtime && npm run build && electron-builder --win portable --x64 --config.artifactName=Constella_${version}_${arch}-portable.${ext}",
     "build:electron:release": "npm run build:electron:installer && npm run build:electron:zip",
     "build:electron:dir": "npm run build:server && npm run prepare:server-runtime && npm run prepare:node-runtime && npm run build && electron-builder --dir",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "styles:format": "node scripts/format-styles.cjs",
+    "styles:check": "node scripts/format-styles.cjs --check"
   },
   "build": {
     "appId": "com.constella.app",
@@ -133,6 +135,7 @@
     "cross-env": "^10.1.0",
     "electron": "^39.8.10",
     "electron-builder": "^26.4.0",
+    "prettier": "3.6.2",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-electron": "^0.29.0",

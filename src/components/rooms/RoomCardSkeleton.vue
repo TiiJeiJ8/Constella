@@ -37,7 +37,8 @@
 }
 
 @keyframes skeleton-pulse {
-    0%, 100% {
+    0%,
+    100% {
         opacity: 1;
     }
     50% {
@@ -60,10 +61,12 @@
 .skeleton-title {
     height: 24px;
     width: 60%;
-    background: linear-gradient(90deg, 
-        var(--border-light) 25%, 
-        var(--bg-tertiary) 50%, 
-        var(--border-light) 75%);
+    background: linear-gradient(
+        90deg,
+        var(--border-light) 25%,
+        var(--bg-tertiary) 50%,
+        var(--border-light) 75%
+    );
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
     border-radius: 8px;
@@ -73,10 +76,12 @@
 .skeleton-meta {
     height: 16px;
     width: 40%;
-    background: linear-gradient(90deg, 
-        var(--border-light) 25%, 
-        var(--bg-tertiary) 50%, 
-        var(--border-light) 75%);
+    background: linear-gradient(
+        90deg,
+        var(--border-light) 25%,
+        var(--bg-tertiary) 50%,
+        var(--border-light) 75%
+    );
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
     border-radius: 6px;
@@ -86,10 +91,12 @@
     width: 32px;
     height: 32px;
     border-radius: 16px;
-    background: linear-gradient(90deg, 
-        var(--border-light) 25%, 
-        var(--bg-tertiary) 50%, 
-        var(--border-light) 75%);
+    background: linear-gradient(
+        90deg,
+        var(--border-light) 25%,
+        var(--bg-tertiary) 50%,
+        var(--border-light) 75%
+    );
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
 }
@@ -102,10 +109,12 @@
 .skeleton-line {
     height: 14px;
     width: 100%;
-    background: linear-gradient(90deg, 
-        var(--border-light) 25%, 
-        var(--bg-tertiary) 50%, 
-        var(--border-light) 75%);
+    background: linear-gradient(
+        90deg,
+        var(--border-light) 25%,
+        var(--bg-tertiary) 50%,
+        var(--border-light) 75%
+    );
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
     border-radius: 6px;
@@ -127,10 +136,12 @@
 .skeleton-tag {
     height: 24px;
     width: 80px;
-    background: linear-gradient(90deg, 
-        var(--border-light) 25%, 
-        var(--bg-tertiary) 50%, 
-        var(--border-light) 75%);
+    background: linear-gradient(
+        90deg,
+        var(--border-light) 25%,
+        var(--bg-tertiary) 50%,
+        var(--border-light) 75%
+    );
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
     border-radius: 12px;
@@ -139,10 +150,12 @@
 .skeleton-time {
     height: 16px;
     width: 60px;
-    background: linear-gradient(90deg, 
-        var(--border-light) 25%, 
-        var(--bg-tertiary) 50%, 
-        var(--border-light) 75%);
+    background: linear-gradient(
+        90deg,
+        var(--border-light) 25%,
+        var(--bg-tertiary) 50%,
+        var(--border-light) 75%
+    );
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
     border-radius: 6px;

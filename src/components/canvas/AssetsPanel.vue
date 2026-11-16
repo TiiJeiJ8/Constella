@@ -30,10 +30,7 @@
                 v-for="asset in assets"
                 :key="asset.id"
                 class="asset-item"
-                :class="{
-                    selected: selectedAssetId === asset.id,
-                    readonly: !canInsert
-                }"
+                :class="{ selected: selectedAssetId === asset.id, readonly: !canInsert }"
                 :draggable="canInsert"
                 @click="selectAsset(asset)"
                 @dblclick="insertAsset(asset)"
@@ -66,14 +63,14 @@
             </div>
         </div>
 
-        <div v-else class="empty-state">
-            <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <div v-else class="ct-panel-empty">
+            <svg class="ct-panel-empty-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <rect x="4.75" y="5.5" width="14.5" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7" />
                 <circle cx="9" cy="10" r="1.2" fill="currentColor" />
                 <path d="m8 16 3.2-3.2L14 15l1.8-1.8L17 14.4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" />
             </svg>
-            <span class="empty-text">{{ t('canvas.assets.empty') }}</span>
-            <span class="empty-hint">{{ t('canvas.assets.emptyHint') }}</span>
+            <span class="ct-panel-empty-text">{{ t('canvas.assets.empty') }}</span>
+            <span class="ct-panel-empty-hint">{{ t('canvas.assets.emptyHint') }}</span>
         </div>
 
         <div v-if="selectedAssetId" class="asset-actions">
@@ -98,6 +95,7 @@
 </template>
 
 <script setup>
+import '@/styles/panel-empty.css'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ConfirmDialog from '@/components/base/ConfirmDialog.vue'
@@ -336,7 +334,7 @@ function formatSize(bytes) {
 
 .upload-area:hover {
     border-color: var(--color-primary);
-    background: rgba(102, 126, 234, 0.05);
+    background: var(--color-primary-hover-bg);
 }
 
 .upload-area.disabled {
@@ -449,7 +447,7 @@ function formatSize(bytes) {
 
 .asset-item.selected {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+    box-shadow: 0 0 0 2px var(--color-primary-selection-ring);
 }
 
 .asset-preview {
@@ -518,38 +516,12 @@ function formatSize(bytes) {
 }
 
 .delete-btn:hover:not(:disabled) {
-    background: #ef4444;
+    background: var(--color-danger);
 }
 
 .delete-btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
-}
-
-.empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 32px 16px;
-    text-align: center;
-}
-
-.empty-icon {
-    width: 48px;
-    height: 48px;
-    opacity: 0.5;
-    color: var(--text-tertiary);
-}
-
-.empty-text {
-    font-size: 14px;
-    color: var(--text-secondary);
-}
-
-.empty-hint {
-    font-size: 12px;
-    color: var(--text-tertiary);
 }
 
 .asset-actions {

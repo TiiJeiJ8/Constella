@@ -1,41 +1,41 @@
 <template>
-    <Transition name="dialog-fade">
-        <div v-if="modelValue" class="dialog-overlay" @click="handleOverlayClick">
-            <div class="dialog-container" @click.stop>
-                <div class="dialog-header">
-                    <h3 class="dialog-title">{{ copy.title }}</h3>
-                    <button class="close-btn" @click="handleClose">&times;</button>
+    <Transition name="ct-room-dialog-fade">
+        <div v-if="modelValue" class="ct-room-dialog-overlay" @click="handleOverlayClick">
+            <div class="ct-room-dialog-panel ct-room-dialog-sheet" @click.stop>
+                <div class="ct-room-dialog-header">
+                    <h3 class="ct-room-dialog-title">{{ copy.title }}</h3>
+                    <button class="ct-room-dialog-close" @click="handleClose">&times;</button>
                 </div>
 
-                <div class="dialog-body">
+                <div class="ct-room-dialog-body">
                     <p class="dialog-description">{{ copy.description }}</p>
 
                     <form @submit.prevent="handleSubmit">
-                        <div class="form-group">
-                            <label class="form-label">{{ copy.inviteCode }}</label>
+                        <div class="ct-room-form-group">
+                            <label class="ct-room-form-label">{{ copy.inviteCode }}</label>
                             <input
                                 v-model.trim="inviteCode"
                                 type="text"
-                                class="form-input"
+                                class="ct-room-form-input"
                                 :class="{ error: inviteCodeError || submitError }"
                                 :placeholder="copy.inviteCodePlaceholder"
                                 :disabled="loading"
                                 maxlength="24"
                                 autofocus
                             />
-                            <span v-if="inviteCodeError" class="error-text">{{ inviteCodeError }}</span>
+                            <span v-if="inviteCodeError" class="ct-room-form-error">{{ inviteCodeError }}</span>
                         </div>
 
-                        <p v-if="submitError" class="error-text submit-error">{{ submitError }}</p>
+                        <p v-if="submitError" class="ct-room-form-error submit-error">{{ submitError }}</p>
                     </form>
                 </div>
 
-                <div class="dialog-footer">
-                    <button class="btn btn-secondary" @click="handleClose" :disabled="loading">
+                <div class="ct-room-dialog-footer ct-room-dialog-footer-bordered">
+                    <button class="ct-room-dialog-action ct-room-dialog-secondary" @click="handleClose" :disabled="loading">
                         {{ t('common.cancel') }}
                     </button>
-                    <button class="btn btn-primary" @click="handleSubmit" :disabled="loading">
-                        <span v-if="loading" class="loading-spinner"></span>
+                    <button class="ct-room-dialog-action ct-room-dialog-primary" @click="handleSubmit" :disabled="loading">
+                        <span v-if="loading" class="ct-room-dialog-spinner"></span>
                         {{ loading ? copy.joining : copy.join }}
                     </button>
                 </div>
@@ -45,6 +45,7 @@
 </template>
 
 <script setup>
+import '@/styles/room-dialogs.css'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { apiService } from '@/services/api'
@@ -142,68 +143,13 @@ watch(() => props.modelValue, open => {
 </script>
 
 <style scoped>
-.dialog-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 20px;
+.ct-room-dialog-panel {
+    --ct-room-dialog-width: 450px;
 }
 
-.dialog-container {
-    background: var(--bg-primary);
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    width: 100%;
-    max-width: 450px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.dialog-header {
-    padding: 24px 24px 16px;
-    border-bottom: 1px solid var(--border-light);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.dialog-title {
+.ct-room-dialog-close {
     font-size: 20px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0;
-}
-
-.close-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 16px;
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
     transition: all 0.2s ease;
-}
-
-.close-btn:hover {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-}
-
-.dialog-body {
-    padding: 24px;
 }
 
 .dialog-description {
@@ -213,137 +159,13 @@ watch(() => props.modelValue, open => {
     line-height: 1.6;
 }
 
-.form-group {
-    margin-bottom: 20px;
-}
-
-.form-label {
-    display: block;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-primary);
-    margin-bottom: 8px;
-}
-
-.form-input {
-    width: 100%;
+.ct-room-form-input {
     padding: 12px 16px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-size: 14px;
-    transition: all 0.2s ease;
     text-transform: uppercase;
     letter-spacing: 0.08em;
 }
 
-.form-input:focus {
-    border-color: var(--accent-primary);
-    outline: none;
-}
-
-.form-input.error {
-    border-color: #e53935;
-}
-
-.error-text {
-    display: block;
-    color: #e53935;
-    font-size: 12px;
-    margin-top: 6px;
-}
-
 .submit-error {
     margin: 0;
-}
-
-.dialog-footer {
-    padding: 16px 24px;
-    border-top: 1px solid var(--border-light);
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-}
-
-.btn {
-    padding: 10px 24px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.btn-secondary {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-}
-
-.btn-secondary:hover:not(:disabled) {
-    background: var(--bg-secondary);
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-}
-
-.btn-primary:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.loading-spinner {
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.dialog-fade-enter-active,
-.dialog-fade-leave-active {
-    transition: opacity 0.3s ease;
-}
-
-.dialog-fade-enter-active .dialog-container,
-.dialog-fade-leave-active .dialog-container {
-    transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-.dialog-fade-enter-from,
-.dialog-fade-leave-to {
-    opacity: 0;
-}
-
-.dialog-fade-enter-from .dialog-container,
-.dialog-fade-leave-to .dialog-container {
-    transform: scale(0.95);
-    opacity: 0;
-}
-
-@media (max-width: 768px) {
-    .dialog-container {
-        max-width: 100%;
-        margin: 0;
-        border-radius: 16px 16px 0 0;
-        align-self: flex-end;
-    }
 }
 </style>

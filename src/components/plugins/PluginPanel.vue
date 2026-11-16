@@ -106,7 +106,9 @@ const closeLabel = computed(() => locale.value === 'zh-CN' ? '关闭插件面板
     font-size: 24px;
     line-height: 1;
     cursor: pointer;
-    transition: transform 0.22s ease, background-color 0.22s ease;
+    transition:
+        transform 0.22s ease,
+        background-color 0.22s ease;
 }
 
 .plugin-panel-close:hover {

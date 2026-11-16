@@ -187,22 +187,27 @@ const connectionText = computed(() => {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #67c23a;
+    background: var(--status-success);
     transition: all 0.3s ease;
 }
 
 .status-item.syncing .status-dot {
-    background: #409eff;
+    background: var(--accent-primary);
     animation: pulse-dot 1.5s ease-in-out infinite;
 }
 
 .status-item.offline .status-dot {
-    background: #f56c6c;
+    background: var(--status-error);
 }
 
 @keyframes pulse-dot {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
 }
 
 @media (max-width: 768px) {

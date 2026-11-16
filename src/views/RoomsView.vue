@@ -245,7 +245,9 @@ watch(() => props.directJoinSignal, (value, previousValue) => {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .error-icon,
@@ -257,7 +259,7 @@ watch(() => props.directJoinSignal, (value, previousValue) => {
 .retry-button,
 .create-button {
     padding: 10px 24px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--color-primary-gradient);
     color: white;
     border: none;
     border-radius: 8px;
@@ -270,7 +272,7 @@ watch(() => props.directJoinSignal, (value, previousValue) => {
 .retry-button:hover,
 .create-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 8px 16px rgba(var(--color-primary-rgb), 0.3);
 }
 
 .retry-button:active,
@@ -283,7 +285,7 @@ watch(() => props.directJoinSignal, (value, previousValue) => {
 }
 
 .main-content::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
+    background: var(--border-color);
     border-radius: 3px;
 }
 
@@ -291,8 +293,8 @@ watch(() => props.directJoinSignal, (value, previousValue) => {
     background: transparent;
 }
 
-.dark .main-content::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.3);
+.main-content::-webkit-scrollbar-thumb:hover {
+    background: var(--text-tertiary);
 }
 
 @media (max-width: 1200px) {

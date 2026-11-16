@@ -645,7 +645,11 @@ onBeforeUnmount(() => {
     background: var(--bg-secondary);
     cursor: pointer;
     text-align: left;
-    transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease,
+        box-shadow 0.2s ease,
+        opacity 0.2s ease;
 }
 
 .plugin-action-card:hover:not(:disabled) {
@@ -764,7 +768,11 @@ onBeforeUnmount(() => {
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    transition: transform 0.22s ease, box-shadow 0.22s ease, background-color 0.22s ease, opacity 0.22s ease;
+    transition:
+        transform 0.22s ease,
+        box-shadow 0.22s ease,
+        background-color 0.22s ease,
+        opacity 0.22s ease;
 }
 
 .plugin-btn:hover:not(:disabled) {
@@ -876,7 +884,9 @@ onBeforeUnmount(() => {
     font-weight: 700;
     white-space: nowrap;
     cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition:
+        background-color 0.2s ease,
+        color 0.2s ease;
 }
 
 .plugin-tab:hover {
@@ -947,7 +957,10 @@ onBeforeUnmount(() => {
     border-radius: 8px;
     padding: 12px;
     background: var(--bg-secondary);
-    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+    transition:
+        transform 0.22s ease,
+        box-shadow 0.22s ease,
+        border-color 0.22s ease;
     min-width: 0;
 }
 
@@ -976,17 +989,23 @@ onBeforeUnmount(() => {
 
 .plugin-diagnostic-error {
     border-color: rgba(239, 68, 68, 0.3);
-    background: linear-gradient(180deg, rgba(239, 68, 68, 0.06), rgba(239, 68, 68, 0.015)), var(--bg-secondary);
+    background:
+        linear-gradient(180deg, rgba(239, 68, 68, 0.06), rgba(239, 68, 68, 0.015)),
+        var(--bg-secondary);
 }
 
 .plugin-diagnostic-warning {
     border-color: rgba(245, 158, 11, 0.3);
-    background: linear-gradient(180deg, rgba(245, 158, 11, 0.06), rgba(245, 158, 11, 0.015)), var(--bg-secondary);
+    background:
+        linear-gradient(180deg, rgba(245, 158, 11, 0.06), rgba(245, 158, 11, 0.015)),
+        var(--bg-secondary);
 }
 
 .plugin-diagnostic-info {
     border-color: rgba(59, 130, 246, 0.28);
-    background: linear-gradient(180deg, rgba(59, 130, 246, 0.06), rgba(59, 130, 246, 0.015)), var(--bg-secondary);
+    background:
+        linear-gradient(180deg, rgba(59, 130, 246, 0.06), rgba(59, 130, 246, 0.015)),
+        var(--bg-secondary);
 }
 
 .plugin-card-row {
@@ -1045,7 +1064,30 @@ onBeforeUnmount(() => {
     line-height: 1;
 }
 
-.plugin-kind-text{background:rgba(37,99,235,.12);color:#2563eb}.plugin-kind-markdown{background:rgba(124,58,237,.12);color:#7c3aed}.plugin-kind-image{background:rgba(5,150,105,.12);color:#059669}.plugin-kind-hyperlink{background:rgba(14,165,233,.13);color:#0284c7}.plugin-kind-quote-card{background:rgba(217,119,6,.13);color:#b45309}.plugin-kind-blank{background:rgba(100,116,139,.14);color:#64748b}
+.plugin-kind-text {
+    background: rgba(37, 99, 235, 0.12);
+    color: #2563eb;
+}
+.plugin-kind-markdown {
+    background: rgba(124, 58, 237, 0.12);
+    color: #7c3aed;
+}
+.plugin-kind-image {
+    background: rgba(5, 150, 105, 0.12);
+    color: #059669;
+}
+.plugin-kind-hyperlink {
+    background: rgba(14, 165, 233, 0.13);
+    color: #0284c7;
+}
+.plugin-kind-quote-card {
+    background: rgba(217, 119, 6, 0.13);
+    color: #b45309;
+}
+.plugin-kind-blank {
+    background: rgba(100, 116, 139, 0.14);
+    color: #64748b;
+}
 
 .plugin-name {
     font-size: 15px;

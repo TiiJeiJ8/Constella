@@ -1,36 +1,36 @@
 <template>
-    <Transition name="dialog-fade">
-        <div v-if="modelValue" class="dialog-overlay" @click="handleOverlayClick">
-            <div class="dialog-container" @click.stop>
-                <div class="dialog-header">
-                    <h3 class="dialog-title">{{ t('createRoom.title') }}</h3>
-                    <button class="close-btn" @click="handleClose">
+    <Transition name="ct-room-dialog-fade">
+        <div v-if="modelValue" class="ct-room-dialog-overlay" @click="handleOverlayClick">
+            <div class="ct-room-dialog-panel ct-room-dialog-sheet" @click.stop>
+                <div class="ct-room-dialog-header">
+                    <h3 class="ct-room-dialog-title">{{ t('createRoom.title') }}</h3>
+                    <button class="ct-room-dialog-close" @click="handleClose">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
                         </svg>
                     </button>
                 </div>
 
-                <div class="dialog-body">
+                <div class="ct-room-dialog-body">
                     <form @submit.prevent="handleSubmit">
-                        <div class="form-group">
-                            <label class="form-label">{{ t('createRoom.name') }}</label>
+                        <div class="ct-room-form-group">
+                            <label class="ct-room-form-label">{{ t('createRoom.name') }}</label>
                             <input
                                 v-model="formData.name"
                                 type="text"
-                                class="form-input"
+                                class="ct-room-form-input"
                                 :class="{ error: errors.name }"
                                 :placeholder="t('createRoom.namePlaceholder')"
                                 maxlength="100"
                             />
-                            <span v-if="errors.name" class="error-text">{{ errors.name }}</span>
+                            <span v-if="errors.name" class="ct-room-form-error">{{ errors.name }}</span>
                         </div>
 
-                        <div class="form-group">
-                            <label class="form-label">{{ t('createRoom.description') }}</label>
+                        <div class="ct-room-form-group">
+                            <label class="ct-room-form-label">{{ t('createRoom.description') }}</label>
                             <textarea
                                 v-model="formData.description"
-                                class="form-textarea"
+                                class="ct-room-form-textarea"
                                 :placeholder="t('createRoom.descriptionPlaceholder')"
                                 rows="3"
                                 maxlength="500"
@@ -38,8 +38,8 @@
                             <span class="char-count">{{ formData.description?.length || 0 }}/500</span>
                         </div>
 
-                        <div class="form-group">
-                            <label class="form-label">{{ t('createRoom.icon') }}</label>
+                        <div class="ct-room-form-group">
+                            <label class="ct-room-form-label">{{ t('createRoom.icon') }}</label>
                             <div class="icon-selector">
                                 <button
                                     v-for="icon in iconOptions"
@@ -54,7 +54,7 @@
                             </div>
                         </div>
 
-                        <div class="form-group">
+                        <div class="ct-room-form-group">
                             <div class="checkbox-group">
                                 <label class="checkbox-label">
                                     <input
@@ -74,9 +74,9 @@
                             <p class="form-hint">{{ t('createRoom.privateHint') }}</p>
                         </div>
 
-                        <div class="form-group">
-                            <label class="form-label">{{ t('createRoom.defaultRole') }}</label>
-                            <select v-model="formData.defaultRole" class="form-input">
+                        <div class="ct-room-form-group">
+                            <label class="ct-room-form-label">{{ t('createRoom.defaultRole') }}</label>
+                            <select v-model="formData.defaultRole" class="ct-room-form-input">
                                 <option value="editor">{{ t('createRoom.defaultRoleOptions.editor') }}</option>
                                 <option value="viewer">{{ t('createRoom.defaultRoleOptions.viewer') }}</option>
                             </select>
@@ -86,28 +86,28 @@
                         </div>
 
                         <Transition name="slide-fade">
-                            <div v-if="formData.isPrivate" class="form-group">
-                                <label class="form-label">{{ t('createRoom.password') }}</label>
+                            <div v-if="formData.isPrivate" class="ct-room-form-group">
+                                <label class="ct-room-form-label">{{ t('createRoom.password') }}</label>
                                 <input
                                     v-model="formData.password"
                                     type="password"
-                                    class="form-input"
+                                    class="ct-room-form-input"
                                     :class="{ error: errors.password }"
                                     :placeholder="t('createRoom.passwordPlaceholder')"
                                     maxlength="50"
                                 />
-                                <span v-if="errors.password" class="error-text">{{ errors.password }}</span>
+                                <span v-if="errors.password" class="ct-room-form-error">{{ errors.password }}</span>
                             </div>
                         </Transition>
                     </form>
                 </div>
 
-                <div class="dialog-footer">
-                    <button class="btn btn-secondary" :disabled="loading" @click="handleClose">
+                <div class="ct-room-dialog-footer ct-room-dialog-footer-bordered">
+                    <button class="ct-room-dialog-action ct-room-dialog-secondary" :disabled="loading" @click="handleClose">
                         {{ t('common.cancel') }}
                     </button>
-                    <button class="btn btn-primary" :disabled="loading" @click="handleSubmit">
-                        <span v-if="loading" class="loading-spinner"></span>
+                    <button class="ct-room-dialog-action ct-room-dialog-primary" :disabled="loading" @click="handleSubmit">
+                        <span v-if="loading" class="ct-room-dialog-spinner"></span>
                         {{ loading ? t('createRoom.creating') : t('createRoom.create') }}
                     </button>
                 </div>
@@ -117,6 +117,7 @@
 </template>
 
 <script setup>
+import '@/styles/room-dialogs.css'
 import { reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { apiService } from '@/services/api'
@@ -273,120 +274,32 @@ watch(() => formData.isPrivate, isPrivate => {
 </script>
 
 <style scoped>
-.dialog-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 20px;
-}
-
-.dialog-container {
-    background: var(--bg-primary);
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    width: 100%;
-    max-width: 500px;
+.ct-room-dialog-panel {
+    --ct-room-dialog-width: 500px;
     max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
     transition: background-color 0.3s ease;
 }
 
-.dialog-header {
-    padding: 24px 24px 16px;
-    border-bottom: 1px solid var(--border-light);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.dialog-title {
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0;
-}
-
-.close-btn {
-    width: 32px;
-    height: 32px;
+.ct-room-dialog-close {
     border: none;
-    border-radius: 16px;
-    background: transparent;
-    color: var(--text-secondary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.close-btn svg {
-    width: 15px;
-    height: 15px;
-    display: block;
-}
-
-.close-btn:hover {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-}
-
-.dialog-body {
-    padding: 24px;
+.ct-room-dialog-body {
     overflow-y: auto;
     flex: 1;
 }
 
-.form-group {
-    margin-bottom: 20px;
-}
-
-.form-group:last-child {
+.ct-room-form-group:last-child {
     margin-bottom: 0;
 }
 
-.form-label {
-    display: block;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-primary);
-    margin-bottom: 8px;
-}
-
-.form-input,
-.form-textarea {
-    width: 100%;
+.ct-room-form-input,
+.ct-room-form-textarea {
     padding: 10px 14px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-size: 14px;
-    transition: all 0.2s ease;
 }
 
-.form-input:focus,
-.form-textarea:focus {
-    border-color: var(--accent-primary);
-    outline: none;
-}
-
-.form-input.error,
-.form-textarea.error {
-    border-color: #e53935;
-}
-
-.form-textarea {
+.ct-room-form-textarea {
     resize: vertical;
     min-height: 80px;
 }
@@ -397,13 +310,6 @@ watch(() => formData.isPrivate, isPrivate => {
     font-size: 12px;
     color: var(--text-tertiary);
     margin-top: 4px;
-}
-
-.error-text {
-    display: block;
-    color: #e53935;
-    font-size: 12px;
-    margin-top: 6px;
 }
 
 .form-hint {
@@ -476,86 +382,6 @@ watch(() => formData.isPrivate, isPrivate => {
     display: block;
 }
 
-.dialog-footer {
-    padding: 16px 24px;
-    border-top: 1px solid var(--border-light);
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-}
-
-.btn {
-    padding: 10px 24px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.btn-secondary {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-}
-
-.btn-secondary:hover:not(:disabled) {
-    background: var(--bg-secondary);
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-}
-
-.btn-primary:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.loading-spinner {
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.dialog-fade-enter-active,
-.dialog-fade-leave-active {
-    transition: opacity 0.3s ease;
-}
-
-.dialog-fade-enter-active .dialog-container,
-.dialog-fade-leave-active .dialog-container {
-    transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-.dialog-fade-enter-from,
-.dialog-fade-leave-to {
-    opacity: 0;
-}
-
-.dialog-fade-enter-from .dialog-container,
-.dialog-fade-leave-to .dialog-container {
-    transform: scale(0.95);
-    opacity: 0;
-}
-
 .slide-fade-enter-active,
 .slide-fade-leave-active {
     transition: all 0.3s ease;
@@ -568,11 +394,7 @@ watch(() => formData.isPrivate, isPrivate => {
 }
 
 @media (max-width: 768px) {
-    .dialog-container {
-        max-width: 100%;
-        margin: 0;
-        border-radius: 16px 16px 0 0;
-        align-self: flex-end;
+    .ct-room-dialog-panel {
         max-height: 85vh;
     }
 

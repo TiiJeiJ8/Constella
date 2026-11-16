@@ -63,14 +63,14 @@
             </div>
         </div>
 
-        <div v-else class="empty-state">
-            <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <div v-else class="ct-panel-empty">
+            <svg class="ct-panel-empty-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M7 4.75h7l3 3v11.5H7A2.25 2.25 0 0 1 4.75 17V7A2.25 2.25 0 0 1 7 4.75Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7" />
                 <path d="M14 4.75V8h3" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7" />
                 <path d="M8.75 13.25h6.5M8.75 16h4.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.7" />
             </svg>
-            <span class="empty-text">{{ t('canvas.history.empty') }}</span>
-            <span class="empty-hint">{{ t('canvas.history.emptyHint') }}</span>
+            <span class="ct-panel-empty-text">{{ t('canvas.history.empty') }}</span>
+            <span class="ct-panel-empty-hint">{{ t('canvas.history.emptyHint') }}</span>
         </div>
 
         <div class="auto-save-settings" :class="{ disabled: !canCreateSnapshots }">
@@ -114,6 +114,7 @@
 </template>
 
 <script setup>
+import '@/styles/panel-empty.css'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ConfirmDialog from '@/components/base/ConfirmDialog.vue'
@@ -417,12 +418,12 @@ watch(() => props.canCreateSnapshots, value => {
 
 .snapshot-item:hover {
     border-color: var(--color-primary);
-    background: rgba(102, 126, 234, 0.05);
+    background: var(--color-primary-hover-bg);
 }
 
 .snapshot-item.active {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+    box-shadow: 0 0 0 2px var(--color-primary-selection-ring);
 }
 
 .snapshot-info {
@@ -505,41 +506,15 @@ watch(() => props.canCreateSnapshots, value => {
 }
 
 .action-btn.danger:hover:not(:disabled) {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: rgba(239, 68, 68, 0.5);
-    color: #ef4444;
+    background: rgba(var(--color-danger-rgb), 0.1);
+    border-color: rgba(var(--color-danger-rgb), 0.5);
+    color: var(--color-danger);
 }
 
 .action-icon {
     width: 15px;
     height: 15px;
     display: block;
-}
-
-.empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 32px 16px;
-    text-align: center;
-}
-
-.empty-icon {
-    width: 48px;
-    height: 48px;
-    opacity: 0.5;
-    color: var(--text-tertiary);
-}
-
-.empty-text {
-    font-size: 14px;
-    color: var(--text-secondary);
-}
-
-.empty-hint {
-    font-size: 12px;
-    color: var(--text-tertiary);
 }
 
 .auto-save-settings {

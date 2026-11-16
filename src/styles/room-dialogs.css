@@ -1,0 +1,202 @@
+.ct-room-dialog-overlay {
+    inset: 0;
+    position: fixed;
+    background: var(--modal-backdrop);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1000;
+}
+
+.ct-room-dialog-panel {
+    background: var(--bg-primary);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: var(--ct-room-dialog-width);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.ct-room-dialog-header {
+    padding: 24px 24px 16px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ct-room-dialog-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.ct-room-dialog-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 16px;
+    background: transparent;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.ct-room-dialog-close:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.ct-room-dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.ct-room-dialog-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: ct-room-dialog-spin 0.8s linear infinite;
+}
+
+.ct-room-dialog-body {
+    padding: 24px;
+}
+
+.ct-room-dialog-close svg {
+    width: 15px;
+    height: 15px;
+    display: block;
+}
+
+.ct-room-form-group {
+    margin-bottom: 20px;
+}
+
+.ct-room-form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.ct-room-form-error {
+    display: block;
+    color: var(--form-error-color);
+    font-size: 12px;
+    margin-top: 6px;
+}
+
+.ct-room-dialog-footer-bordered {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-light);
+}
+
+.ct-room-dialog-action {
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ct-room-dialog-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ct-room-dialog-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.ct-room-dialog-secondary:hover:not(:disabled) {
+    background: var(--bg-secondary);
+}
+
+.ct-room-dialog-primary {
+    background: var(--color-primary-gradient);
+    color: white;
+    border: none;
+}
+
+.ct-room-dialog-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.3);
+}
+
+input.ct-room-form-input,
+select.ct-room-form-input,
+textarea.ct-room-form-textarea {
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.ct-room-form-input:focus,
+.ct-room-form-textarea:focus {
+    border-color: var(--accent-primary);
+    outline: none;
+}
+
+.ct-room-form-input.error,
+.ct-room-form-textarea.error {
+    border-color: var(--form-error-color);
+}
+
+.ct-room-dialog-fade-enter-active,
+.ct-room-dialog-fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.ct-room-dialog-fade-enter-active .ct-room-dialog-panel,
+.ct-room-dialog-fade-leave-active .ct-room-dialog-panel {
+    transition:
+        transform 0.3s ease,
+        opacity 0.3s ease;
+}
+
+.ct-room-dialog-fade-enter-from,
+.ct-room-dialog-fade-leave-to {
+    opacity: 0;
+}
+
+.ct-room-dialog-fade-enter-from .ct-room-dialog-panel,
+.ct-room-dialog-fade-leave-to .ct-room-dialog-panel {
+    transform: scale(0.95);
+    opacity: 0;
+}
+
+@media (max-width: 768px) {
+    .ct-room-dialog-sheet {
+        max-width: 100%;
+        margin: 0;
+        border-radius: 16px 16px 0 0;
+        align-self: flex-end;
+    }
+}
+
+@keyframes ct-room-dialog-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

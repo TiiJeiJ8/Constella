@@ -449,15 +449,15 @@ watch(password, () => {
 
 .password-input:focus {
     border-color: var(--accent-primary);
-    box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1);
+    box-shadow: 0 0 0 3px var(--accent-focus-ring);
 }
 
 .password-input.error {
-    border-color: #e53935;
+    border-color: var(--form-error-color);
 }
 
 .password-input.error:focus {
-    box-shadow: 0 0 0 3px rgba(229, 57, 53, 0.1);
+    box-shadow: 0 0 0 3px rgba(var(--form-error-rgb), 0.1);
 }
 
 .password-input:disabled {
@@ -477,9 +477,9 @@ watch(password, () => {
     border-radius: 8px;
     font-size: 0.875rem;
     font-weight: 500;
-    background: rgba(229, 57, 53, 0.1);
-    color: #e53935;
-    border: 1px solid rgba(229, 57, 53, 0.3);
+    background: rgba(var(--form-error-rgb), 0.1);
+    color: var(--form-error-color);
+    border: 1px solid rgba(var(--form-error-rgb), 0.3);
 }
 
 .login-btn {
@@ -509,11 +509,11 @@ watch(password, () => {
 }
 
 .login-btn.loading {
-    background: #ff9800;
+    background: var(--form-warning-color);
 }
 
 .login-btn.success {
-    background: #43a047;
+    background: var(--form-success-color);
     cursor: default;
 }
 
