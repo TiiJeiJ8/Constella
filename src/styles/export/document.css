@@ -38,7 +38,7 @@ body {
     line-height: 1.78;
 }
 
-.document-body> :first-child {
+.document-body > :first-child {
     margin-top: 0;
 }
 
@@ -105,7 +105,7 @@ body {
     padding-left: 1.4em;
 }
 
-.document-body li+li {
+.document-body li + li {
     margin-top: 0.35em;
 }
 
@@ -274,7 +274,8 @@ body {
 
 .mermaid-wrapper {
     margin: var(--mermaid-wrapper-margin) 0;
-    padding: var(--mermaid-wrapper-padding-top) var(--mermaid-wrapper-padding-side) var(--mermaid-wrapper-padding-bottom);
+    padding: var(--mermaid-wrapper-padding-top) var(--mermaid-wrapper-padding-side)
+        var(--mermaid-wrapper-padding-bottom);
     border-radius: 16px;
     background: var(--surface-alt);
     overflow: visible;
@@ -405,7 +406,6 @@ body {
 }
 
 @media print {
-
     html,
     body {
         background: var(--surface);

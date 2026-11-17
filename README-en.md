@@ -75,7 +75,7 @@ On first launch, enter your backend URL on the home page. The address is saved l
 | Start the Web development server | `npm run dev` | — |
 | Start Electron in development mode | `npm run dev:electron` | — |
 | Build Web assets | `npm run build` | `dist/` |
-| Build the Electron client (includes the Node runtime) | `npm run build:electron` | `dist-electron/` |
+| Build the Electron client (includes the Node runtime) | `npm run build:electron` | `release/` |
 
 ## Build and Deployment
 
@@ -99,7 +99,11 @@ This command updates `web/package.json` and `web/package-lock.json`, then attemp
 | Generate the installer only | `npm run build:electron:installer` |
 | Generate the zip only | `npm run build:electron:zip` |
 
-Build artifacts are generated in `dist-electron/`.
+Build artifacts are generated in `release/`.
+
+`dist/` holds the renderer build and `dist-electron/` holds the main/preload builds; distributables and `win-unpacked/` go to `release/`. Only the renderer output and the two Electron entry files are included in the application. Vite bundles renderer and main-process npm packages, so these are `devDependencies`; backend production dependencies are installed separately by the runtime preparation script. An automatic packaging check rejects unexpected directories and unbundled main-process dependencies.
+
+A failed backend production dependency installation stops the build and preserves the previous runtime. After installation, only the staging directory is pruned: backend declarations/source maps, known SQLite/LevelDB build files, and prebuilds for other platforms are removed; runtime code, target native modules, and licenses remain. Electron language resources retain the product's supported `zh-CN` and `en-US` locales.
 
 ### Web Deployment
 

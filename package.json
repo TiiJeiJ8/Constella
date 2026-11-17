@@ -1,7 +1,7 @@
 {
   "name": "web",
   "private": true,
-  "version": "v1.3.2",
+  "version": "v1.4.1",
   "description": "Constella - A visual workflow and node-based editing application",
   "author": "Constella Team",
   "type": "module",
@@ -33,12 +33,12 @@
     "appId": "com.constella.app",
     "productName": "Constella",
     "directories": {
-      "output": "dist-electron"
+      "output": "release"
     },
     "files": [
       "dist/**",
-      "dist-electron/**",
-      "electron/**"
+      "dist-electron/main.js",
+      "dist-electron/preload.js"
     ],
     "extraResources": [
       {
@@ -77,16 +77,30 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
-    }
+    },
+    "afterPack": "scripts/verify-package.cjs",
+    "electronLanguages": [
+      "en-US",
+      "zh-CN"
+    ]
   },
-  "dependencies": {
+  "devDependencies": {
     "@element-plus/icons-vue": "^2.3.2",
     "@floating-ui/dom": "^1.7.6",
     "@marktext/file-icons": "^1.0.6",
+    "@types/bonjour": "^3.5.13",
+    "@types/dompurify": "^3.0.5",
     "@types/katex": "^0.16.8",
     "@types/markdown-it": "^14.1.2",
+    "@types/node": "^24.10.4",
+    "@vitejs/plugin-vue": "^6.0.3",
+    "@vue/tsconfig": "^0.8.1",
     "bonjour-service": "^1.3.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
     "dompurify": "^3.3.1",
+    "electron": "^39.8.10",
+    "electron-builder": "^26.4.0",
     "electron-store": "^11.0.2",
     "element-plus": "^2.13.0",
     "execall": "^3.0.0",
@@ -107,6 +121,7 @@
     "ot-json1": "^1.0.2",
     "ot-text-unicode": "^4.0.0",
     "plantuml-encoder": "^1.4.0",
+    "prettier": "3.6.2",
     "prismjs": "^1.30.0",
     "rxjs": "^7.8.2",
     "snabbdom": "^3.6.4",
@@ -114,32 +129,20 @@
     "snapsvg-cjs": "^0.0.6",
     "tdesign-icons-vue-next": "^0.4.1",
     "turndown": "^7.2.4",
+    "typescript": "~5.9.3",
     "underscore": "^1.13.8",
     "vega": "^6.2.0",
     "vega-embed": "^7.1.0",
     "vega-lite": "^6.4.3",
+    "vite": "^7.3.1",
+    "vite-plugin-electron": "^0.29.0",
     "vue": "^3.5.26",
     "vue-i18n": "^9.14.4",
     "vue-konva": "^3.3.0",
+    "vue-tsc": "^3.2.2",
+    "wait-on": "^9.0.3",
     "webfontloader": "^1.6.28",
     "y-websocket": "^3.0.0",
     "yjs": "^13.6.29"
-  },
-  "devDependencies": {
-    "@types/bonjour": "^3.5.13",
-    "@types/dompurify": "^3.0.5",
-    "@types/node": "^24.10.4",
-    "@vitejs/plugin-vue": "^6.0.3",
-    "@vue/tsconfig": "^0.8.1",
-    "concurrently": "^9.2.1",
-    "cross-env": "^10.1.0",
-    "electron": "^39.8.10",
-    "electron-builder": "^26.4.0",
-    "prettier": "3.6.2",
-    "typescript": "~5.9.3",
-    "vite": "^7.3.1",
-    "vite-plugin-electron": "^0.29.0",
-    "vue-tsc": "^3.2.2",
-    "wait-on": "^9.0.3"
   }
 }

@@ -1,6 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const { spawnSync } = require('child_process')
+const pruneServerRuntime = require('./prune-server-runtime.cjs')
 
 const webRoot = path.resolve(__dirname, '..')
 const serverRoot = process.env.CONSTELLA_SERVER_ROOT
@@ -35,6 +36,12 @@ function sleep(ms) {
 }
 
 function removeDirWithRetry(target, retries = 6, delayMs = 300) {
+    if (![runtimeNextRoot, runtimePrevRoot].includes(path.resolve(target))) {
+        throw new Error(`Unexpected cleanup path: ${target}`)
+    }
+    if (fs.existsSync(target) && fs.lstatSync(target).isSymbolicLink()) {
+        throw new Error(`Refusing to clean linked directory: ${target}`)
+    }
     for (let i = 0; i < retries; i += 1) {
         try {
             fs.rmSync(target, { recursive: true, force: true })
@@ -62,10 +69,10 @@ copyDir(path.join(serverRoot, 'config'), path.join(runtimeNextRoot, 'config'))
 try {
     run('npm', ['ci', '--omit=dev', '--no-audit', '--no-fund'], runtimeNextRoot)
 } catch (error) {
-    console.warn('[prepare-server-runtime] npm ci failed, fallback to copying server/node_modules.')
-    console.warn(`[prepare-server-runtime] reason: ${error.message}`)
-    copyDir(path.join(serverRoot, 'node_modules'), path.join(runtimeNextRoot, 'node_modules'))
+    throw new Error(`[prepare-server-runtime] Production dependency installation failed; previous runtime preserved. ${error.message}`)
 }
+
+pruneServerRuntime(runtimeNextRoot)
 
 if (fs.existsSync(runtimeRoot)) {
     fs.renameSync(runtimeRoot, runtimePrevRoot)

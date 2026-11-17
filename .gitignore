@@ -13,6 +13,7 @@ node_modules
 .npm-cache
 dist
 dist-electron
+release/
 dist-ssr
 .electron-server-runtime
 .electron-server-runtime-prev

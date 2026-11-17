@@ -75,7 +75,7 @@ npm run dev
 | 启动 Web 开发环境 | `npm run dev` | — |
 | 启动 Electron 开发模式 | `npm run dev:electron` | — |
 | 构建 Web 产物 | `npm run build` | `dist/` |
-| 构建 Electron 客户端（包含内置 Node runtime） | `npm run build:electron` | `dist-electron/` |
+| 构建 Electron 客户端（包含内置 Node runtime） | `npm run build:electron` | `release/` |
 
 ## 构建与部署
 
@@ -99,7 +99,11 @@ npm run version:bump -- 1.x.x
 | 仅生成安装程序 | `npm run build:electron:installer` |
 | 仅生成 zip | `npm run build:electron:zip` |
 
-构建产物输出至 `dist-electron/`。
+构建产物输出至 `release/`。
+
+`dist/` 保存前端编译产物，`dist-electron/` 仅保存主进程和 preload 编译产物；发布包与 `win-unpacked/` 输出至 `release/`。应用只收集前端产物及两个 Electron 入口文件。前端和主进程使用的 npm 包由 Vite 编译，因此列在 `devDependencies`；后端生产依赖由独立的 runtime 准备脚本安装。打包后的自动检查会拒绝额外目录和未打包的主进程依赖。
+
+后端生产依赖安装失败会终止构建并保留上一份 runtime。安装成功后，仅在发布暂存目录中移除后端声明/source map、SQLite/LevelDB 的已知编译文件和其他平台预编译文件，保留运行代码、目标原生模块及许可证。Electron 语言资源保留产品支持的 `zh-CN` 与 `en-US`。
 
 ### Web 部署
 
